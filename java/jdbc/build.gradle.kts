@@ -187,6 +187,11 @@ jreleaser {
         copyright.set("2025 Amazon.com, Inc. or its affiliates. All Rights Reserved.")
     }
 
+    signing {
+        active.set(org.jreleaser.model.Active.ALWAYS)
+        armored.set(true)
+    }
+
     release {
         github {
             overwrite.set(true)
