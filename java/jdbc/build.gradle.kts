@@ -188,8 +188,7 @@ jreleaser {
     }
 
     signing {
-        active.set(org.jreleaser.model.Active.ALWAYS)
-        armored.set(true)
+        active.set(org.jreleaser.model.Active.NEVER)
     }
 
     release {
@@ -209,6 +208,7 @@ jreleaser {
                     active.set(org.jreleaser.model.Active.ALWAYS)
                     url.set("https://central.sonatype.com/api/v1/publisher")
                     stagingRepository("build/staging-deploy")
+                    sign.set(false)
                 }
             }
         }
