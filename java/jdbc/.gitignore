@@ -1,0 +1,11 @@
+.idea/
+/build
+/buildSrc/build/
+.DS_Store
+**/.DS_Store
+**/*.iml
+classes/
+maven-status/
+test-classes/
+target/
+**/.gradle
