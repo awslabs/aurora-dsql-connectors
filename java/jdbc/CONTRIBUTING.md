@@ -1,13 +1,10 @@
 # Contributing Guidelines
 
-Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional
-documentation, we greatly value feedback and contributions from our community.
+Thank you for your interest in contributing to the Aurora DSQL JDBC Connector!
 
-Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
-information to effectively respond to your bug report or contribution.
+## How to contribute
 
-
-## Reporting Bugs/Feature Requests
+### Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.
 
@@ -19,8 +16,8 @@ reported the issue. Please try to include as much information as you can. Detail
 * Any modifications you've made relevant to the bug
 * Anything unusual about your environment or deployment
 
+### Contributing via Pull Requests
 
-## Contributing via Pull Requests
 Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
 
 1. You are working against the latest source on the *main* branch.
@@ -39,21 +36,283 @@ To send us a pull request, please:
 GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
+## Development Environment Setup
 
-## Finding contributions to work on
-Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
+### Prerequisites
 
+* Java 17 or higher
+* Gradle 8.13 or higher (included via Gradle connector)
+* Git
 
-## Code of Conduct
-This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
-For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact
-opensource-codeofconduct@amazon.com with any additional questions or comments.
+### Building the Project
 
+```bash
+# Clone the repository
+git clone https://github.com/awslabs/aurora-dsql-jdbc-connector.git
+cd aurora-dsql-jdbc-connector
 
-## Security issue notifications
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
+# Build the project
+./gradlew build
 
+# Run tests
+./gradlew test
+
+# Generate code coverage report
+./gradlew jacocoTestReport
+
+# Run static analysis
+./gradlew spotbugsMain spotbugsTest
+```
+
+### Running Tests
+
+The project includes both unit tests and integration tests:
+
+#### Unit Tests
+```bash
+# Run all unit tests
+./gradlew test
+
+# Run tests for a specific class
+./gradlew test --tests "AuroraDsqlConnectionConnectorTest"
+
+# Run tests with coverage
+./gradlew test jacocoTestReport
+```
+
+#### Integration Tests
+Integration tests require a real Aurora DSQL cluster and AWS credentials:
+
+```bash
+# Set required environment variables
+export AURORA_DSQL_ENDPOINT=your-cluster-endpoint.dsql.us-east-1.on.aws
+export AWS_REGION=us-east-1
+
+# Run integration tests
+./gradlew test --tests "*IntegrationTest"
+```
+
+### Code Style and Quality
+
+This project follows specific coding standards:
+
+#### Code Style
+* Use 4 spaces for indentation (no tabs)
+* Maximum line length of 120 characters
+* No wildcard imports - use explicit imports only
+* Follow Google Java Style Guide conventions
+
+#### Quality Checks
+```bash
+# Run all quality checks
+./gradlew check
+
+# Run SpotBugs analysis
+./gradlew spotbugsMain spotbugsTest
+
+# Generate code coverage report
+./gradlew jacocoTestReport
+```
+
+#### Import Guidelines
+**✅ Correct:**
+```java
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+```
+
+**❌ Incorrect:**
+```java
+import java.sql.*;
+```
+
+### Testing Guidelines
+
+#### Unit Test Structure
+```java
+@Test
+void testMethodName_WhenCondition_ThenExpectedResult() {
+    // Arrange
+    String input = "test input";
+    
+    // Act
+    String result = methodUnderTest(input);
+    
+    // Assert
+    assertEquals("expected", result);
+}
+```
+
+#### Integration Test Requirements
+* Use `@EnabledIfSystemProperty` for conditional execution
+* Clean up resources in `@AfterEach` methods
+* Use realistic test data
+* Test with actual Aurora DSQL connections
+
+#### Mock Usage
+* Use Mockito for mocking dependencies
+* Mock external dependencies, not the class under test
+* Verify interactions when behavior matters
+* Use `@SuppressFBWarnings` for test-specific SpotBugs warnings
+
+### Documentation
+
+#### Javadoc Requirements
+All public APIs must include comprehensive Javadoc:
+
+```java
+/**
+ * Creates a connection to Aurora DSQL with automatic token management.
+ * 
+ * <p>This method handles:
+ * <ul>
+ *   <li>IAM token generation and refresh</li>
+ *   <li>Connection lifetime management (60-minute limit)</li>
+ *   <li>Prepared statement re-preparation on connection refresh</li>
+ * </ul>
+ * 
+ * @param url the Aurora DSQL cluster endpoint URL
+ * @param properties connection properties including user and token settings
+ * @return a connection connector with automatic management features
+ * @throws SQLException if the connection cannot be established
+ */
+```
+
+#### README Updates
+Update the README.md file when:
+* Adding new features or configuration options
+* Changing existing behavior
+* Adding new dependencies
+* Modifying build or setup procedures
+
+## Aurora DSQL Specific Considerations
+
+When contributing to this connector, keep in mind Aurora DSQL's unique characteristics:
+
+### Token Management
+* IAM tokens have configurable lifetime
+* Tokens are cached and refreshed automatically
+
+## Commit Message Guidelines
+
+Use clear, descriptive commit messages following conventional commit format:
+
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+Types:
+* `feat`: New feature
+* `fix`: Bug fix
+* `docs`: Documentation changes
+* `test`: Test additions or modifications
+* `refactor`: Code refactoring
+* `perf`: Performance improvements
+* `chore`: Maintenance tasks
+
+Examples:
+```
+feat(connection): add automatic connection refresh
+fix(token): resolve token expiration race condition
+docs(readme): update configuration examples
+test(integration): add long-lived connection tests
+```
+
+## Pull Request Process
+
+1. **Create Feature Branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make Changes**
+   * Follow coding standards
+   * Add comprehensive tests
+   * Update documentation
+   * Ensure all checks pass
+
+3. **Test Locally**
+   ```bash
+   ./gradlew build
+   ./gradlew test
+   ./gradlew check
+   ```
+
+4. **Commit Changes**
+   ```bash
+   git add .
+   git commit -m "feat: add your feature description"
+   ```
+
+5. **Push and Create PR**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+6. **PR Requirements**
+   * Descriptive title and description
+   * Reference related issues
+   * Include test results
+   * Update documentation as needed
+
+## Issue Templates
+
+### Bug Report
+```markdown
+**Describe the bug**
+A clear and concise description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Create connection with properties '...'
+2. Execute query '...'
+3. See error
+
+**Expected behavior**
+A clear and concise description of what you expected to happen.
+
+**Environment:**
+- Java version: [e.g. 17]
+- Aurora DSQL region: [e.g. us-east-1]
+- Connector version: [e.g. 1.0.0]
+- OS: [e.g. Ubuntu 20.04]
+
+**Additional context**
+Add any other context about the problem here, including stack traces.
+```
+
+### Feature Request
+```markdown
+**Is your feature request related to a problem? Please describe.**
+A clear and concise description of what the problem is.
+
+**Describe the solution you'd like**
+A clear and concise description of what you want to happen.
+
+**Describe alternatives you've considered**
+A clear and concise description of any alternative solutions or features you've considered.
+
+**Additional context**
+Add any other context or screenshots about the feature request here.
+```
+
+## Security
+
+If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public GitHub issue.
 
 ## Licensing
 
 See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+
+We may ask you to sign a [Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) for larger changes.
+
+## Code of Conduct
+
+This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
+For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact
+opensource-codeofconduct@amazon.com with any additional questions or comments.
