@@ -174,7 +174,7 @@ publishing {
     }
 }
 
-if ('UPLOAD'.equals(System.getenv('JRELEASER_MAVENCENTRAL_STAGE'))) {
+if ("UPLOAD".equals(System.getenv("JRELEASER_MAVENCENTRAL_STAGE"))) {
     jreleaser {
         project {
             name.set("aurora-dsql-jdbc-connector")
