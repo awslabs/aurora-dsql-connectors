@@ -174,41 +174,33 @@ publishing {
     }
 }
 
-jreleaser {
-    project {
-        name.set("aurora-dsql-jdbc-connector")
-        description.set("A PgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
-        longDescription.set("The Aurora DSQL JDBC Connector is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.")
-        links {
-            homepage.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
-        }
-        authors.set(listOf("Aurora DSQL Team"))
-        license.set("Apache-2.0")
-        copyright.set("2025 Amazon.com, Inc. or its affiliates. All Rights Reserved.")
-    }
-
-    signing {
-        active.set(org.jreleaser.model.Active.NEVER)
-    }
-
-    release {
-        github {
-            overwrite.set(true)
-            changelog {
-                formatted.set(org.jreleaser.model.Active.ALWAYS)
-                preset.set("conventional-commits")
+if ('UPLOAD'.equals(System.getenv('JRELEASER_MAVENCENTRAL_STAGE'))) {
+    jreleaser {
+        project {
+            name.set("aurora-dsql-jdbc-connector")
+            description.set("A PgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
+            longDescription.set("The Aurora DSQL JDBC Connector is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.")
+            links {
+                homepage.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
             }
+            authors.set(listOf("Aurora DSQL Team"))
+            license.set("Apache-2.0")
+            copyright.set("2025 Amazon.com, Inc. or its affiliates. All Rights Reserved.")
         }
-    }
 
-    deploy {
-        maven {
-            mavenCentral {
-                create("sonatype") {
-                    active.set(org.jreleaser.model.Active.ALWAYS)
-                    url.set("https://central.sonatype.com/api/v1/publisher")
-                    stagingRepository("build/staging-deploy")
-                    sign.set(false)
+        signing {
+            active.set(org.jreleaser.model.Active.ALWAYS)
+            armored.set(true)
+        }
+
+        deploy {
+            maven {
+                mavenCentral {
+                    create("sonatype") {
+                        active.set(org.jreleaser.model.Active.ALWAYS)
+                        url.set("https://central.sonatype.com/api/v1/publisher")
+                        stagingRepository("build/staging-deploy")
+                    }
                 }
             }
         }
