@@ -8,7 +8,7 @@ plugins {
     id("maven-publish")
     id("jacoco")
     id("com.github.spotbugs") version "6.1.+"
-    id("org.jreleaser") version "1.15.0"
+    id("org.jreleaser") version "1.19.0"
 }
 
 group = "software.amazon.dsql"
