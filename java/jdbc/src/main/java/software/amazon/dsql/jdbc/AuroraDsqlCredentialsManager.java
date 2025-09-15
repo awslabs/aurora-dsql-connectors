@@ -25,7 +25,7 @@ public final class AuroraDsqlCredentialsManager {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    private static volatile AwsCredentialsProvider credentialsProvider = DefaultCredentialsProvider.create();
+    private static volatile AwsCredentialsProvider credentialsProvider = DefaultCredentialsProvider.builder().build();
 
     /**
      * Set the AwsCredentialsProvider to use for token generation.
@@ -39,7 +39,7 @@ public final class AuroraDsqlCredentialsManager {
      * Resets AuroraDsqlCredentialsManager back to the DefaultCredentialsProvider.
      */
     public static void resetProvider() {
-        credentialsProvider = DefaultCredentialsProvider.create();
+        credentialsProvider = DefaultCredentialsProvider.builder().build();
     }
 
     /**
