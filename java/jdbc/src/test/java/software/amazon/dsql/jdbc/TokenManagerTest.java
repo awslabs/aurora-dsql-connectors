@@ -16,6 +16,13 @@
 
 package software.amazon.dsql.jdbc;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+import java.sql.SQLException;
+import java.time.Duration;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,14 +30,6 @@ import org.mockito.MockedStatic;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dsql.DsqlUtilities;
-
-import java.sql.SQLException;
-import java.time.Duration;
-import java.util.function.Consumer;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 class TokenManagerTest {
 
@@ -49,7 +48,7 @@ class TokenManagerTest {
         mockCredentialsProvider = mock(AwsCredentialsProvider.class);
         mockDsqlUtilities = mock(DsqlUtilities.class);
         mockBuilder = mock(DsqlUtilities.Builder.class);
-        
+
         // Clear cache before each test
         TokenManager.clearCache();
     }
@@ -70,7 +69,13 @@ class TokenManagerTest {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
 
             // Act
-            String token = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
+            String token =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            TEST_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
 
             // Assert
             assertEquals(expectedToken, token);
@@ -89,7 +94,13 @@ class TokenManagerTest {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
 
             // Act
-            String token = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, ADMIN_USER, mockCredentialsProvider, TEST_DURATION);
+            String token =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            ADMIN_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
 
             // Assert
             assertEquals(expectedToken, token);
@@ -108,10 +119,22 @@ class TokenManagerTest {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
 
             // First call - generates token
-            String firstToken = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
-            
+            String firstToken =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            TEST_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
+
             // Second call - should return cached token
-            String secondToken = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
+            String secondToken =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            TEST_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
 
             // Assert
             assertEquals(expectedToken, firstToken);
@@ -127,20 +150,32 @@ class TokenManagerTest {
         String token1 = "token1";
         String token2 = "token2";
         AwsCredentialsProvider mockCredentialsProvider2 = mock(AwsCredentialsProvider.class);
-        
+
         setupMockDsqlUtilities(token1);
 
         try (MockedStatic<DsqlUtilities> dsqlUtilitiesMock = mockStatic(DsqlUtilities.class)) {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
-            
+
             // Mock different responses for different calls
             when(mockDsqlUtilities.generateDbConnectAuthToken(any(Consumer.class)))
-                .thenReturn(token1)
-                .thenReturn(token2);
+                    .thenReturn(token1)
+                    .thenReturn(token2);
 
             // Act
-            String firstToken = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
-            String secondToken = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, "user2", mockCredentialsProvider2, TEST_DURATION);
+            String firstToken =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            TEST_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
+            String secondToken =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            "user2",
+                            mockCredentialsProvider2,
+                            TEST_DURATION);
 
             // Assert
             assertEquals(token1, firstToken);
@@ -159,17 +194,29 @@ class TokenManagerTest {
 
         try (MockedStatic<DsqlUtilities> dsqlUtilitiesMock = mockStatic(DsqlUtilities.class)) {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
-            
+
             // Mock different responses for different calls
             when(mockDsqlUtilities.generateDbConnectAuthToken(any(Consumer.class)))
-                .thenReturn(initialToken)
-                .thenReturn(refreshedToken);
+                    .thenReturn(initialToken)
+                    .thenReturn(refreshedToken);
 
             // First call - generates initial token
-            String firstToken = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
-            
+            String firstToken =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            TEST_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
+
             // Force refresh - should generate new token
-            String secondToken = TokenManager.forceRefreshToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
+            String secondToken =
+                    TokenManager.forceRefreshToken(
+                            TEST_HOSTNAME,
+                            TEST_REGION,
+                            TEST_USER,
+                            mockCredentialsProvider,
+                            TEST_DURATION);
 
             // Assert
             assertEquals(initialToken, firstToken);
@@ -189,13 +236,15 @@ class TokenManagerTest {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
 
             // First call - generates and caches token
-            TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
-            
+            TokenManager.getToken(
+                    TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
+
             // Clear cache
             TokenManager.clearCache();
-            
+
             // Second call - should generate new token since cache is cleared
-            TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
+            TokenManager.getToken(
+                    TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION);
 
             // Assert
             // Should call token generation twice since cache was cleared
@@ -213,7 +262,9 @@ class TokenManagerTest {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
 
             // Act
-            String token = TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, null);
+            String token =
+                    TokenManager.getToken(
+                            TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, null);
 
             // Assert
             assertEquals(expectedToken, token);
@@ -230,26 +281,37 @@ class TokenManagerTest {
             dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
 
             // Act & Assert
-            SQLException exception = assertThrows(SQLException.class, () -> 
-                TokenManager.getToken(TEST_HOSTNAME, TEST_REGION, TEST_USER, mockCredentialsProvider, TEST_DURATION));
-            
+            SQLException exception =
+                    assertThrows(
+                            SQLException.class,
+                            () ->
+                                    TokenManager.getToken(
+                                            TEST_HOSTNAME,
+                                            TEST_REGION,
+                                            TEST_USER,
+                                            mockCredentialsProvider,
+                                            TEST_DURATION));
+
             assertTrue(exception.getMessage().contains("Token generation failed"));
         }
     }
 
     private void setupMockDsqlUtilities(String token) {
         when(mockBuilder.region(any(Region.class))).thenReturn(mockBuilder);
-        when(mockBuilder.credentialsProvider(any(AwsCredentialsProvider.class))).thenReturn(mockBuilder);
+        when(mockBuilder.credentialsProvider(any(AwsCredentialsProvider.class)))
+                .thenReturn(mockBuilder);
         when(mockBuilder.build()).thenReturn(mockDsqlUtilities);
         when(mockDsqlUtilities.generateDbConnectAuthToken(any(Consumer.class))).thenReturn(token);
-        when(mockDsqlUtilities.generateDbConnectAdminAuthToken(any(Consumer.class))).thenReturn(token);
+        when(mockDsqlUtilities.generateDbConnectAdminAuthToken(any(Consumer.class)))
+                .thenReturn(token);
     }
 
     private void setupMockDsqlUtilitiesWithException() {
         when(mockBuilder.region(any(Region.class))).thenReturn(mockBuilder);
-        when(mockBuilder.credentialsProvider(any(AwsCredentialsProvider.class))).thenReturn(mockBuilder);
+        when(mockBuilder.credentialsProvider(any(AwsCredentialsProvider.class)))
+                .thenReturn(mockBuilder);
         when(mockBuilder.build()).thenReturn(mockDsqlUtilities);
         when(mockDsqlUtilities.generateDbConnectAuthToken(any(Consumer.class)))
-            .thenThrow(new RuntimeException("Token generation failed"));
+                .thenThrow(new RuntimeException("Token generation failed"));
     }
 }

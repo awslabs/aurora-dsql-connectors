@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 import java.util.Properties
 
 plugins {
@@ -9,9 +12,10 @@ repositories {
     mavenCentral()
 }
 
-val parentProps = Properties().apply {
-    load(file("../gradle.properties").inputStream())
-}
+val parentProps =
+    Properties().apply {
+        load(file("../gradle.properties").inputStream())
+    }
 
 dependencies {
     // Define dependency this way to allow for independent execution of tests with a pre-built jar.
@@ -34,7 +38,8 @@ tasks.test {
 
     // Only run when feature flag property is set, or when run directly from this subproject
     onlyIf {
-        val shouldRun = System.getProperty("runIntegrationTests") == "true" ||
+        val shouldRun =
+            System.getProperty("runIntegrationTests") == "true" ||
                 gradle.startParameter.currentDir.name == "integration-tests"
         if (!shouldRun) {
             println("Integration tests skipped - run task 'integrationTest' to run them")

@@ -22,29 +22,29 @@ import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 public final class AuroraDsqlCredentialsManager {
 
     private AuroraDsqlCredentialsManager() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new UnsupportedOperationException(
+                "This is a utility class and cannot be instantiated");
     }
 
-    private static volatile AwsCredentialsProvider credentialsProvider = DefaultCredentialsProvider.builder().build();
+    private static volatile AwsCredentialsProvider credentialsProvider =
+            DefaultCredentialsProvider.builder().build();
 
     /**
      * Set the AwsCredentialsProvider to use for token generation.
-     * @param customCredentialsProvider is an AwsCredentialsProvider (e.g. 'ProfileCredentialProvider').
+     *
+     * @param customCredentialsProvider is an AwsCredentialsProvider (e.g.
+     *     'ProfileCredentialProvider').
      */
     public static void setProvider(final AwsCredentialsProvider customCredentialsProvider) {
         credentialsProvider = customCredentialsProvider;
     }
 
-    /**
-     * Resets AuroraDsqlCredentialsManager back to the DefaultCredentialsProvider.
-     */
+    /** Resets AuroraDsqlCredentialsManager back to the DefaultCredentialsProvider. */
     public static void resetProvider() {
         credentialsProvider = DefaultCredentialsProvider.builder().build();
     }
 
-    /**
-     * Retrieves AuroraDsqlCredentialsManager's credentials provider.
-     */
+    /** Retrieves AuroraDsqlCredentialsManager's credentials provider. */
     public static AwsCredentialsProvider getProvider() {
         return credentialsProvider;
     }

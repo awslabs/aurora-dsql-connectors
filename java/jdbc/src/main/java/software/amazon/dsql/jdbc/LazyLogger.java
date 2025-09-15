@@ -16,14 +16,12 @@
 
 package software.amazon.dsql.jdbc;
 
-import javax.annotation.Nonnull;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 
-/**
- * Lazy logging wrapper that only evaluates log messages when the level is enabled.
- */
+/** Lazy logging wrapper that only evaluates log messages when the level is enabled. */
 public class LazyLogger {
     private final Logger logger;
 

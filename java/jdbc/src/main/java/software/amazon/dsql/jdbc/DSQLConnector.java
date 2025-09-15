@@ -16,29 +16,26 @@
 
 package software.amazon.dsql.jdbc;
 
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.net.URISyntaxException;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
-import java.sql.Driver;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
 
 /**
- * DSQLConnector is a package that allows Aurora DSQL developers to access
- * Aurora DSQL cluster while using this interface
+ * DSQLConnector is a package that allows Aurora DSQL developers to access Aurora DSQL cluster while
+ * using this interface
  */
 public class DSQLConnector implements java.sql.Driver {
 
@@ -56,7 +53,8 @@ public class DSQLConnector implements java.sql.Driver {
 
     public static void register() throws SQLException {
         if (isRegistered()) {
-            throw new IllegalStateException("This driver is already registered, cannot re-register");
+            throw new IllegalStateException(
+                    "This driver is already registered, cannot re-register");
         }
         final DSQLConnector driver = new DSQLConnector();
         DriverManager.registerDriver(driver);
@@ -65,7 +63,8 @@ public class DSQLConnector implements java.sql.Driver {
 
     public static void deregister() throws SQLException {
         if (registeredDriver == null) {
-            throw new IllegalStateException("This driver has yet to be registered, cannot deregister");
+            throw new IllegalStateException(
+                    "This driver has yet to be registered, cannot deregister");
         }
         DriverManager.deregisterDriver(registeredDriver);
         registeredDriver = null;
@@ -93,23 +92,24 @@ public class DSQLConnector implements java.sql.Driver {
 
             // Get host from URL
             final String host = ConnUrlParser.extractHostFromUrl(validatedUrl);
-            
+
             // Get region from host or from properties
             final String regionStr = determineRegion(host, props);
             final Region regionObj = Region.of(regionStr.toLowerCase());
 
             // Get token duration from properties
             final long tokenDuration = PropertyDefinition.TOKEN_DURATION.getLong(props);
-            final Duration tokenDurationInSecond =  tokenDuration == 0 ? null : Duration.ofSeconds(tokenDuration);
+            final Duration tokenDurationInSecond =
+                    tokenDuration == 0 ? null : Duration.ofSeconds(tokenDuration);
 
             // Get authentication token using static TokenManager
-            final String authToken = TokenManager.getToken(
-                host, 
-                regionObj, 
-                user, 
-                getCredentialsProvider(props),
-                tokenDurationInSecond
-            );
+            final String authToken =
+                    TokenManager.getToken(
+                            host,
+                            regionObj,
+                            user,
+                            getCredentialsProvider(props),
+                            tokenDurationInSecond);
             props.setProperty("password", authToken);
 
             // Use ConnWrapper to create PostgreSQL connection with auth token
@@ -132,7 +132,7 @@ public class DSQLConnector implements java.sql.Driver {
         if (regionFromProps != null) {
             return regionFromProps;
         }
-        
+
         // If not in properties, extract region from host
         return ConnUrlParser.extractRegionFromHost(host);
     }
@@ -140,14 +140,15 @@ public class DSQLConnector implements java.sql.Driver {
     private AwsCredentialsProvider getCredentialsProvider(final Properties props) {
         final String profile = PropertyDefinition.PROFILE.get(props);
         if (profile != null) {
-             return ProfileCredentialsProvider.create(profile);
+            return ProfileCredentialsProvider.create(profile);
         }
         return AuroraDsqlCredentialsManager.getProvider();
     }
 
     @Override
     @Nonnull
-    public DriverPropertyInfo[] getPropertyInfo(final String url, final Properties info) throws SQLException {
+    public DriverPropertyInfo[] getPropertyInfo(final String url, final Properties info)
+            throws SQLException {
         final Properties copy = new Properties(info);
         try {
             if (url != null) {
@@ -157,7 +158,8 @@ public class DSQLConnector implements java.sql.Driver {
             throw new SQLException("Invalid URL format: " + e.getMessage(), e);
         }
 
-        final Collection<AuroraDsqlProperty> knownProperties = PropertyDefinition.getAllProperties();
+        final Collection<AuroraDsqlProperty> knownProperties =
+                PropertyDefinition.getAllProperties();
         final DriverPropertyInfo[] props = new DriverPropertyInfo[knownProperties.size()];
         int i = 0;
         for (final AuroraDsqlProperty prop : knownProperties) {
@@ -188,4 +190,3 @@ public class DSQLConnector implements java.sql.Driver {
         return PARENT_LOGGER;
     }
 }
-

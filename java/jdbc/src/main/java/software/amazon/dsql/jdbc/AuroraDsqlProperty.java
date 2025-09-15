@@ -16,16 +16,19 @@
 
 package software.amazon.dsql.jdbc;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.sql.DriverPropertyInfo;
 import java.util.Properties;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class AuroraDsqlProperty extends DriverPropertyInfo {
 
     public final @Nullable String defaultValue;
 
-    public AuroraDsqlProperty(@Nonnull final String name, @Nullable final String defaultValue, final String description) {
+    public AuroraDsqlProperty(
+            @Nonnull final String name,
+            @Nullable final String defaultValue,
+            final String description) {
         this(name, defaultValue, description, false);
     }
 

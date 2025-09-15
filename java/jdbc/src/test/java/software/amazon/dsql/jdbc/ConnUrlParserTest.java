@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Properties;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +41,8 @@ class ConnUrlParserTest {
     @Test
     void testParsePropertiesFromValidUrl() throws URISyntaxException {
         // Arrange
-        String url = "jdbc:postgresql://test-cluster.dsql.us-east-1.on.aws/postgres?user=admin&token-duration-secs=3600";
+        String url =
+                "jdbc:postgresql://test-cluster.dsql.us-east-1.on.aws/postgres?user=admin&token-duration-secs=3600";
 
         // Act
         ConnUrlParser.parsePropertiesFromUrl(url, properties);
@@ -77,13 +77,15 @@ class ConnUrlParserTest {
 
         // Assert
         assertEquals("admin", properties.getProperty("user"));
-        assertEquals("custom_db", properties.getProperty("database")); // Should keep the property value
+        assertEquals(
+                "custom_db", properties.getProperty("database")); // Should keep the property value
     }
 
     @Test
     void testParsePropertiesFromUrlWithMultipleParameters() throws URISyntaxException {
         // Arrange
-        String url = "jdbc:postgresql://cluster.dsql.us-west-2.on.aws/mydb?user=testuser&token-duration-secs=7200&profile=myprofile&ssl=true";
+        String url =
+                "jdbc:postgresql://cluster.dsql.us-west-2.on.aws/mydb?user=testuser&token-duration-secs=7200&profile=myprofile&ssl=true";
 
         // Act
         ConnUrlParser.parsePropertiesFromUrl(url, properties);
@@ -99,7 +101,8 @@ class ConnUrlParserTest {
     @Test
     void testParsePropertiesFromUrlWithClusterIdAndRegion() throws URISyntaxException {
         // Arrange
-        String url = "jdbc:postgresql://dummy.host/postgres?user=admin&cluster-id=my-cluster&region=eu-west-1";
+        String url =
+                "jdbc:postgresql://dummy.host/postgres?user=admin&cluster-id=my-cluster&region=eu-west-1";
 
         // Act
         ConnUrlParser.parsePropertiesFromUrl(url, properties);
@@ -154,7 +157,8 @@ class ConnUrlParserTest {
     @Test
     void testParsePropertiesFromUrlWithEmptyParameterValue() throws URISyntaxException {
         // Arrange
-        String url = "jdbc:postgresql://cluster.dsql.us-east-1.on.aws/postgres?user=&token-duration-secs=3600";
+        String url =
+                "jdbc:postgresql://cluster.dsql.us-east-1.on.aws/postgres?user=&token-duration-secs=3600";
 
         // Act
         ConnUrlParser.parsePropertiesFromUrl(url, properties);
@@ -171,11 +175,11 @@ class ConnUrlParserTest {
         String url = "jdbc:postgresql://[invalid-host-format]/database";
 
         // Act & Assert
-        assertThrows(URISyntaxException.class, () -> 
-            ConnUrlParser.parsePropertiesFromUrl(url, properties)
-        );
+        assertThrows(
+                URISyntaxException.class,
+                () -> ConnUrlParser.parsePropertiesFromUrl(url, properties));
     }
-    
+
     @Test
     void testParsePropertiesFromNullUrl() {
         // Act
@@ -185,92 +189,86 @@ class ConnUrlParserTest {
     @Test
     void testConstructorThrowsException() {
         // Act & Assert
-        Exception exception = assertThrows(Exception.class, () -> {
-            // Use reflection to access private constructor
-            java.lang.reflect.Constructor<ConnUrlParser> constructor = 
-                ConnUrlParser.class.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            constructor.newInstance();
-        });
-        
+        Exception exception =
+                assertThrows(
+                        Exception.class,
+                        () -> {
+                            // Use reflection to access private constructor
+                            java.lang.reflect.Constructor<ConnUrlParser> constructor =
+                                    ConnUrlParser.class.getDeclaredConstructor();
+                            constructor.setAccessible(true);
+                            constructor.newInstance();
+                        });
+
         // The actual exception will be wrapped in InvocationTargetException
         assertTrue(exception.getCause() instanceof UnsupportedOperationException);
     }
-    
+
     @Test
     void testIsDsqlUrl() {
         // Valid DSQL URLs
-        assertTrue(ConnUrlParser.isDsqlUrl("jdbc:aws-dsql:postgresql://cluster-name.dsql.eu-west-1.on.aws/mydb"));
-        assertFalse(ConnUrlParser.isDsqlUrl("jdbc:postgresql://my-cluster.rds.us-east-1.amazonaws.com/postgres"));
+        assertTrue(
+                ConnUrlParser.isDsqlUrl(
+                        "jdbc:aws-dsql:postgresql://cluster-name.dsql.eu-west-1.on.aws/mydb"));
+        assertFalse(
+                ConnUrlParser.isDsqlUrl(
+                        "jdbc:postgresql://my-cluster.rds.us-east-1.amazonaws.com/postgres"));
         assertFalse(ConnUrlParser.isDsqlUrl(null));
     }
-    
+
     @Test
     void testExtractDatabaseFromUrl() {
         // Test with valid URL
         assertEquals(
-            "postgres",
-            ConnUrlParser.extractDatabaseFromUrl("jdbc:postgresql://my-cluster.dsql.us-east-1.on.aws/postgres")
-        );
-        
+                "postgres",
+                ConnUrlParser.extractDatabaseFromUrl(
+                        "jdbc:postgresql://my-cluster.dsql.us-east-1.on.aws/postgres"));
+
         // Test with custom database
         assertEquals(
-            "mydb",
-            ConnUrlParser.extractDatabaseFromUrl("jdbc:postgresql://my-cluster.dsql.us-east-1.on.aws/mydb")
-        );
-        
+                "mydb",
+                ConnUrlParser.extractDatabaseFromUrl(
+                        "jdbc:postgresql://my-cluster.dsql.us-east-1.on.aws/mydb"));
+
         // Test with null URL
         assertNull(ConnUrlParser.extractDatabaseFromUrl(null));
-        
+
         // Test with invalid URL
         assertNull(ConnUrlParser.extractDatabaseFromUrl("invalid-url"));
     }
-    
+
     @Test
     void testExtractHostFromUrl() throws SQLException {
         // Test with valid URL
         assertEquals(
-            "my-cluster.dsql.us-east-1.on.aws",
-            ConnUrlParser.extractHostFromUrl("jdbc:postgresql://my-cluster.dsql.us-east-1.on.aws/postgres")
-        );
+                "my-cluster.dsql.us-east-1.on.aws",
+                ConnUrlParser.extractHostFromUrl(
+                        "jdbc:postgresql://my-cluster.dsql.us-east-1.on.aws/postgres"));
 
         assertEquals(
                 "my-cluster.dsql-gamma.us-east-1.on.aws",
-                ConnUrlParser.extractHostFromUrl("jdbc:postgresql://my-cluster.dsql-gamma.us-east-1.on.aws/postgres")
-        );
-        
+                ConnUrlParser.extractHostFromUrl(
+                        "jdbc:postgresql://my-cluster.dsql-gamma.us-east-1.on.aws/postgres"));
+
         // Test with null URL
-        assertThrows(
-            SQLException.class,
-            () -> ConnUrlParser.extractHostFromUrl(null)
-        );
+        assertThrows(SQLException.class, () -> ConnUrlParser.extractHostFromUrl(null));
 
         // Test with invalid URL
-        assertThrows(
-            SQLException.class,
-            () -> ConnUrlParser.extractHostFromUrl("invalid-url")
-        );
+        assertThrows(SQLException.class, () -> ConnUrlParser.extractHostFromUrl("invalid-url"));
     }
-    
+
     @Test
     void testExtractRegionFromHost() throws SQLException {
         // Test with valid host
         assertEquals(
-            "us-east-1",
-            ConnUrlParser.extractRegionFromHost("my-cluster.dsql.us-east-1.on.aws")
-        );
-        
+                "us-east-1",
+                ConnUrlParser.extractRegionFromHost("my-cluster.dsql.us-east-1.on.aws"));
+
         // Test with null host
-        assertThrows(
-            SQLException.class,
-            () -> ConnUrlParser.extractRegionFromHost(null)
-        );
-        
+        assertThrows(SQLException.class, () -> ConnUrlParser.extractRegionFromHost(null));
+
         // Test with invalid host
-        assertThrows(
-            SQLException.class,
-            () -> ConnUrlParser.extractRegionFromHost("invalid-host")
-        );
+        assertThrows(SQLException.class, () -> ConnUrlParser.extractRegionFromHost("invalid-host"));
     }
 
     @Test

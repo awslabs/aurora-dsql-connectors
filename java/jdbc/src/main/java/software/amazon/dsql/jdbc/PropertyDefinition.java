@@ -27,30 +27,33 @@ import java.util.logging.Logger;
 public final class PropertyDefinition {
 
     private PropertyDefinition() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new UnsupportedOperationException(
+                "This is a utility class and cannot be instantiated");
     }
 
     private static final Logger LOGGER = Logger.getLogger("com.amazon.jdbc.PropertyDefinition");
 
-    public static final AuroraDsqlProperty USER = new AuroraDsqlProperty("user", null,
-            "The user to connect with Aurora DSQL");
+    public static final AuroraDsqlProperty USER =
+            new AuroraDsqlProperty("user", null, "The user to connect with Aurora DSQL");
 
-    public static final AuroraDsqlProperty PROFILE = new AuroraDsqlProperty("profile", null,
-            "The profile to be used for Aurora DSQL connections");
+    public static final AuroraDsqlProperty PROFILE =
+            new AuroraDsqlProperty(
+                    "profile", null, "The profile to be used for Aurora DSQL connections");
 
-    public static final AuroraDsqlProperty REGION = new AuroraDsqlProperty("region", null,
-            "The AWS region for Aurora DSQL connections");
+    public static final AuroraDsqlProperty REGION =
+            new AuroraDsqlProperty("region", null, "The AWS region for Aurora DSQL connections");
 
     // Token duration for long-lived tokens (default 8 hours = 28800 seconds)
-    public static final AuroraDsqlProperty TOKEN_DURATION = new AuroraDsqlProperty("token-duration-secs", null,
-            "The duration in seconds for cached tokens");
-            
-    // Database name for Aurora DSQL connections
-    public static final AuroraDsqlProperty DATABASE = new AuroraDsqlProperty("database", "postgres",
-            "The database name to connect to (default: postgres)");
+    public static final AuroraDsqlProperty TOKEN_DURATION =
+            new AuroraDsqlProperty(
+                    "token-duration-secs", null, "The duration in seconds for cached tokens");
 
-    private static final Map<String, AuroraDsqlProperty> PROPS_BY_NAME =
-            new ConcurrentHashMap<>();
+    // Database name for Aurora DSQL connections
+    public static final AuroraDsqlProperty DATABASE =
+            new AuroraDsqlProperty(
+                    "database", "postgres", "The database name to connect to (default: postgres)");
+
+    private static final Map<String, AuroraDsqlProperty> PROPS_BY_NAME = new ConcurrentHashMap<>();
 
     static {
         registerProperties();
@@ -73,13 +76,15 @@ public final class PropertyDefinition {
                             try {
                                 prop = (AuroraDsqlProperty) f.get(AuroraDsqlProperty.class);
                             } catch (final IllegalArgumentException | IllegalAccessException ex) {
-                                LOGGER.log(Level.WARNING, "An error has occurred while retrieving a property", ex);
+                                LOGGER.log(
+                                        Level.WARNING,
+                                        "An error has occurred while retrieving a property",
+                                        ex);
                             }
 
                             if (prop != null) {
                                 PROPS_BY_NAME.put(prop.name, prop);
                             }
                         });
-
     }
 }

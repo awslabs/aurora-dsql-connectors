@@ -16,16 +16,17 @@
 
 package software.amazon.dsql.jdbc;
 
-import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 
 public final class PropertyUtils {
     private static final Logger LOGGER = Logger.getLogger(PropertyUtils.class.getName());
 
     private PropertyUtils() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new UnsupportedOperationException(
+                "This is a utility class and cannot be instantiated");
     }
 
     public static @Nonnull Properties copyProperties(final Properties props) {
@@ -51,7 +52,8 @@ public final class PropertyUtils {
 
         for (final Map.Entry<Object, Object> entry : propsToAdd.entrySet()) {
             if (entry.getKey() == null || entry.getValue() == null) {
-                throw new IllegalArgumentException("The key and value of the entry cannot be null.");
+                throw new IllegalArgumentException(
+                        "The key and value of the entry cannot be null.");
             }
             String key = entry.getKey().toString();
             String value = sanitizePropertyValue(entry.getValue().toString());
@@ -75,10 +77,14 @@ public final class PropertyUtils {
 
         // Remove surrounding quotes if present
         if (trimmed.length() >= 2) {
-            if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) ||
-                    (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+            if ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
+                    || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
                 String unquoted = trimmed.substring(1, trimmed.length() - 1);
-                LOGGER.fine(() -> String.format("Sanitized property value from '%s' to '%s'", value, unquoted));
+                LOGGER.fine(
+                        () ->
+                                String.format(
+                                        "Sanitized property value from '%s' to '%s'",
+                                        value, unquoted));
                 return unquoted;
             }
         }

@@ -27,7 +27,7 @@ public class ConnWrapper {
 
     public ConnWrapper(final String url, final Properties info) {
         this.url = url;
-        this.info =  new Properties(info);
+        this.info = new Properties(info);
     }
 
     public Connection makeConnection() throws SQLException {

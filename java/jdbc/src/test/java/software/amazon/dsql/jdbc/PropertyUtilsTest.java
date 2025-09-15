@@ -17,7 +17,6 @@
 package software.amazon.dsql.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -26,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Properties;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -96,9 +94,9 @@ class PropertyUtilsTest {
     @Test
     void testAddPropertiesWithNullDestination() {
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> 
-            PropertyUtils.addProperties(null, properties)
-        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> PropertyUtils.addProperties(null, properties));
     }
 
     @Test
@@ -137,51 +135,58 @@ class PropertyUtilsTest {
     void testAddPropertiesWithNullKeyThrowsException() {
         // Arrange
         Properties destination = new Properties();
-        Properties propsWithNullKey = new Properties() {
-            @Override
-            public java.util.Set<java.util.Map.Entry<Object, Object>> entrySet() {
-                java.util.Set<java.util.Map.Entry<Object, Object>> set = new java.util.HashSet<>();
-                set.add(new java.util.AbstractMap.SimpleEntry<>(null, "value"));
-                return set;
-            }
-        };
+        Properties propsWithNullKey =
+                new Properties() {
+                    @Override
+                    public java.util.Set<java.util.Map.Entry<Object, Object>> entrySet() {
+                        java.util.Set<java.util.Map.Entry<Object, Object>> set =
+                                new java.util.HashSet<>();
+                        set.add(new java.util.AbstractMap.SimpleEntry<>(null, "value"));
+                        return set;
+                    }
+                };
 
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> 
-            PropertyUtils.addProperties(destination, propsWithNullKey)
-        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> PropertyUtils.addProperties(destination, propsWithNullKey));
     }
 
     @Test
     void testAddPropertiesWithNullValueThrowsException() {
         // Arrange
         Properties destination = new Properties();
-        Properties propsWithNullValue = new Properties() {
-            @Override
-            public java.util.Set<java.util.Map.Entry<Object, Object>> entrySet() {
-                java.util.Set<java.util.Map.Entry<Object, Object>> set = new java.util.HashSet<>();
-                set.add(new java.util.AbstractMap.SimpleEntry<>("key", null));
-                return set;
-            }
-        };
+        Properties propsWithNullValue =
+                new Properties() {
+                    @Override
+                    public java.util.Set<java.util.Map.Entry<Object, Object>> entrySet() {
+                        java.util.Set<java.util.Map.Entry<Object, Object>> set =
+                                new java.util.HashSet<>();
+                        set.add(new java.util.AbstractMap.SimpleEntry<>("key", null));
+                        return set;
+                    }
+                };
 
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> 
-            PropertyUtils.addProperties(destination, propsWithNullValue)
-        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> PropertyUtils.addProperties(destination, propsWithNullValue));
     }
 
     @Test
     void testConstructorThrowsException() {
         // Act & Assert
-        Exception exception = assertThrows(Exception.class, () -> {
-            // Use reflection to access private constructor
-            java.lang.reflect.Constructor<PropertyUtils> constructor = 
-                PropertyUtils.class.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            constructor.newInstance();
-        });
-        
+        Exception exception =
+                assertThrows(
+                        Exception.class,
+                        () -> {
+                            // Use reflection to access private constructor
+                            java.lang.reflect.Constructor<PropertyUtils> constructor =
+                                    PropertyUtils.class.getDeclaredConstructor();
+                            constructor.setAccessible(true);
+                            constructor.newInstance();
+                        });
+
         // The actual exception will be wrapped in InvocationTargetException
         assertTrue(exception.getCause() instanceof UnsupportedOperationException);
     }
@@ -193,7 +198,7 @@ class PropertyUtilsTest {
 
         // Assert
         assertNotSame(properties, result); // Should be different instances
-        
+
         // Modify original and verify copy is unaffected
         properties.setProperty("key1", "modified");
         assertEquals("value1", result.getProperty("key1")); // Copy should be unchanged
@@ -214,7 +219,6 @@ class PropertyUtilsTest {
         assertEquals("value", result.getProperty("existing"));
         assertEquals(1, result.size());
     }
-
 
     @Test
     void testSanitizePropertyValue() {
@@ -296,7 +300,8 @@ class PropertyUtilsTest {
         assertNotNull(PropertyUtils.copyProperties(null));
 
         // Test null destination properties
-        assertThrows(IllegalArgumentException.class, () ->
-                PropertyUtils.addProperties(null, new Properties()));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> PropertyUtils.addProperties(null, new Properties()));
     }
 }

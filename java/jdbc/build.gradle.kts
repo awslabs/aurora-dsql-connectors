@@ -84,7 +84,7 @@ tasks.named<Jar>("jar") {
         attributes(
             "Implementation-Title" to "Aurora DSQL JDBC Connector",
             "Implementation-Version" to version,
-            "Implementation-Vendor" to "Amazon Web Services"
+            "Implementation-Vendor" to "Amazon Web Services",
         )
     }
 }
@@ -167,17 +167,24 @@ publishing {
                     }
                 }
 
-                properties.set(mapOf(
-                    "maven.compiler.source" to targetJavaVersion.toString(),
-                    "maven.compiler.target" to targetJavaVersion.toString()
-                ))
+                properties.set(
+                    mapOf(
+                        "maven.compiler.source" to targetJavaVersion.toString(),
+                        "maven.compiler.target" to targetJavaVersion.toString(),
+                    ),
+                )
             }
         }
     }
 
     repositories {
         maven {
-            url = layout.buildDirectory.dir("staging-deploy").get().asFile.toURI()
+            url =
+                layout.buildDirectory
+                    .dir("staging-deploy")
+                    .get()
+                    .asFile
+                    .toURI()
         }
     }
 }
@@ -187,7 +194,9 @@ if ("UPLOAD".equals(System.getenv("JRELEASER_MAVENCENTRAL_STAGE"))) {
         project {
             name.set("aurora-dsql-jdbc-connector")
             description.set("A PgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
-            longDescription.set("The Aurora DSQL JDBC Connector is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.")
+            longDescription.set(
+                "The Aurora DSQL JDBC Connector is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.",
+            )
             links {
                 homepage.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
             }

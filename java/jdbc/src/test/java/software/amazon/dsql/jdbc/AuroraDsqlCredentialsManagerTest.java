@@ -16,13 +16,6 @@
 
 package software.amazon.dsql.jdbc;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.AfterEach;
-
-import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -30,6 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 class AuroraDsqlCredentialsManagerTest {
 
@@ -52,7 +50,8 @@ class AuroraDsqlCredentialsManagerTest {
 
         // Assert
         assertNotNull(result);
-        // Should be DefaultCredentialsProvider (we can't easily test the exact type without more setup)
+        // Should be DefaultCredentialsProvider (we can't easily test the exact type without more
+        // setup)
     }
 
     @Test
@@ -107,7 +106,7 @@ class AuroraDsqlCredentialsManagerTest {
         // Act
         AuroraDsqlCredentialsManager.setProvider(provider1);
         AwsCredentialsProvider firstResult = AuroraDsqlCredentialsManager.getProvider();
-        
+
         AuroraDsqlCredentialsManager.setProvider(provider2);
         AwsCredentialsProvider secondResult = AuroraDsqlCredentialsManager.getProvider();
 
@@ -124,23 +123,27 @@ class AuroraDsqlCredentialsManagerTest {
         AwsCredentialsProvider provider2 = mock(AwsCredentialsProvider.class);
 
         // Act
-        Thread thread1 = new Thread(() -> {
-            AuroraDsqlCredentialsManager.setProvider(provider1);
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
+        Thread thread1 =
+                new Thread(
+                        () -> {
+                            AuroraDsqlCredentialsManager.setProvider(provider1);
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        });
 
-        Thread thread2 = new Thread(() -> {
-            AuroraDsqlCredentialsManager.setProvider(provider2);
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
+        Thread thread2 =
+                new Thread(
+                        () -> {
+                            AuroraDsqlCredentialsManager.setProvider(provider2);
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        });
 
         thread1.start();
         thread2.start();
@@ -170,14 +173,19 @@ class AuroraDsqlCredentialsManagerTest {
     @Test
     void testConstructorThrowsException() {
         // Act & Assert
-        Exception exception = assertThrows(Exception.class, () -> {
-            // Use reflection to access private constructor
-            java.lang.reflect.Constructor<AuroraDsqlCredentialsManager> constructor = 
-                AuroraDsqlCredentialsManager.class.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            constructor.newInstance();
-        });
-        
+        Exception exception =
+                assertThrows(
+                        Exception.class,
+                        () -> {
+                            // Use reflection to access private constructor
+                            java.lang.reflect.Constructor<AuroraDsqlCredentialsManager>
+                                    constructor =
+                                            AuroraDsqlCredentialsManager.class
+                                                    .getDeclaredConstructor();
+                            constructor.setAccessible(true);
+                            constructor.newInstance();
+                        });
+
         // The actual exception will be wrapped in InvocationTargetException
         assertTrue(exception.getCause() instanceof UnsupportedOperationException);
     }
@@ -193,7 +201,7 @@ class AuroraDsqlCredentialsManagerTest {
         AuroraDsqlCredentialsManager.setProvider(provider2);
         AuroraDsqlCredentialsManager.setProvider(null);
         AuroraDsqlCredentialsManager.resetProvider();
-        
+
         AwsCredentialsProvider result = AuroraDsqlCredentialsManager.getProvider();
 
         // Assert

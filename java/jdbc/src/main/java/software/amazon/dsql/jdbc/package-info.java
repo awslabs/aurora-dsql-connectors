@@ -16,8 +16,8 @@
 
 /**
  * Aurora DSQL JDBC Connector package.
- * 
- * This package provides a JDBC Connector for Amazon Aurora DSQL that handles
- * IAM authentication, token management, and long-lived connections.
+ *
+ * <p>This package provides a JDBC Connector for Amazon Aurora DSQL that handles IAM authentication,
+ * token management, and long-lived connections.
  */
 package software.amazon.dsql.jdbc;

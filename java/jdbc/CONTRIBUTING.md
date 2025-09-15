@@ -135,10 +135,10 @@ import java.sql.*;
 void testMethodName_WhenCondition_ThenExpectedResult() {
     // Arrange
     String input = "test input";
-    
+
     // Act
     String result = methodUnderTest(input);
-    
+
     // Assert
     assertEquals("expected", result);
 }
@@ -164,14 +164,14 @@ All public APIs must include comprehensive Javadoc:
 ```java
 /**
  * Creates a connection to Aurora DSQL with automatic token management.
- * 
+ *
  * <p>This method handles:
  * <ul>
  *   <li>IAM token generation and refresh</li>
  *   <li>Connection lifetime management (60-minute limit)</li>
  *   <li>Prepared statement re-preparation on connection refresh</li>
  * </ul>
- * 
+ *
  * @param url the Aurora DSQL cluster endpoint URL
  * @param properties connection properties including user and token settings
  * @return a connection connector with automatic management features

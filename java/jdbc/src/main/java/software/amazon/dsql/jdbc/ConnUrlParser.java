@@ -16,13 +16,12 @@
 
 package software.amazon.dsql.jdbc;
 
-import software.amazon.awssdk.utils.StringUtils;
-
-import javax.annotation.Nonnull;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Properties;
+import javax.annotation.Nonnull;
+import software.amazon.awssdk.utils.StringUtils;
 
 public final class ConnUrlParser {
 
@@ -31,17 +30,19 @@ public final class ConnUrlParser {
     private static final String CONNECTOR_POSTGRESQL_PREFIX = "jdbc:aws-dsql:postgresql://";
 
     private ConnUrlParser() {
-        throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
+        throw new UnsupportedOperationException(
+                "This is a utility class and cannot be instantiated");
     }
 
     /**
      * Parse properties from URL and add them to the provided Properties object.
      *
-     * @param url   URL to parse
+     * @param url URL to parse
      * @param props Properties object to add parsed properties to
      * @throws URISyntaxException if the URL is invalid
      */
-    public static void parsePropertiesFromUrl(final String url, @Nonnull final Properties props) throws URISyntaxException {
+    public static void parsePropertiesFromUrl(final String url, @Nonnull final Properties props)
+            throws URISyntaxException {
         if (url == null) {
             return;
         }
@@ -50,7 +51,9 @@ public final class ConnUrlParser {
         final URI connUrl = new URI(cleanUrl);
 
         // Extract database name from path if present and not already set in properties
-        if (props.getProperty("database") == null && connUrl.getPath() != null && !connUrl.getPath().isEmpty()) {
+        if (props.getProperty("database") == null
+                && connUrl.getPath() != null
+                && !connUrl.getPath().isEmpty()) {
             final String database = connUrl.getPath().substring(1); // Remove leading '/'
             props.setProperty("database", database);
         }
@@ -76,13 +79,14 @@ public final class ConnUrlParser {
     /**
      * Converts a DSQL URL to a full JDBC URL with database and parameters.
      *
-     * @param url   DSQL URL (with or without jdbc: prefix, with or without database)
+     * @param url DSQL URL (with or without jdbc: prefix, with or without database)
      * @param props Properties containing connection parameters
      * @return Full JDBC URL with database and parameters
      * @throws SQLException if URL conversion fails
      */
     @Nonnull
-    public static String convertToFullJdbcUrl(final String url, @Nonnull final Properties props) throws SQLException {
+    public static String convertToFullJdbcUrl(final String url, @Nonnull final Properties props)
+            throws SQLException {
         if (url == null) {
             throw new SQLException("URL is null");
         }
@@ -95,7 +99,6 @@ public final class ConnUrlParser {
             String cleanUrl = url.substring(CONNECTOR_POSTGRESQL_PREFIX.length());
 
             // Handle jdbc:aws-dsql:postgresql:// prefix
-
 
             // Parse as postgresql:// URL
             final String uriString = "postgresql://" + cleanUrl;
@@ -135,8 +138,8 @@ public final class ConnUrlParser {
     }
 
     /**
-     * Checks if the URL is a valid Aurora DSQL URL.
-     * Only accepts jdbc:aws-dsql:postgresql:// connector prefix with valid DSQL hostname.
+     * Checks if the URL is a valid Aurora DSQL URL. Only accepts jdbc:aws-dsql:postgresql://
+     * connector prefix with valid DSQL hostname.
      *
      * @param url URL to check
      * @return true if the URL is a valid Aurora DSQL URL
