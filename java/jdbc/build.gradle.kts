@@ -7,6 +7,7 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("jacoco")
+    id("com.diffplug.spotless") version "7.2.1"
     id("com.github.spotbugs") version "6.3.+"
     id("org.jreleaser") version "1.20.0"
 }
@@ -48,6 +49,29 @@ java {
     }
     withJavadocJar()
     withSourcesJar()
+}
+
+spotless {
+    format("misc") {
+        target("*.properties", "*.gradle", "*.md", ".gitignore")
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    java {
+        target("src/**/*.java", "integration-tests/src/**/*.java")
+        licenseHeaderFile(".license-headers/java.txt")
+        googleJavaFormat().aosp()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("**/*.kts")
+        licenseHeaderFile(".license-headers/kotlin.txt", "^(?!\\s*//)")
+        ktlint()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 tasks.named<Javadoc>("javadoc") {
@@ -103,10 +127,8 @@ tasks.register<Test>("integrationTest") {
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.release = targetJavaVersion
+    options.compilerArgs.addAll(listOf("-Werror", "-Xlint:deprecation", "-Xlint:-options"))
 }
-
-// SpotBugs configuration temporarily disabled for Brazil build compatibility
-// TODO: Re-enable SpotBugs configuration once Brazil build environment supports external plugin repositories
 
 publishing {
     publications {
@@ -182,7 +204,7 @@ if ("UPLOAD".equals(System.getenv("JRELEASER_MAVENCENTRAL_STAGE"))) {
         deploy {
             maven {
                 mavenCentral {
-                    create("sonatype") {
+                    register("sonatype") {
                         active.set(org.jreleaser.model.Active.ALWAYS)
                         url.set("https://central.sonatype.com/api/v1/publisher")
                         stagingRepository("build/staging-deploy")
