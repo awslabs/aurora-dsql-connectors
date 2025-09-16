@@ -54,7 +54,6 @@ jobs:
       env:
         CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
-        RUN_INTEGRATION: "TRUE"
       run: |
         ./gradlew build -i
         ./gradlew publishToMavenLocal
@@ -64,6 +63,5 @@ jobs:
         CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
         CLUSTER_USER: "admin"
-        RUN_INTEGRATION: "TRUE"
       run: |
-        ./gradlew test --tests "BasicConnectionIntegrationTest" -i
+        ./gradlew integrationTest

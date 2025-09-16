@@ -12,7 +12,6 @@ plugins {
 }
 
 group = "software.amazon.dsql"
-version = "1.0.0"
 
 repositories {
     mavenCentral()
@@ -82,42 +81,21 @@ tasks.named<Test>("test") {
     // Set test timeout
     systemProperty("junit.jupiter.execution.timeout.default", "5m")
     systemProperty("junit.jupiter.execution.timeout.testable.method.default", "2m")
+    
+    // Always run when invoked directly
+    outputs.upToDateWhen { 
+        gradle.startParameter.taskNames.none { it == "test" || it == ":test" }
+    }
 }
 
 // Task specifically for integration tests
 tasks.register<Test>("integrationTest") {
     description = "Runs integration tests against live Aurora DSQL cluster"
     group = "verification"
-
-    useJUnitPlatform {
-        includeTags("integration")
-    }
-
-    // Only run integration tests
-    include("**/integration/**")
-
-    // Set integration test environment
-    systemProperty("RUN_INTEGRATION", "TRUE")
-    systemProperty("CLUSTER_ENDPOINT", System.getenv("CLUSTER_ENDPOINT") ?: "")
-    systemProperty("REGION", System.getenv("REGION") ?: "")
-    systemProperty("CLUSTER_USER", System.getenv("CLUSTER_USER") ?: "")
-
-    // Configure test execution for integration tests
-    testLogging {
-        events("passed", "skipped", "failed", "standardOut", "standardError")
-        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
-        showStandardStreams = true
-    }
-
-    // Longer timeouts for integration tests
-    systemProperty("junit.jupiter.execution.timeout.default", "10m")
-    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "5m")
-
-    // Fail fast on first failure for CI/CD
-    failFast = true
-
-    // Ensure build completes before running integration tests
-    dependsOn("build")
+    
+    System.setProperty("runIntegrationTests", "true")
+    
+    dependsOn(":integration-tests:test")
 }
 
 tasks.withType<JavaCompile> {

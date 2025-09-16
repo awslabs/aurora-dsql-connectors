@@ -3,7 +3,6 @@ package software.amazon.dsql.jdbc.integration;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.condition.EnabledIf;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -24,19 +23,11 @@ import static org.junit.jupiter.api.Assertions.*;
  * - CLUSTER_USER: Database user (default: admin)
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@EnabledIf("isIntegrationTestEnabled")
 public class BasicConnectionIntegrationTest {
 
     private static final String CLUSTER_ENDPOINT = System.getenv("CLUSTER_ENDPOINT");
     private static final String REGION = System.getenv("REGION");
     private static final String CLUSTER_USER = System.getenv("CLUSTER_USER");
-    private static final String RUN_INTEGRATION = System.getenv("RUN_INTEGRATION");
-
-    static boolean isIntegrationTestEnabled() {
-        return "TRUE".equalsIgnoreCase(RUN_INTEGRATION) && 
-               CLUSTER_ENDPOINT != null && 
-               REGION != null;
-    }
 
     @BeforeAll
     void setUp() {

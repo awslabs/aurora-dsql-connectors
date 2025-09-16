@@ -2,3 +2,5 @@
 // SPDX-License-Identifier: Apache-2.0
 
 rootProject.name = "aurora-dsql-jdbc-connector"
+
+include("integration-tests")
