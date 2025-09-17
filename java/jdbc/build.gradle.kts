@@ -13,6 +13,7 @@ plugins {
 }
 
 group = "software.amazon.dsql"
+version = System.getenv("PROJECT_VERSION") ?: "0.0.0-SNAPSHOT"
 
 val targetJavaVersion = project.property("targetJavaVersion").toString().toInt()
 

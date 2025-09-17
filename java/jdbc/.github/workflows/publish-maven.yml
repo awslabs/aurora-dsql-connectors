@@ -2,7 +2,6 @@ name: Deploy to Maven Central
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 jobs:
   deploy:
@@ -20,10 +19,12 @@ jobs:
           distribution: 'corretto'
       - name: Deploy to Central Portal
         run: |
+          echo "Publishing version: $PROJECT_VERSION"
           ./gradlew build
           ./gradlew publish
           ./gradlew jreleaserDeploy
         env:
+          PROJECT_VERSION: ${{ github.event.release.tag_name }}
           JRELEASER_MAVENCENTRAL_STAGE: 'UPLOAD'
           JRELEASER_GPG_PUBLIC_KEY: |
             ${{ secrets.GPG_PUBLIC_KEY }}
