@@ -40,8 +40,8 @@ GitHub provides additional document on [forking a repository](https://help.githu
 
 ### Prerequisites
 
-* Java 17 or higher
-* Gradle 8.13 or higher (included via Gradle connector)
+* Java 24 or higher
+* Gradle 8.14 or higher (included via Gradle connector)
 * Git
 
 ### Building the Project

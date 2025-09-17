@@ -7,7 +7,7 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("jacoco")
-    id("com.github.spotbugs") version "6.1.+"
+    id("com.github.spotbugs") version "6.3.+"
     id("org.jreleaser") version "1.19.0"
 }
 
@@ -31,6 +31,8 @@ dependencies {
     implementation("com.github.spotbugs:spotbugs-annotations:4.7.3")
 
     // Test dependencies
+    testImplementation("net.bytebuddy:byte-buddy-agent:1.17.7")
+    testImplementation("net.bytebuddy:byte-buddy:1.17.7")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
     testImplementation("software.amazon.awssdk:regions:2.31.32")
@@ -44,7 +46,7 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(24)
     }
     withJavadocJar()
     withSourcesJar()
