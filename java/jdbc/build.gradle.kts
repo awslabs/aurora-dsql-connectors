@@ -1,7 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+import com.diffplug.spotless.FormatterFunc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
+import java.io.Serializable
 
 plugins {
     id("java-library")
@@ -65,6 +67,17 @@ spotless {
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
+        custom(
+            "Refuse wildcard imports",
+            object : Serializable, FormatterFunc {
+                override fun apply(input: String): String {
+                    if (input.contains("\nimport .*\\*;".toRegex())) {
+                        throw GradleException("No wildcard imports allowed.")
+                    }
+                    return input
+                }
+            },
+        )
     }
     kotlinGradle {
         target("**/*.kts")

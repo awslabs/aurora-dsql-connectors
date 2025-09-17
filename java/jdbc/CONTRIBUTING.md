@@ -74,7 +74,7 @@ The project includes both unit tests and integration tests:
 ./gradlew test
 
 # Run tests for a specific class
-./gradlew test --tests "AuroraDsqlConnectionConnectorTest"
+./gradlew test --tests "AuroraDsqlCredentialsManagerTest"
 
 # Run tests with coverage
 ./gradlew test jacocoTestReport
@@ -85,22 +85,19 @@ Integration tests require a real Aurora DSQL cluster and AWS credentials:
 
 ```bash
 # Set required environment variables
-export AURORA_DSQL_ENDPOINT=your-cluster-endpoint.dsql.us-east-1.on.aws
-export AWS_REGION=us-east-1
+export CLUSTER_ENDPOINT=your-cluster-endpoint.dsql.us-east-1.on.aws
+export REGION=us-east-1
+
+# Optional: Set custom user (defaults to 'admin')
+export CLUSTER_USER=your-username
 
 # Run integration tests
-./gradlew test --tests "*IntegrationTest"
+./gradlew integrationTest
 ```
 
 ### Code Style and Quality
 
-This project follows specific coding standards:
-
-#### Code Style
-* Use 4 spaces for indentation (no tabs)
-* Maximum line length of 120 characters
-* No wildcard imports - use explicit imports only
-* Follow Google Java Style Guide conventions
+This project follows specific coding standards, which are defined by Spotless.
 
 #### Quality Checks
 ```bash
@@ -109,6 +106,12 @@ This project follows specific coding standards:
 
 # Run SpotBugs analysis
 ./gradlew spotbugsMain spotbugsTest
+
+# Run Spotless checks
+./gradlew spotlessCheck
+
+# Apply Spotless fixes
+./gradlew spotlessApply
 
 # Generate code coverage report
 ./gradlew jacocoTestReport
@@ -145,7 +148,6 @@ void testMethodName_WhenCondition_ThenExpectedResult() {
 ```
 
 #### Integration Test Requirements
-* Use `@EnabledIfSystemProperty` for conditional execution
 * Clean up resources in `@AfterEach` methods
 * Use realistic test data
 * Test with actual Aurora DSQL connections

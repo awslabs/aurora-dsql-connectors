@@ -56,10 +56,10 @@ implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:1.0.0")
 
 ## Dependencies
 
-The Aurora DSQL JDBC crapper requires the following dependencies to function properly:
+The Aurora DSQL JDBC Connector requires the following dependencies to function properly:
 
 ### Required Dependencies
-Below dependencies are automatically included when you add the Aurora DSQL JDBC crapper to your project:
+Below dependencies are automatically included when you add the Aurora DSQL JDBC Connector to your project:
 
 ```xml
 <!-- PostgreSQL JDBC Driver -->
@@ -87,7 +87,7 @@ implementation("software.amazon.awssdk:dsql:2.33.8")
 - **PostgreSQL JDBC Driver**: Provides the underlying PostgreSQL connectivity that Aurora DSQL is compatible with
 - **AWS SDK for Aurora DSQL**: Enables IAM authentication token generation for Aurora DSQL clusters
 
-**Note**: You don't need to explicitly add these dependencies to your project when using the Aurora DSQL JDBC Crapper, as they are included transitively. However, if you want to control the versions or have specific requirements, you can declare them explicitly in your build file.
+**Note**: You don't need to explicitly add these dependencies to your project when using the Aurora DSQL JDBC Connector, as they are included transitively. However, if you want to control the versions or have specific requirements, you can declare them explicitly in your build file.
 
 ## Connection Methods
 
