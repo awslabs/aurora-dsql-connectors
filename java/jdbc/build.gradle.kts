@@ -31,7 +31,7 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.7")
 
     // Annotation dependencies for @Nullable, @Nonnull, etc.
-    implementation("com.github.spotbugs:spotbugs-annotations:4.9.4")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.4")
 
     // Test dependencies
     testImplementation("net.bytebuddy:byte-buddy-agent:1.17.7")
