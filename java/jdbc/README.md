@@ -41,53 +41,29 @@ For more information on how to download the Aurora DSQL JDBC Connector, minimum 
 - AWS credentials configured (via AWS CLI, environment variables, or IAM roles)
 
 ### Maven Central
+The latest version is available on [Maven Central](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector). Check Maven Central or the badge at the top of the `README.md` for the latest version.
+
 ```xml
 <dependency>
     <groupId>software.amazon.dsql</groupId>
     <artifactId>aurora-dsql-jdbc-connector</artifactId>
-    <version>1.0.0</version>
+    <version><!-- See Maven Central for latest version --></version>
 </dependency>
 ```
 
 ### Gradle Dependency
 ```kotlin
-implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:1.0.0")
+implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:VERSION")
 ```
 
 ## Dependencies
 
-The Aurora DSQL JDBC Connector requires the following dependencies to function properly:
+The Aurora DSQL JDBC Connector automatically includes all necessary dependencies when added to your project:
 
-### Required Dependencies
-Below dependencies are automatically included when you add the Aurora DSQL JDBC Connector to your project:
-
-```xml
-<!-- PostgreSQL JDBC Driver -->
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <version>42.7.7</version>
-</dependency>
-
-<!-- AWS SDK for Aurora DSQL -->
-<dependency>
-    <groupId>software.amazon.awssdk</groupId>
-    <artifactId>dsql</artifactId>
-    <version>2.33.8</version>
-</dependency>
-```
-
-Or in Gradle:
-```kotlin
-implementation("org.postgresql:postgresql:42.7.7")
-implementation("software.amazon.awssdk:dsql:2.33.8")
-```
-
-### What These Dependencies Provide
 - **PostgreSQL JDBC Driver**: Provides the underlying PostgreSQL connectivity that Aurora DSQL is compatible with
 - **AWS SDK for Aurora DSQL**: Enables IAM authentication token generation for Aurora DSQL clusters
 
-**Note**: You don't need to explicitly add these dependencies to your project when using the Aurora DSQL JDBC Connector, as they are included transitively. However, if you want to control the versions or have specific requirements, you can declare them explicitly in your build file.
+These dependencies are included transitively, so you don't need to add them explicitly to your build file. The specific versions and dependency tree can be found in the project's [build.gradle.kts](build.gradle.kts) file, or on [Maven Central](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector).
 
 ## Connection Methods
 
@@ -204,9 +180,9 @@ This project uses Gradle 8.13 and follows the same build patterns as other AWS A
 ### Build Artifacts
 
 The build generates the following artifacts:
-- `aurora-dsql-jdbc-connector-1.0.0.jar` - Main library JAR
-- `aurora-dsql-jdbc-connector-1.0.0-sources.jar` - Source code JAR
-- `aurora-dsql-jdbc-connector-1.0.0-javadoc.jar` - Javadoc JAR
+- `aurora-dsql-jdbc-connector-<VERSION>.jar` - Main library JAR
+- `aurora-dsql-jdbc-connector-<VERSION>-sources.jar` - Source code JAR
+- `aurora-dsql-jdbc-connector-<VERSION>-javadoc.jar` - Javadoc JAR
 
 ### Code Quality
 
