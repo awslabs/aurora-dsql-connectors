@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     // Allow subproject to build standalone if the dependency is published in mavenLocal.
-    if (System.getenv("PROJECT_VERSION") != null) {
+    if (System.getenv("USE_MAVEN_LOCAL") != null) {
         testImplementation("software.amazon.dsql:aurora-dsql-jdbc-connector:${System.getenv("PROJECT_VERSION")}")
     } else {
         testImplementation(project(":"))
