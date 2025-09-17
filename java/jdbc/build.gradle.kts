@@ -8,7 +8,7 @@ plugins {
     id("maven-publish")
     id("jacoco")
     id("com.github.spotbugs") version "6.3.+"
-    id("org.jreleaser") version "1.19.0"
+    id("org.jreleaser") version "1.20.0"
 }
 
 group = "software.amazon.dsql"
@@ -21,26 +21,24 @@ repositories {
 
 dependencies {
     // AWS SDK for Aurora DSQL
-    implementation("software.amazon.awssdk:dsql:2.31.32")
+    implementation("software.amazon.awssdk:dsql:2.33.8")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector
     implementation("org.postgresql:postgresql:42.7.7")
 
     // Annotation dependencies for @Nullable, @Nonnull, etc.
-    implementation("javax.annotation:javax.annotation-api:1.3.2")
-    implementation("com.github.spotbugs:spotbugs-annotations:4.7.3")
+    implementation("com.github.spotbugs:spotbugs-annotations:4.9.4")
 
     // Test dependencies
     testImplementation("net.bytebuddy:byte-buddy-agent:1.17.7")
     testImplementation("net.bytebuddy:byte-buddy:1.17.7")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-    testImplementation("software.amazon.awssdk:regions:2.31.32")
-    testImplementation("software.amazon.awssdk:aws-core:2.31.32")
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
     testImplementation("org.mockito:mockito-junit-jupiter:5.1.1")
+    testImplementation("software.amazon.awssdk:regions:2.33.8")
 
-    // Runtime dependencies
+    // Runtime dependencies for tests
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

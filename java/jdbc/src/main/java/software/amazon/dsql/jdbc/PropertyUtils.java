@@ -16,8 +16,7 @@
 
 package software.amazon.dsql.jdbc;
 
-import edu.umd.cs.findbugs.annotations.NonNull;
-
+import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
@@ -29,7 +28,7 @@ public final class PropertyUtils {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
 
-    public static @NonNull Properties copyProperties(final Properties props) {
+    public static @Nonnull Properties copyProperties(final Properties props) {
         final Properties copy = new Properties();
 
         if (props == null) {
@@ -39,7 +38,7 @@ public final class PropertyUtils {
         return addProperties(copy, props);
     }
 
-    public static @NonNull Properties addProperties(
+    public static @Nonnull Properties addProperties(
             final Properties dest, final Properties propsToAdd) {
 
         if (dest == null) {

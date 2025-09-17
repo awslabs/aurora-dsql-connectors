@@ -73,14 +73,14 @@ Below dependencies are automatically included when you add the Aurora DSQL JDBC 
 <dependency>
     <groupId>software.amazon.awssdk</groupId>
     <artifactId>dsql</artifactId>
-    <version>2.31.32</version>
+    <version>2.33.8</version>
 </dependency>
 ```
 
 Or in Gradle:
 ```kotlin
 implementation("org.postgresql:postgresql:42.7.7")
-implementation("software.amazon.awssdk:dsql:2.31.32")
+implementation("software.amazon.awssdk:dsql:2.33.8")
 ```
 
 ### What These Dependencies Provide
