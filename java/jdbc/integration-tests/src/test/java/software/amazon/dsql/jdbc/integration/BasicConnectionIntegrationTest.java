@@ -5,7 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -187,7 +189,7 @@ public class BasicConnectionIntegrationTest {
             
             // Test prepared statement insertion
             String insertSql = "INSERT INTO prep_test (id, value) VALUES (?, ?)";
-            try (var pstmt = conn.prepareStatement(insertSql)) {
+            try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                 for (int i = 1; i <= 5; i++) {
                     pstmt.setInt(1, i);
                     pstmt.setString(2, "value_" + i);
@@ -197,7 +199,7 @@ public class BasicConnectionIntegrationTest {
             
             // Test prepared statement query
             String selectSql = "SELECT * FROM prep_test WHERE id = ?";
-            try (var pstmt = conn.prepareStatement(selectSql)) {
+            try (PreparedStatement pstmt = conn.prepareStatement(selectSql)) {
                 pstmt.setInt(1, 3);
                 try (ResultSet rs = pstmt.executeQuery()) {
                     assertTrue(rs.next(), "Result set should have at least one row");
@@ -215,8 +217,8 @@ public class BasicConnectionIntegrationTest {
         
         try (Connection conn = DriverManager.getConnection(url)) {
             assertNotNull(conn, "Connection should not be null");
-            
-            var metadata = conn.getMetaData();
+
+            DatabaseMetaData metadata = conn.getMetaData();
             assertNotNull(metadata, "Metadata should not be null");
             
             // Test basic metadata

@@ -40,6 +40,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -180,7 +181,7 @@ class DSQLConnectorTest {
 
         // Mock ConnWrapper to prevent actual network connection
         Connection mockConnection = mock(Connection.class);
-        try (var connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
+        try (MockedConstruction<ConnWrapper> connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
             when(mock.makeConnection()).thenReturn(mockConnection);
         })) {
             // Act
@@ -258,7 +259,7 @@ class DSQLConnectorTest {
 
         // Mock ConnWrapper to prevent actual network connection
         Connection mockConnection = mock(Connection.class);
-        try (var connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
+        try (MockedConstruction<ConnWrapper> connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
             when(mock.makeConnection()).thenReturn(mockConnection);
         })) {
             // Act
@@ -326,7 +327,7 @@ class DSQLConnectorTest {
         when(mockProperty1.toDriverPropertyInfo(any(Properties.class))).thenReturn(mockPropertyInfo1);
         when(mockProperty2.toDriverPropertyInfo(any(Properties.class))).thenReturn(mockPropertyInfo2);
 
-        try (var propertyDefinitionMock = mockStatic(PropertyDefinition.class)) {
+        try (MockedStatic<PropertyDefinition> propertyDefinitionMock = mockStatic(PropertyDefinition.class)) {
             propertyDefinitionMock.when(() -> PropertyDefinition.getAllProperties())
                     .thenReturn(Arrays.asList(mockProperty1, mockProperty2));
 
@@ -350,7 +351,7 @@ class DSQLConnectorTest {
         DriverPropertyInfo mockPropertyInfo = new DriverPropertyInfo("test", "value");
         when(mockProperty.toDriverPropertyInfo(any(Properties.class))).thenReturn(mockPropertyInfo);
 
-        try (var propertyDefinitionMock = mockStatic(PropertyDefinition.class)) {
+        try (MockedStatic<PropertyDefinition> propertyDefinitionMock = mockStatic(PropertyDefinition.class)) {
             propertyDefinitionMock.when(() -> PropertyDefinition.getAllProperties())
                     .thenReturn(Collections.singletonList(mockProperty));
 
@@ -405,7 +406,7 @@ class DSQLConnectorTest {
 
         // Mock ConnWrapper to prevent actual network connection
         Connection mockConnection = mock(Connection.class);
-        try (var connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
+        try (MockedConstruction<ConnWrapper> connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
             when(mock.makeConnection()).thenReturn(mockConnection);
         })) {
             // Act
@@ -436,7 +437,7 @@ class DSQLConnectorTest {
 
         // Mock ConnWrapper to prevent actual network connection
         Connection mockConnection = mock(Connection.class);
-        try (var connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
+        try (MockedConstruction<ConnWrapper> connWrapperMock = mockConstruction(ConnWrapper.class, (mock, context) -> {
             when(mock.makeConnection()).thenReturn(mockConnection);
         })) {
             // Act

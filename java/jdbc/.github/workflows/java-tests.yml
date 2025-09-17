@@ -1,0 +1,181 @@
+name: Aurora DSQL JDBC Connector Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'build.gradle.kts'
+      - '.github/workflows/java-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'build.gradle.kts'
+      - '.github/workflows/java-tests.yml'
+  # Give us a button to allow running the workflow on demand for testing.
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Manual Workflow Run'
+        required: false
+        type: string
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: "17"
+      target-versions: ${{ steps.versions.outputs.matrix }}
+    steps:
+      - id: versions
+        run: echo "matrix=[8, 11, 17]" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+   
+    - name: Set up JDK ${{ needs.setup.outputs.build-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ needs.setup.outputs.build-version }}
+        distribution: 'corretto'
+        architecture: x64
+        cache: gradle
+
+    - name: Build library
+      run: ./gradlew build -x test
+
+    - name: Publish to local repository
+      run: ./gradlew publishToMavenLocal
+
+    - name: Upload built artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-jars
+        path: ~/.m2/repository/software/amazon/dsql/aurora-dsql-jdbc-connector/
+
+  unit-tests:
+    name: Unit Tests
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+   
+    - name: Set up JDK ${{ needs.setup.outputs.build-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ needs.setup.outputs.build-version }}
+        distribution: 'corretto'
+        architecture: x64
+        cache: gradle
+
+    - name: Run unit tests
+      run: ./gradlew test
+
+  create-cluster:
+    name: Create Aurora DSQL Cluster
+    needs: [setup, unit-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    outputs:
+      cluster-id: ${{ steps.create.outputs.cluster-id }}
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
+        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+
+    - name: Create Aurora DSQL cluster
+      id: create
+      run: |
+        RESULT=$(aws dsql create-cluster \
+          --no-deletion-protection-enabled \
+          --region ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }} \
+          --tags Name=jdbc-connector-${{ github.run_id }})
+        CLUSTER_ID=$(echo "$RESULT" | jq -r '.identifier')
+        
+        aws dsql wait cluster-active \
+          --identifier "$CLUSTER_ID" \
+          --region ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        
+        echo "cluster-id=$CLUSTER_ID" >> $GITHUB_OUTPUT
+
+  integration-tests:
+    name: Integration Tests (Java ${{ matrix.jvm-version }})
+    needs: [setup, create-cluster]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        jvm-version: ${{ fromJson(needs.setup.outputs.target-versions) }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ matrix.jvm-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ matrix.jvm-version }}
+        distribution: 'corretto'
+        architecture: x64
+        cache: gradle
+
+    - name: Download built artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: built-jars
+        path: ~/.m2/repository/software/amazon/dsql/aurora-dsql-jdbc-connector/
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
+        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+
+    - name: Run integration tests
+      working-directory: integration-tests
+      env:
+        REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
+        CLUSTER_USER: "admin"
+      run: |
+        ../gradlew test
+
+  delete-cluster:
+    name: Delete Aurora DSQL Cluster
+    needs: [setup, create-cluster, integration-tests]
+    runs-on: ubuntu-latest
+    if: always() && needs.create-cluster.result == 'success'
+    permissions:
+      id-token: write
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
+        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+
+    - name: Delete Aurora DSQL cluster
+      run: |
+        aws dsql delete-cluster \
+          --identifier "${{ needs.create-cluster.outputs.cluster-id }}" \
+          --region ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }} \
+          > /dev/null

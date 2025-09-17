@@ -36,7 +36,7 @@ The Aurora DSQL JDBC Connector works with connection pooling libraries such as H
 For more information on how to download the Aurora DSQL JDBC Connector, minimum requirements to use it, and how to integrate it within your project, please refer to the sections below.
 
 ### Prerequisites
-- Java 17 or higher
+- Java 8 or higher
 - An existing Aurora DSQL cluster with `Active` status
 - AWS credentials configured (via AWS CLI, environment variables, or IAM roles)
 
