@@ -1,5 +1,6 @@
 # Aurora DSQL JDBC Connector
 [![Maven Central Version](https://img.shields.io/maven-central/v/software.amazon.dsql/aurora-dsql-jdbc-connector?style=for-the-badge)](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector)
+[![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg?style=for-the-badge)](https://javadoc.io/doc/software.amazon.dsql/aurora-dsql-jdbc-connector/latest/software/amazon/dsql/jdbc/package-summary.html)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
 
 A PgJDBC connector that integrates IAM Authentication for connecting Java applications to Amazon Aurora DSQL clusters.
