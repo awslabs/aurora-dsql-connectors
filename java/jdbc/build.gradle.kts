@@ -138,10 +138,68 @@ tasks.register<Test>("integrationTest") {
     dependsOn(":integration-tests:test")
 }
 
+// Captures the version number in the jar so it can be provided on request.
+tasks.register("generateVersionClass") {
+    val outputDir = layout.buildDirectory.dir("generated/sources/version/java")
+    val versionFile = outputDir.get().file("software/amazon/dsql/jdbc/Version.java")
+
+    inputs.property("version", version)
+    outputs.file(versionFile)
+
+    doLast {
+        val versionRegex = """(\d+)\.(\d+)\.(\d+)(?:-.+)?""".toRegex()
+
+        val versionStr = version.toString()
+        val matchResult =
+            versionRegex.matchEntire(versionStr)
+                ?: throw GradleException("Invalid version format: '$versionStr'")
+
+        val (majorStr, minorStr, patchStr) = matchResult.destructured
+        val major = majorStr.toInt()
+        val minor = minorStr.toInt()
+        val patch = patchStr.toInt()
+
+        versionFile.asFile.parentFile.mkdirs()
+        versionFile.asFile.writeText(
+            """
+            package software.amazon.dsql.jdbc;
+
+            /**
+             * Version information for Aurora DSQL JDBC Connector.
+             * Generated automatically during build.
+             */
+            public final class Version {
+                public static final int MAJOR = $major;
+                public static final int MINOR = $minor;
+                public static final int PATCH = $patch;
+                public static final String FULL = "$versionStr";
+
+                private Version() {
+                    // Prevent construction of utility class.
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir(layout.buildDirectory.dir("generated/sources/version/java"))
+        }
+    }
+}
+
 tasks.withType<JavaCompile> {
+    dependsOn("generateVersionClass")
     options.encoding = "UTF-8"
     options.release = targetJavaVersion
     options.compilerArgs.addAll(listOf("-Werror", "-Xlint:deprecation", "-Xlint:-options"))
+}
+
+tasks.named("sourcesJar") {
+    dependsOn("generateVersionClass")
 }
 
 publishing {

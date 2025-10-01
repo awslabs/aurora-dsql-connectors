@@ -171,12 +171,30 @@ public class DSQLConnector implements java.sql.Driver {
 
     @Override
     public int getMajorVersion() {
-        return 1;
+        return Version.MAJOR;
     }
 
     @Override
     public int getMinorVersion() {
-        return 0;
+        return Version.MINOR;
+    }
+
+    /**
+     * Provides the patch version of this driver.
+     *
+     * @return the patch version number
+     */
+    public int getPatchVersion() {
+        return Version.PATCH;
+    }
+
+    /**
+     * Provides the full version string of this driver (e.g., "1.2.3" or "1.2.3-SNAPSHOT").
+     *
+     * @return the full version string
+     */
+    public String getVersion() {
+        return Version.FULL;
     }
 
     @Override

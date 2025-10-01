@@ -415,12 +415,22 @@ class DSQLConnectorTest {
 
     @Test
     void testGetMajorVersion() {
-        assertEquals(1, driver.getMajorVersion());
+        assertEquals(Version.MAJOR, driver.getMajorVersion());
     }
 
     @Test
     void testGetMinorVersion() {
-        assertEquals(0, driver.getMinorVersion());
+        assertEquals(Version.MINOR, driver.getMinorVersion());
+    }
+
+    @Test
+    void testGetPatchVersion() {
+        assertEquals(Version.PATCH, driver.getPatchVersion());
+    }
+
+    @Test
+    void testGetDriverVersion() {
+        assertEquals(Version.FULL, driver.getVersion());
     }
 
     @Test
