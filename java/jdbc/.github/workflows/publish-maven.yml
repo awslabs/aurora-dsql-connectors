@@ -1,4 +1,7 @@
 name: Deploy to Maven Central
+
+permissions: {}
+
 on:
   release:
     types: [published]
@@ -6,10 +9,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 24

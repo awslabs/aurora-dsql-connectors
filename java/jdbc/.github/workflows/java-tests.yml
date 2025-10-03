@@ -1,7 +1,6 @@
 name: Aurora DSQL JDBC Connector Tests
 
-permissions:
-  contents: read
+permissions: {}
 
 on:
   push:
@@ -89,7 +88,7 @@ jobs:
     needs: [setup, unit-tests]
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write # required by aws-actions/configure-aws-credentials
     outputs:
       cluster-id: ${{ steps.create.outputs.cluster-id }}
     steps:
@@ -119,7 +118,7 @@ jobs:
     needs: [setup, create-cluster]
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write # required by aws-actions/configure-aws-credentials
     strategy:
       max-parallel: 1
       fail-fast: true
@@ -167,7 +166,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && needs.create-cluster.result == 'success'
     permissions:
-      id-token: write
+      id-token: write # required by aws-actions/configure-aws-credentials
     steps:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
