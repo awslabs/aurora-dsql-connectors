@@ -167,6 +167,8 @@ tasks.register("generateVersionClass") {
             /**
              * Version information for Aurora DSQL JDBC Connector.
              * Generated automatically during build.
+             *
+             * @since 1.1.1
              */
             public final class Version {
                 public static final int MAJOR = $major;

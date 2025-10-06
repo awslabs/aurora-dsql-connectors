@@ -34,8 +34,44 @@ import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 
 /**
- * DSQLConnector is a package that allows Aurora DSQL developers to access Aurora DSQL cluster while
- * using this interface
+ * JDBC {@link Driver} implementation that intercepts connection requests and injects IAM
+ * authentication tokens.
+ *
+ * <p>This class serves as the main entry point for JDBC connections to Aurora DSQL. It implements
+ * the standard JDBC {@link Driver} interface and is automatically registered with {@link
+ * DriverManager} during class initialization. The driver intercepts {@link #connect(String,
+ * Properties)} calls, generates IAM authentication tokens, and delegates to the PostgreSQL JDBC
+ * driver with the temporary token set as the password.
+ *
+ * <h3>Driver Registration</h3>
+ *
+ * <p>The driver self-registers during class loading via a static initializer block. This means no
+ * explicit registration is needed, having the driver on the classpath is sufficient:
+ *
+ * <pre>{@code
+ * // No explicit registration needed
+ * Connection conn = DriverManager.getConnection(url, props);
+ * }</pre>
+ *
+ * <p>Manual control over registration is available through {@link #register()}, {@link
+ * #deregister()}, and {@link #isRegistered()} for advanced scenarios.
+ *
+ * <h3>Credentials Sources</h3>
+ *
+ * <p>The driver uses AWS credentials to generate short-lived IAM authentication tokens. Credentials
+ * can be sourced from:
+ *
+ * <ul>
+ *   <li>The default AWS profile
+ *   <li>A configurable AWS profile specified via the {@code profile} connection property
+ *   <li>A custom credentials provider configured through {@link AuroraDsqlCredentialsManager} for
+ *       advanced use cases
+ * </ul>
+ *
+ * <p>See {@link #connect(String, Properties)} for more details on configuring the driver and the
+ * connection procedure.
+ *
+ * @since 1.0.0
  */
 public class DSQLConnector implements java.sql.Driver {
 
@@ -51,6 +87,20 @@ public class DSQLConnector implements java.sql.Driver {
         }
     }
 
+    /**
+     * Manually registers this driver with the JDBC {@link DriverManager}.
+     *
+     * <p>This method is typically not needed as the driver automatically registers itself during
+     * class initialization via the static initializer block. Manual registration is only necessary
+     * in scenarios where the driver has been explicitly deregistered and needs to be re-registered.
+     *
+     * <p><b>Thread Safety:</b> This method is not thread-safe. Callers must ensure synchronization
+     * if concurrent access is possible.
+     *
+     * @throws IllegalStateException if the driver is already registered
+     * @see #deregister()
+     * @see #isRegistered()
+     */
     public static void register() throws SQLException {
         if (isRegistered()) {
             throw new IllegalStateException(
@@ -61,6 +111,23 @@ public class DSQLConnector implements java.sql.Driver {
         registeredDriver = driver;
     }
 
+    /**
+     * Deregisters this driver from the JDBC {@link DriverManager}.
+     *
+     * <p>This method prevents the driver from being called by the {@link DriverManager}. After
+     * deregistration, the driver will no longer be available for creating connections through
+     * {@link DriverManager#getConnection(String, Properties)}.
+     *
+     * <p>Deregistration is rarely needed in typical applications but may be useful in advanced use
+     * cases.
+     *
+     * <p><b>Thread Safety:</b> This method is not thread-safe. Callers must ensure synchronization
+     * if concurrent access is possible.
+     *
+     * @throws IllegalStateException if the driver has not been registered
+     * @see #register()
+     * @see #isRegistered()
+     */
     public static void deregister() throws SQLException {
         if (registeredDriver == null) {
             throw new IllegalStateException(
@@ -70,10 +137,79 @@ public class DSQLConnector implements java.sql.Driver {
         registeredDriver = null;
     }
 
+    /**
+     * Checks whether this driver is currently registered with the JDBC {@link DriverManager}.
+     *
+     * <p><b>Thread Safety:</b> This method is not thread-safe. Callers must ensure synchronization
+     * if concurrent access is possible.
+     *
+     * @return {@code true} if the driver is registered, {@code false} otherwise
+     * @see #register()
+     * @see #deregister()
+     */
     public static boolean isRegistered() {
         return registeredDriver != null;
     }
 
+    /**
+     * Establishes a connection to an Aurora DSQL cluster using IAM authentication.
+     *
+     * <p>This method orchestrates the connection process by validating the URL, extracting
+     * configuration, obtaining an IAM token, and creating the underlying PostgreSQL connection. The
+     * IAM token is automatically injected as the password before delegating to the PostgreSQL JDBC
+     * driver.
+     *
+     * <h3>Connection Flow</h3>
+     *
+     * <ol>
+     *   <li>Validates and normalizes the JDBC URL format
+     *   <li>Merges properties from URL parameters and the provided {@link Properties} object
+     *   <li>Obtains {@link AwsCredentialsProvider} based on {@code profile} property or custom
+     *       provider chain
+     *   <li>Retrieves IAM token using AWS credentials
+     *   <li>Creates PostgreSQL connection to Aurora DSQL with token as password
+     * </ol>
+     *
+     * <h3>Connection Properties</h3>
+     *
+     * <p>Properties can be specified in the URL or the {@link Properties} object. URL parameters
+     * take precedence over {@link Properties} object values. See {@link PropertyDefinition} for all
+     * available connection properties.
+     *
+     * <h3>Credentials Sources</h3>
+     *
+     * <p>The driver resolves AWS credentials in the following order:
+     *
+     * <ol>
+     *   <li>If the {@code profile} connection property is specified, credentials are loaded from
+     *       that named profile in the AWS credentials file
+     *   <li>If no {@code profile} is specified, the driver uses the credentials provider configured
+     *       via {@link AuroraDsqlCredentialsManager#setProvider(AwsCredentialsProvider)}
+     *   <li>By default, {@link AuroraDsqlCredentialsManager} uses the AWS SDK's default credentials
+     *       provider.
+     * </ol>
+     *
+     * <h3>Error Scenarios</h3>
+     *
+     * <p>Throws {@link SQLException} for:
+     *
+     * <ul>
+     *   <li>Invalid URL format
+     *   <li>Missing {@code user} property
+     *   <li>AWS credential resolution failures
+     *   <li>IAM token generation failures
+     *   <li>PostgreSQL connection failures
+     * </ul>
+     *
+     * @param url the JDBC URL in format {@code
+     *     jdbc:aws-dsql:postgresql://cluster.dsql.region.on.aws} with optional database and
+     *     property definitions
+     * @param info connection properties which augment those provided in the URL
+     * @return a {@link Connection} to the Aurora DSQL cluster
+     * @throws SQLException if connection cannot be established due to invalid input, credential
+     *     issues, or connection failures
+     * @see PropertyDefinition
+     */
     @Override
     public Connection connect(final String url, final Properties info) throws SQLException {
         // Parse properties from URL if provided
@@ -121,8 +257,17 @@ public class DSQLConnector implements java.sql.Driver {
         }
     }
 
+    /**
+     * Checks if this driver can handle the specified JDBC URL.
+     *
+     * <p>Returns {@code true} for URLs with the {@code jdbc:aws-dsql:postgresql://} prefix. Called
+     * by {@link DriverManager} to select the appropriate driver.
+     *
+     * @param url the JDBC URL to check
+     * @return {@code true} if URL can be handled by this driver implementation
+     */
     @Override
-    public boolean acceptsURL(final String url) throws SQLException {
+    public boolean acceptsURL(final String url) {
         return ConnUrlParser.isDsqlUrl(url);
     }
 
@@ -145,6 +290,11 @@ public class DSQLConnector implements java.sql.Driver {
         return AuroraDsqlCredentialsManager.getProvider();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @see PropertyDefinition
+     */
     @Override
     @Nonnull
     public DriverPropertyInfo[] getPropertyInfo(final String url, final Properties info)
@@ -197,6 +347,15 @@ public class DSQLConnector implements java.sql.Driver {
         return Version.FULL;
     }
 
+    /**
+     * Indicates whether this driver is JDBC compliant.
+     *
+     * <p>This driver returns {@code false} because it delegates to the PostgreSQL JDBC driver,
+     * which is not fully JDBC compliant. The driver provides full functionality for Aurora DSQL
+     * connections but does not guarantee complete JDBC specification compliance.
+     *
+     * @return {@code false} to indicate this driver is not fully JDBC compliant
+     */
     @Override
     public boolean jdbcCompliant() {
         return false;

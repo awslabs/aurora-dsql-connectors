@@ -91,13 +91,16 @@ Connection conn = DriverManager.getConnection(url);
 
 ## Properties
 
-| Parameter | Description                                                                                                               | Default                                                                                                              |
-|-----------|---------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| `user` | Determines the user for the connection and the token generation method used. Example: `admin`                             | -                                                                                                                    |
-| `token-duration-secs` | Duration in seconds for token validity                                                                                    | [Same as dsql sdk limit](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/SECTION_authentication-token.html) |
-| `profile` | Used for instantiating a `ProfileCredentialsProvider` for token generation with the provided profile name                 | -                                                                                                                    |
-| `region` | AWS region for Aurora DSQL connections. It is optional. When provided, it will override the region extracted from the URL | -                                                                                                                    |
-| `database` | The database name to connect to                                                                                           | postgres                                                                                                             |
+The connector supports the following connection properties:
+
+| Parameter | Description                                                                                                               | Default                                                                                                               |
+|-----------|---------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| `user` | Determines the user for the connection and the token generation method used. Example: `admin`                             | -                                                                                                                     |
+| `token-duration-secs` | Duration in seconds for token validity                                                                                    | [Same as AWS SDK default](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/SECTION_authentication-token.html) |
+| `profile` | Used for instantiating a `ProfileCredentialsProvider` for token generation with the provided profile name                 | -                                                                                                                     |
+| `region` | AWS region for Aurora DSQL connections. It is optional. When provided, it will override the region extracted from the URL | -                                                                                                                     |
+
+**Note:** The database name is specified in the URL path (e.g., `/postgres`). If not specified in the URL, it defaults to `postgres`.
 
 ## Logging
 Enabling logging is a very useful mechanism for troubleshooting any issue one might potentially experience while using the Aurora DSQL JDBC Connector.
