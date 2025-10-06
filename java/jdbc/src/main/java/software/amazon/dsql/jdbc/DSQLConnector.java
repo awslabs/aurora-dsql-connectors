@@ -75,8 +75,9 @@ import software.amazon.awssdk.regions.Region;
  */
 public class DSQLConnector implements java.sql.Driver {
 
-    private static final Logger PARENT_LOGGER = Logger.getLogger("software.amazon.dsql.jdbc");
-    private static final Logger LOGGER = Logger.getLogger("com.amazon.jdbc.DSQLConnector");
+    private static final Logger PARENT_LOGGER =
+            Logger.getLogger(DSQLConnector.class.getPackage().getName());
+
     private static @Nullable Driver registeredDriver;
 
     static {

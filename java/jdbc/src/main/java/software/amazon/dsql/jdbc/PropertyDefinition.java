@@ -71,7 +71,7 @@ public final class PropertyDefinition {
                 "This is a utility class and cannot be instantiated");
     }
 
-    private static final Logger LOGGER = Logger.getLogger("com.amazon.jdbc.PropertyDefinition");
+    private static final Logger LOGGER = Logger.getLogger(PropertyDefinition.class.getName());
 
     /**
      * Database user for authentication.

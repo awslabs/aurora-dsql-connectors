@@ -112,7 +112,7 @@ The connector uses Java's built-in logging system (java.util.logging). You can c
 .level = INFO
 
 # Show Aurora DSQL JDBC Connector FINE logs for detailed debugging
-software.amazon.dsql.level = FINE
+software.amazon.dsql.jdbc.level = FINE
 
 # Console handler configuration
 handlers = java.util.logging.ConsoleHandler
