@@ -62,21 +62,30 @@ public class BasicConnectionIntegrationTest {
         System.out.println("User: " + (CLUSTER_USER != null ? CLUSTER_USER : "admin"));
     }
 
+    /**
+     * Verify the provided {@link Connection} is valid, and is capable of basic operations.
+     *
+     * @param conn The {@link Connection} to check.
+     */
+    private void assertConnectionValid(final Connection conn) throws SQLException {
+        assertNotNull(conn, "Connection should not be null");
+        assertFalse(conn.isClosed(), "Connection should be open");
+
+        // Test basic query
+        try (Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT 1 as test_value")) {
+            assertTrue(rs.next(), "Result set should have at least one row");
+            assertEquals(1, rs.getInt("test_value"), "Test value should be 1");
+        }
+    }
+
     @Test
     void testBasicConnectionWithEndpoint() throws SQLException {
         String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
         String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres?user=" + user;
 
         try (Connection conn = DriverManager.getConnection(url)) {
-            assertNotNull(conn, "Connection should not be null");
-            assertFalse(conn.isClosed(), "Connection should be open");
-
-            // Test basic query
-            try (Statement stmt = conn.createStatement();
-                    ResultSet rs = stmt.executeQuery("SELECT 1 as test_value")) {
-                assertTrue(rs.next(), "Result set should have at least one row");
-                assertEquals(1, rs.getInt("test_value"), "Test value should be 1");
-            }
+            assertConnectionValid(conn);
         }
     }
 
@@ -89,14 +98,21 @@ public class BasicConnectionIntegrationTest {
         String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres";
 
         try (Connection conn = DriverManager.getConnection(url, props)) {
-            assertNotNull(conn, "Connection should not be null");
-            assertFalse(conn.isClosed(), "Connection should be open");
+            assertConnectionValid(conn);
+        }
+    }
 
-            // Test database metadata
-            String databaseProductName = conn.getMetaData().getDatabaseProductName();
-            assertTrue(
-                    databaseProductName.contains("PostgreSQL"),
-                    "Database product should be PostgreSQL-compatible");
+    @Test
+    void testConnectionWithoutDatabaseInUrlUsesDefault() throws SQLException {
+        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
+        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "?user=" + user;
+
+        try (Connection conn = DriverManager.getConnection(url)) {
+            assertConnectionValid(conn);
+            assertEquals(
+                    "postgres",
+                    conn.getCatalog(),
+                    "Should connect to default postgres database when no database specified in URL");
         }
     }
 
@@ -123,15 +139,23 @@ public class BasicConnectionIntegrationTest {
         }
     }
 
+    /**
+     * Convenience method for tests which need a connection but don't care about the specifics of
+     * the URL/configuration.
+     */
+    private Connection createConnection() throws SQLException {
+        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT;
+        Properties props = new Properties();
+        props.setProperty("user", CLUSTER_USER != null ? CLUSTER_USER : "admin");
+        return DriverManager.getConnection(url, props);
+    }
+
     @Test
     void testMultipleConnections() throws SQLException {
-        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
-        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres?user=" + user;
-
         // Test multiple concurrent connections
-        try (Connection conn1 = DriverManager.getConnection(url);
-                Connection conn2 = DriverManager.getConnection(url);
-                Connection conn3 = DriverManager.getConnection(url)) {
+        try (Connection conn1 = createConnection();
+                Connection conn2 = createConnection();
+                Connection conn3 = createConnection()) {
 
             assertNotNull(conn1, "Connection 1 should not be null");
             assertNotNull(conn2, "Connection 2 should not be null");
@@ -160,10 +184,7 @@ public class BasicConnectionIntegrationTest {
 
     @Test
     void testTransactionHandling() throws SQLException {
-        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
-        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres?user=" + user;
-
-        try (Connection conn = DriverManager.getConnection(url)) {
+        try (Connection conn = createConnection()) {
             assertNotNull(conn, "Connection should not be null");
 
             // Test transaction with auto-commit disabled
@@ -208,10 +229,7 @@ public class BasicConnectionIntegrationTest {
 
     @Test
     void testPreparedStatements() throws SQLException {
-        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
-        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres?user=" + user;
-
-        try (Connection conn = DriverManager.getConnection(url)) {
+        try (Connection conn = createConnection()) {
             assertNotNull(conn, "Connection should not be null");
 
             // Create a temporary table
@@ -245,10 +263,7 @@ public class BasicConnectionIntegrationTest {
 
     @Test
     void testConnectionMetadata() throws SQLException {
-        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
-        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres?user=" + user;
-
-        try (Connection conn = DriverManager.getConnection(url)) {
+        try (Connection conn = createConnection()) {
             assertNotNull(conn, "Connection should not be null");
 
             DatabaseMetaData metadata = conn.getMetaData();
@@ -261,6 +276,9 @@ public class BasicConnectionIntegrationTest {
             String driverVersion = metadata.getDriverVersion();
 
             assertNotNull(databaseProductName, "Database product name should not be null");
+            assertTrue(
+                    databaseProductName.contains("PostgreSQL"),
+                    "Database product should be PostgreSQL-compatible");
             assertNotNull(databaseProductVersion, "Database product version should not be null");
             assertNotNull(driverName, "Driver name should not be null");
             assertNotNull(driverVersion, "Driver version should not be null");

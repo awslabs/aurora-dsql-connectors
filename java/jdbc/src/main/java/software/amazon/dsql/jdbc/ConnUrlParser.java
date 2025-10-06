@@ -48,13 +48,19 @@ public final class ConnUrlParser {
             return;
         }
 
-        final String cleanUrl = url.substring(5);
-        final URI connUrl = new URI(cleanUrl);
+        final String cleanUrl;
+        if (url.startsWith(CONNECTOR_POSTGRESQL_PREFIX)) {
+            cleanUrl = url.substring(CONNECTOR_POSTGRESQL_PREFIX.length());
+        } else if (url.startsWith(JDBC_PREFIX)) {
+            cleanUrl = url.substring(JDBC_PREFIX.length());
+        } else {
+            cleanUrl = url.substring(5); // fallback: strip "jdbc:"
+        }
 
-        // Extract database name from path if present and not already set in properties
-        if (props.getProperty("database") == null
-                && connUrl.getPath() != null
-                && !connUrl.getPath().isEmpty()) {
+        final URI connUrl = new URI("postgresql://" + cleanUrl);
+
+        // Extract database name from path if present
+        if (connUrl.getPath() != null && !connUrl.getPath().isEmpty()) {
             final String database = connUrl.getPath().substring(1); // Remove leading '/'
             props.setProperty("database", database);
         }
@@ -67,6 +73,12 @@ public final class ConnUrlParser {
         final String[] listOfParameters = params.split("&");
         for (final String param : listOfParameters) {
             final String[] keyValPair = param.split("=");
+
+            if (keyValPair[0].equals("database")) {
+                throw new URISyntaxException(
+                        url,
+                        "database must be specified in the URL path, not as a query parameter");
+            }
 
             if (keyValPair.length == 1) {
                 props.setProperty(keyValPair[0], "");

@@ -28,6 +28,8 @@ import java.sql.SQLException;
 import java.util.Properties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ConnUrlParserTest {
 
@@ -67,18 +69,72 @@ class ConnUrlParserTest {
     }
 
     @Test
-    void testParsePropertiesFromUrlWithDatabaseInProperties() throws URISyntaxException {
+    void testUrlDatabaseTakesPrecedenceOverProperties() throws URISyntaxException, SQLException {
         // Arrange
-        String url = "jdbc:postgresql://test-cluster.dsql.us-east-1.on.aws/postgres?user=admin";
+        String url =
+                "jdbc:aws-dsql:postgresql://test-cluster.dsql.us-east-1.on.aws/postgres?user=admin";
         properties.setProperty("database", "custom_db");
 
         // Act
         ConnUrlParser.parsePropertiesFromUrl(url, properties);
 
+        final String result = ConnUrlParser.convertToFullJdbcUrl(url, properties);
+
         // Assert
         assertEquals("admin", properties.getProperty("user"));
+
+        // URL database should overwrite property
+        assertEquals("postgres", properties.getProperty("database"));
+
         assertEquals(
-                "custom_db", properties.getProperty("database")); // Should keep the property value
+                "jdbc:postgresql://test-cluster.dsql.us-east-1.on.aws/postgres?user=admin", result);
+    }
+
+    @Test
+    void testDatabaseDefaultAddedToUrlWithoutDatabase() throws Exception {
+        // Arrange
+        String url = "jdbc:aws-dsql:postgresql://cluster.dsql.us-east-1.on.aws?user=admin";
+
+        // Act
+        final Properties props = new Properties();
+        ConnUrlParser.parsePropertiesFromUrl(url, props);
+
+        final String result = ConnUrlParser.convertToFullJdbcUrl(url, props);
+
+        // Assert
+        assertEquals("admin", props.getProperty("user"));
+
+        // Database not in URL, so not set by parsing
+        assertNull(props.getProperty("database"));
+
+        // The default database "postgres" should be used in the converted URL
+        assertEquals("jdbc:postgresql://cluster.dsql.us-east-1.on.aws/postgres?user=admin", result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "jdbc:aws-dsql:postgresql://cluster.dsql.us-east-1.on.aws?database=postgres&user=admin",
+                "jdbc:aws-dsql:postgresql://cluster.dsql.us-east-1.on.aws/postgres?database=postgres&user=admin"
+            })
+    void testDatabaseAsQueryParameterIsInvalid(String url) throws Exception {
+        // Arrange
+        Properties props = new Properties();
+
+        // Act & Assert
+        URISyntaxException exception =
+                assertThrows(
+                        URISyntaxException.class,
+                        () -> {
+                            ConnUrlParser.parsePropertiesFromUrl(url, props);
+                        });
+
+        assertTrue(
+                exception
+                        .getMessage()
+                        .contains(
+                                "database must be specified in the URL path, not as a query parameter"),
+                "Expected error about invalid database query parameter");
     }
 
     @Test
@@ -96,6 +152,22 @@ class ConnUrlParserTest {
         assertEquals("myprofile", properties.getProperty("profile"));
         assertEquals("true", properties.getProperty("ssl"));
         assertEquals("mydb", properties.getProperty("database"));
+    }
+
+    @Test
+    void testUrlParametersTakePrecedenceOverProperties() throws Exception {
+        // Arrange
+        String url =
+                "jdbc:aws-dsql:postgresql://cluster.dsql.us-east-1.on.aws/postgres?user=urladmin";
+        Properties props = new Properties();
+        props.setProperty("user", "propadmin");
+
+        // Act
+        ConnUrlParser.parsePropertiesFromUrl(url, props);
+
+        // Assert
+        // URL parameter should overwrite property
+        assertEquals("urladmin", props.getProperty("user"));
     }
 
     @Test
