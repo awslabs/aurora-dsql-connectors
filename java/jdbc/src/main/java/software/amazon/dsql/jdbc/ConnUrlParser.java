@@ -20,6 +20,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.utils.StringUtils;
@@ -250,7 +251,7 @@ public final class ConnUrlParser {
                 return pathPart.isEmpty() ? null : pathPart;
             }
         } catch (Exception e) {
-            LOGGER.warning("Could not parse database from URL: " + e.getMessage());
+            LOGGER.log(Level.WARNING, "Could not parse database from URL", e);
         }
 
         return null;

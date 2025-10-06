@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
@@ -61,12 +62,12 @@ public final class TokenManager {
         // Check cache first
         final CachedToken cached = TOKEN_CACHE.get(key);
         if (cached != null && !cached.isExpiredOrExpiringSoon(REFRESH_BUFFER_PERCENTAGE)) {
-            LOGGER.fine(() -> "Aurora DSQL: Returning cached token for " + user);
+            LOGGER.log(Level.FINE, "Aurora DSQL: Returning cached token for user: {0}", user);
             return cached.token;
         }
 
         // Need to refresh
-        LOGGER.fine(() -> "Aurora DSQL: Generating new token for user: " + user);
+        LOGGER.log(Level.FINE, "Aurora DSQL: Generating new token for user: {0}", user);
         return refreshToken(key);
     }
 
@@ -81,21 +82,23 @@ public final class TokenManager {
             throws SQLException {
         final TokenKey key =
                 new TokenKey(hostname, region, user, credentialsProvider, tokenDuration);
-        LOGGER.fine(() -> "Forcing token refresh for user: " + user);
+        LOGGER.log(Level.FINE, "Forcing token refresh for user: {0}", user);
         return refreshToken(key);
     }
 
     /** Clears all cached tokens. */
     public static void clearCache() {
-        LOGGER.fine(() -> "Clearing all token cache");
+        LOGGER.log(Level.FINE, "Clearing all token cache");
         TOKEN_CACHE.clear();
     }
 
     @Nonnull
     private static String refreshToken(@Nonnull final TokenKey key) throws SQLException {
         try {
-            LOGGER.fine(
-                    () -> "Aurora DSQL: Generating new authentication token for user: " + key.user);
+            LOGGER.log(
+                    Level.FINE,
+                    "Aurora DSQL: Generating new authentication token for user: {0}",
+                    key.user);
 
             final DsqlUtilities utilities =
                     DsqlUtilities.builder()
@@ -129,17 +132,15 @@ public final class TokenManager {
             TOKEN_CACHE.put(key, cachedToken);
 
             // Record token refresh for monitoring
-            LOGGER.fine(
-                    () ->
-                            String.format(
-                                    "Aurora DSQL: Token generated successfully. Duration: %d seconds, Expires at: %s",
-                                    cachedTokenDuration.getSeconds(), cachedToken.expiresAt));
+            LOGGER.log(
+                    Level.FINE,
+                    "Aurora DSQL: Token generated successfully. Duration: {0} seconds, Expires at: {1}",
+                    new Object[] {cachedTokenDuration.getSeconds(), cachedToken.expiresAt});
 
             return token;
 
         } catch (Exception e) {
-            LOGGER.severe(
-                    "Aurora DSQL: Failed to generate authentication token: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Aurora DSQL: Failed to generate authentication token", e);
             throw new SQLException("Token generation failed: " + e.getMessage(), e);
         }
     }

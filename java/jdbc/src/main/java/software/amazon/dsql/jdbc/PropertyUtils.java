@@ -18,6 +18,7 @@ package software.amazon.dsql.jdbc;
 
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
@@ -80,11 +81,10 @@ public final class PropertyUtils {
             if ((trimmed.startsWith("\"") && trimmed.endsWith("\""))
                     || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
                 String unquoted = trimmed.substring(1, trimmed.length() - 1);
-                LOGGER.fine(
-                        () ->
-                                String.format(
-                                        "Sanitized property value from '%s' to '%s'",
-                                        value, unquoted));
+                LOGGER.log(
+                        Level.FINE,
+                        "Sanitized property value from ''{0}'' to ''{1}''",
+                        new Object[] {value, unquoted});
                 return unquoted;
             }
         }
