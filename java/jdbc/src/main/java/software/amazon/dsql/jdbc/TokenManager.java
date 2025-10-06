@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -31,7 +32,7 @@ import software.amazon.awssdk.services.dsql.model.GenerateAuthTokenRequest;
 /** Static utility class for managing Aurora DSQL authentication tokens with shared caching. */
 public final class TokenManager {
 
-    private static final LazyLogger LOGGER = new LazyLogger(TokenManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(TokenManager.class.getName());
 
     // Shared token cache across all connections
     private static final ConcurrentHashMap<TokenKey, CachedToken> TOKEN_CACHE =

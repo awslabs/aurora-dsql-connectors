@@ -20,12 +20,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.utils.StringUtils;
 
 public final class ConnUrlParser {
 
-    private static final LazyLogger LOGGER = new LazyLogger(ConnUrlParser.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ConnUrlParser.class.getName());
     private static final String JDBC_PREFIX = "jdbc:postgresql://";
     private static final String CONNECTOR_POSTGRESQL_PREFIX = "jdbc:aws-dsql:postgresql://";
 
