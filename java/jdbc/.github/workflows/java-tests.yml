@@ -51,17 +51,14 @@ jobs:
         architecture: x64
         cache: gradle
 
-    - name: Build library
+    - name: Build jar files
       run: ./gradlew build -x test
 
-    - name: Publish to local repository
-      run: ./gradlew publishToMavenLocal
-
-    - name: Upload built artifacts
+    - name: Upload integration test jar
       uses: actions/upload-artifact@v4
       with:
-        name: built-jars
-        path: ~/.m2/repository/software/amazon/dsql/aurora-dsql-jdbc-connector/
+        name: integration-test-jar
+        path: integration-tests/build/libs/*-all.jar
 
   unit-tests:
     name: Unit Tests
@@ -113,9 +110,45 @@ jobs:
         
         echo "cluster-id=$CLUSTER_ID" >> $GITHUB_OUTPUT
 
+  # We run the integration tests using Gradle to verify the developer experience
+  # when working with a local copy of the repo.
+  gradle-integration-tests:
+    name: Gradle Integration Tests
+    needs: [setup, create-cluster]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ needs.setup.outputs.build-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ needs.setup.outputs.build-version }}
+        distribution: 'corretto'
+        architecture: x64
+        cache: gradle
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
+        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+
+    - name: Run integration tests with Gradle
+      env:
+        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
+        CLUSTER_USER: "admin"
+      run: ./gradlew integrationTest
+
+  # We run the integration tests using pre-built jar files for each JVM targeted
+  # for support. Gradle 9+ no longer supports JDK 8 so the tests must be built
+  # into a jar by a newer JDK version ahead of time.
   integration-tests:
     name: Integration Tests (Java ${{ matrix.jvm-version }})
-    needs: [setup, create-cluster]
+    needs: [setup, create-cluster, gradle-integration-tests]
     runs-on: ubuntu-latest
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -135,13 +168,12 @@ jobs:
         java-version: ${{ matrix.jvm-version }}
         distribution: 'corretto'
         architecture: x64
-        cache: gradle
 
-    - name: Download built artifacts
+    - name: Download integration test jar
       uses: actions/download-artifact@v4
       with:
-        name: built-jars
-        path: ~/.m2/repository/software/amazon/dsql/aurora-dsql-jdbc-connector/
+        name: integration-test-jar
+        path: ./
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -150,19 +182,17 @@ jobs:
         aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
 
     - name: Run integration tests
-      working-directory: integration-tests
       env:
-        USE_MAVEN_LOCAL: "true"
-        PROJECT_VERSION: 0.0.0-SNAPSHOT
-        REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
         CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
         CLUSTER_USER: "admin"
       run: |
-        ../gradlew test
+        java -jar integration-tests-all.jar \
+          --select-package software.amazon.dsql.jdbc.integration \
+          --fail-if-no-tests
 
   delete-cluster:
     name: Delete Aurora DSQL Cluster
-    needs: [setup, create-cluster, integration-tests]
+    needs: [setup, create-cluster, gradle-integration-tests, integration-tests]
     runs-on: ubuntu-latest
     if: always() && needs.create-cluster.result == 'success'
     permissions:

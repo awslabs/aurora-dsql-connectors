@@ -109,7 +109,6 @@ tasks.named<Test>("test") {
 
     // Pass environment variables to tests
     systemProperty("CLUSTER_ENDPOINT", System.getenv("CLUSTER_ENDPOINT") ?: "")
-    systemProperty("REGION", System.getenv("REGION") ?: "")
     systemProperty("CLUSTER_USER", System.getenv("CLUSTER_USER") ?: "")
 
     // Configure test execution

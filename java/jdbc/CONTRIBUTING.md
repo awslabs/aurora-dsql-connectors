@@ -86,7 +86,6 @@ Integration tests require a real Aurora DSQL cluster and AWS credentials:
 ```bash
 # Set required environment variables
 export CLUSTER_ENDPOINT=your-cluster-endpoint.dsql.us-east-1.on.aws
-export REGION=us-east-1
 
 # Optional: Set custom user (defaults to 'admin')
 export CLUSTER_USER=your-username

@@ -41,24 +41,20 @@ import org.junit.jupiter.api.TestInstance;
  *
  * <p>Environment variables required:
  * <li>CLUSTER_ENDPOINT: Aurora DSQL cluster endpoint
- * <li>REGION: AWS region (e.g., us-east-1)
  * <li>CLUSTER_USER: Database user (default: admin)
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BasicConnectionIntegrationTest {
 
     private static final String CLUSTER_ENDPOINT = System.getenv("CLUSTER_ENDPOINT");
-    private static final String REGION = System.getenv("REGION");
     private static final String CLUSTER_USER = System.getenv("CLUSTER_USER");
 
     @BeforeAll
     void setUp() {
         // Validate required environment variables
         assertNotNull(CLUSTER_ENDPOINT, "CLUSTER_ENDPOINT environment variable must be set");
-        assertNotNull(REGION, "REGION environment variable must be set");
 
         System.out.println("Running integration tests against cluster: " + CLUSTER_ENDPOINT);
-        System.out.println("Region: " + REGION);
         System.out.println("User: " + (CLUSTER_USER != null ? CLUSTER_USER : "admin"));
     }
 
