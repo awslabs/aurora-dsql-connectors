@@ -23,6 +23,8 @@ repositories {
     mavenCentral()
 }
 
+val mockitoAgent = configurations.create("mockitoAgent")
+
 dependencies {
     // AWS SDK for Aurora DSQL
     implementation("software.amazon.awssdk:dsql:2.33.8")
@@ -34,13 +36,14 @@ dependencies {
     compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.4")
 
     // Test dependencies
-    testImplementation("net.bytebuddy:byte-buddy-agent:1.17.7")
-    testImplementation("net.bytebuddy:byte-buddy:1.17.7")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
-    testImplementation("org.mockito:mockito-junit-jupiter:5.1.1")
     testImplementation("software.amazon.awssdk:regions:2.33.8")
+
+    // Agent recommended for Java 21+ inline mocking.
+    testImplementation("org.mockito:mockito-junit-jupiter:5.20.0")
+    mockitoAgent("org.mockito:mockito-core:5.20.0") { isTransitive = false }
 
     // Runtime dependencies for tests
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -105,6 +108,8 @@ tasks.named<Jar>("jar") {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    jvmArgs("-javaagent:${mockitoAgent.asPath}")
+
     systemProperty("RUN_INTEGRATION", System.getenv("RUN_INTEGRATION") ?: "FALSE")
 
     // Pass environment variables to tests
