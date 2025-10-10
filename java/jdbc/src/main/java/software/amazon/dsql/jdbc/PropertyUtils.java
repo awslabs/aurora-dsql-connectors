@@ -22,7 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 
-public final class PropertyUtils {
+final class PropertyUtils {
     private static final Logger LOGGER = Logger.getLogger(PropertyUtils.class.getName());
 
     private PropertyUtils() {

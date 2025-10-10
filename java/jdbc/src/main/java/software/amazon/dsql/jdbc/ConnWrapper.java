@@ -21,7 +21,7 @@ import java.sql.SQLException;
 import java.util.Properties;
 import org.postgresql.Driver;
 
-public class ConnWrapper {
+class ConnWrapper {
     private final String url;
     private final Properties info;
 

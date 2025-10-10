@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import software.amazon.awssdk.utils.StringUtils;
 
-public final class ConnUrlParser {
+final class ConnUrlParser {
 
     private static final Logger LOGGER = Logger.getLogger(ConnUrlParser.class.getName());
     private static final String JDBC_PREFIX = "jdbc:postgresql://";

@@ -31,7 +31,7 @@ import software.amazon.awssdk.services.dsql.DsqlUtilities;
 import software.amazon.awssdk.services.dsql.model.GenerateAuthTokenRequest;
 
 /** Static utility class for managing Aurora DSQL authentication tokens with shared caching. */
-public final class TokenManager {
+final class TokenManager {
 
     private static final Logger LOGGER = Logger.getLogger(TokenManager.class.getName());
 
