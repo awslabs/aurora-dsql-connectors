@@ -40,7 +40,7 @@ GitHub provides additional document on [forking a repository](https://help.githu
 
 ### Prerequisites
 
-* Java 24 or higher
+* Java 25 or higher
 * Git
 
 ### Building the Project

@@ -23,11 +23,11 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      build-version: "24"
+      build-version: "25"
       target-versions: ${{ steps.versions.outputs.matrix }}
     steps:
       - id: versions
-        run: echo "matrix=[8, 11, 17, 21, 22, 23, 24]" >> $GITHUB_OUTPUT
+        run: echo "matrix=[8, 11, 17, 21, 22, 23, 24, 25]" >> $GITHUB_OUTPUT
 
   build:
     name: Build
