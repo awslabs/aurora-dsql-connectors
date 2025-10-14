@@ -3,18 +3,13 @@ name: Aurora DSQL JDBC Connector Tests
 permissions: {}
 
 on:
+  # No path filters to ensure tests always run. Using path filters risks missing
+  # critical files and allowing untested changes to merge. This may trigger
+  # unnecessary test runs, but the safety is worth the minor cost.
   push:
     branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'build.gradle.kts'
-      - '.github/workflows/java-tests.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'build.gradle.kts'
-      - '.github/workflows/java-tests.yml'
   # Give us a button to allow running the workflow on demand for testing.
   workflow_dispatch:
     inputs:
