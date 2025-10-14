@@ -32,11 +32,9 @@ sourceSets {
 tasks.test {
     useJUnitPlatform()
 
-    // Only run when feature flag property is set, or when run directly from this subproject
+    // Only run when feature flag property is set
     onlyIf {
-        val shouldRun =
-            System.getProperty("runIntegrationTests") == "true" ||
-                gradle.startParameter.currentDir.name == "integration-tests"
+        val shouldRun = System.getProperty("runIntegrationTests") == "true"
         if (!shouldRun) {
             println("Integration tests skipped - run task 'integrationTest' to run them")
         }

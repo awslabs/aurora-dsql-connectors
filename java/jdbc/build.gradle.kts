@@ -125,11 +125,6 @@ tasks.named<Test>("test") {
     // Set test timeout
     systemProperty("junit.jupiter.execution.timeout.default", "5m")
     systemProperty("junit.jupiter.execution.timeout.testable.method.default", "2m")
-
-    // Always run when invoked directly
-    outputs.upToDateWhen {
-        gradle.startParameter.taskNames.none { it == "test" || it == ":test" }
-    }
 }
 
 // Task specifically for integration tests
@@ -144,16 +139,16 @@ tasks.register<Test>("integrationTest") {
 
 // Captures the version number in the jar so it can be provided on request.
 tasks.register("generateVersionClass") {
+    val versionStr = version.toString()
     val outputDir = layout.buildDirectory.dir("generated/sources/version/java")
-    val versionFile = outputDir.get().file("software/amazon/dsql/jdbc/Version.java")
+    val versionFile = outputDir.map { it.file("software/amazon/dsql/jdbc/Version.java") }
 
-    inputs.property("version", version)
+    inputs.property("version", versionStr)
     outputs.file(versionFile)
 
     doLast {
         val versionRegex = """(\d+)\.(\d+)\.(\d+)(?:-.+)?""".toRegex()
 
-        val versionStr = version.toString()
         val matchResult =
             versionRegex.matchEntire(versionStr)
                 ?: throw GradleException("Invalid version format: '$versionStr'")
@@ -163,8 +158,9 @@ tasks.register("generateVersionClass") {
         val minor = minorStr.toInt()
         val patch = patchStr.toInt()
 
-        versionFile.asFile.parentFile.mkdirs()
-        versionFile.asFile.writeText(
+        val file = versionFile.get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(
             """
             package software.amazon.dsql.jdbc;
 
