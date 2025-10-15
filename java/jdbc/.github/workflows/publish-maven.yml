@@ -21,7 +21,10 @@ jobs:
           echo "Publishing version: $PROJECT_VERSION"
           ./gradlew build
           ./gradlew publish
-          ./gradlew jreleaserDeploy
+          
+          # Flag is a temporary workaround for JReleaser cache incompatibility.
+          # https://github.com/jreleaser/jreleaser/issues/1992
+          ./gradlew jreleaserDeploy --no-configuration-cache
         env:
           PROJECT_VERSION: ${{ github.event.release.tag_name }}
           JRELEASER_MAVENCENTRAL_STAGE: 'UPLOAD'

@@ -5,6 +5,16 @@ import com.diffplug.spotless.FormatterFunc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import java.io.Serializable
 
+// Temporary workaround for JReleaser/Spotless incompatibility.
+// https://github.com/jreleaser/jreleaser/issues/1643
+buildscript {
+    configurations.classpath {
+        resolutionStrategy {
+            force("org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r")
+        }
+    }
+}
+
 plugins {
     id("java-library")
     id("maven-publish")
