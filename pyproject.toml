@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aurora-dsql-python-connector"
+version = "0.1.0"
+description = "A connector that integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters"
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    {name = "Amazon Web Services", email = "aws-aurora-dsql-feedback@amazon.com"}
+]
+requires-python = ">=3.10"
+
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
+]
+
+dependencies = [
+    "boto3>=1.35.74",
+]
+
+[project.optional-dependencies]
+psycopg = [
+   "psycopg[binary]>=3.1.0",
+   "psycopg-pool>=3.2.6",
+]
+
+psycopg2 = [
+   "psycopg2-binary>=2.9.0",
+]
+
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pytest-asyncio>=1.2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/aws/aurora-dsql-connector"
+Repository = "https://github.com/aws/aurora-dsql-connector"
+Documentation = "https://github.com/aws/aurora-dsql-connector"
+"Bug Tracker" = "https://github.com/aws/aurora-dsql-connector/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
