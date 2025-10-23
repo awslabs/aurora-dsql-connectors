@@ -1,0 +1,64 @@
+name: Python connector integration tests
+
+permissions: {}
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - './**'
+      - '.github/workflows/python-connector-integration-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - './**'
+      - '.github/workflows/python-connector-integration-tests.yml'
+  # Give us a button to allow running the workflow on demand for testing.
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Manual Workflow Run'
+        required: false
+        type: string
+
+jobs:
+  connector-integ-test:
+    name: Python connector integration tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required by aws-actions/configure-aws-credentials
+    concurrency:
+      # Ensure only 1 job uses the workflow cluster at a time.
+      group: ${{ github.workflow }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+
+    - name: Configure and run integration tests - admin
+      working-directory: ./
+      env:
+        CLUSTER_USER: "admin"
+        CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
+        REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+      run: |
+        python3 -m venv .venv
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install -e ".[psycopg,psycopg2,dev]"
+        python3 -c "import boto3; print(boto3.__version__)"
+        pip list
+        echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+        python -m pytest tests/integration
