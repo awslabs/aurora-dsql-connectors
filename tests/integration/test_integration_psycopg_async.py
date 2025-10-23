@@ -35,7 +35,7 @@ class TestIntegrationAsync:
             "region": os.getenv("REGION", "us-east-1"),
             "user": os.getenv("CLUSTER_USER", "admin"),
             "dbname": os.getenv("DSQL_DATABASE", "postgres"),
-            "profile": os.getenv("AWS_PROFILE", "default"),
+            # "profile": os.getenv("AWS_PROFILE", "default"),
         }
 
         if not config["host"]:

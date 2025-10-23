@@ -39,7 +39,7 @@ class TestIntegrationPsycopgCommon:
             "region": os.getenv("REGION", "us-east-1"),
             "user": os.getenv("CLUSTER_USER", "admin"),
             "dbname": os.getenv("DSQL_DATABASE", "postgres"),
-            "profile": os.getenv("AWS_PROFILE", "default"),
+            # "profile": os.getenv("AWS_PROFILE", "default"),
         }
 
         if not config["host"]:
@@ -119,7 +119,8 @@ class TestIntegrationPsycopgCommon:
     def test_connection_string_format(self, cluster_config, dsql_connector):
         """Test connection using connection string."""
         conn_str = f"postgresql://{cluster_config['host']}/{cluster_config['dbname']}?user={cluster_config['user']}"
-        if cluster_config["profile"]:
+
+        if cluster_config.get("profile"):
             conn_str += f"&profile={cluster_config['profile']}"
 
         conn = dsql_connector.connect(conn_str)
@@ -222,7 +223,7 @@ class TestIntegrationPsycopgCommon:
                 host=cluster_config["host"],
                 user="nonexistent_user",
                 region=cluster_config["region"],
-                profile=cluster_config["profile"],
+                # profile=cluster_config["profile"],
             )
 
     @pytest.mark.parametrize(
