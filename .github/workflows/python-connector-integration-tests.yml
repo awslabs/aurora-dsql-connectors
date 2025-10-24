@@ -6,12 +6,14 @@ on:
   push:
     branches: [ main ]
     paths:
-      - './**'
+      - './src/**'
+      - './tests/**'
       - '.github/workflows/python-connector-integration-tests.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - './**'
+      - './src/**'
+      - './tests/**'
       - '.github/workflows/python-connector-integration-tests.yml'
   # Give us a button to allow running the workflow on demand for testing.
   workflow_dispatch:

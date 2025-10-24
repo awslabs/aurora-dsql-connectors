@@ -39,11 +39,13 @@ class TestIntegrationPsycopgCommon:
             "region": os.getenv("REGION", "us-east-1"),
             "user": os.getenv("CLUSTER_USER", "admin"),
             "dbname": os.getenv("DSQL_DATABASE", "postgres"),
-            # "profile": os.getenv("AWS_PROFILE", "default"),
         }
+        aws_profile = os.getenv("AWS_PROFILE")
+        if aws_profile:
+            config["profile"] = aws_profile
 
         if not config["host"]:
-            pytest.skip("CLUSTER_ENDPOINT environment variable not set")
+            raise ValueError("CLUSTER_ENDPOINT environment variable not set")
 
         return config
 
@@ -197,14 +199,11 @@ class TestIntegrationPsycopgCommon:
         # The sdk can generate tokens with duration longer than that.
         # However, the connect call to DSQL with a token that has longer duration will fail.
 
+        config = cluster_config.copy()
+        config["token_duration_secs"] = 604801  # one week + 1 sec
+
         with pytest.raises(expected_error) as exc_info:
-            dsql_connector.connect(
-                host=cluster_config["host"],
-                user=cluster_config["user"],
-                region=cluster_config["region"],
-                # profile=cluster_config['profile'],
-                token_duration_secs=604801,  # one week + 1 sec
-            )
+            dsql_connector.connect(**config)
 
         error_message = exc_info.value.args[0]
         assert "X-Amz-Expires must be less than a week (in seconds)" in error_message
@@ -218,13 +217,11 @@ class TestIntegrationPsycopgCommon:
     )
     def test_invalid_user_fails(self, cluster_config, dsql_connector, expected_error):
         """Test that invalid user fails appropriately."""
+
+        config = cluster_config.copy()
+        config["user"] = "nonexistent_user"
         with pytest.raises((RuntimeError, expected_error)):
-            dsql_connector.connect(
-                host=cluster_config["host"],
-                user="nonexistent_user",
-                region=cluster_config["region"],
-                # profile=cluster_config["profile"],
-            )
+            dsql_connector.connect(**config)
 
     @pytest.mark.parametrize(
         "dsql_connector",
