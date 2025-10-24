@@ -35,11 +35,13 @@ class TestIntegrationAsync:
             "region": os.getenv("REGION", "us-east-1"),
             "user": os.getenv("CLUSTER_USER", "admin"),
             "dbname": os.getenv("DSQL_DATABASE", "postgres"),
-            # "profile": os.getenv("AWS_PROFILE", "default"),
         }
+        aws_profile = os.getenv("AWS_PROFILE")
+        if aws_profile:
+            config["profile"] = aws_profile
 
         if not config["host"]:
-            pytest.skip("CLUSTER_ENDPOINT environment variable not set")
+            raise ValueError("CLUSTER_ENDPOINT environment variable not set")
 
         return config
 
