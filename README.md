@@ -1,9 +1,9 @@
-# Aurora DSQL Python Connector
+# Aurora DSQL Connector for Python
 
-The Aurora DSQL Python Connector integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters.
+The Aurora DSQL Connector for Python integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters.
 Internally, it utilizes [psycopg](https://github.com/psycopg/psycopg) and [psycopg2](https://github.com/psycopg/psycopg2) client libraries.
 
-The Aurora DSQL Python Connector is designed as an authentication plugin that extends the functionality of the psycopg and psycopg2
+The Aurora DSQL Connector for Python is designed as an authentication plugin that extends the functionality of the psycopg and psycopg2
 client libraries to enable applications to authenticate with Amazon Aurora DSQL using IAM credentials. The connector 
 does not connect directly to the database but provides seamless IAM authentication on top of the underlying client libraries.
 
@@ -13,7 +13,7 @@ Amazon Aurora DSQL is a distributed SQL database service that provides high avai
 PostgreSQL-compatible applications. Aurora DSQL requires IAM-based authentication with time-limited tokens that 
 existing Python libraries do not natively support.
 
-The idea behind the Aurora DSQL Python Connector is to add an authentication layer on top of the psycopg and psycopg2
+The idea behind the Aurora DSQL Connector for Python is to add an authentication layer on top of the psycopg and psycopg2
 client libraries that handles IAM token generation, allowing users to connect to Aurora DSQL without changing their existing workflows.
 
 ### Features
@@ -40,7 +40,7 @@ pip install aurora_dsql_python_connector
 
 #### Install psycopg or psycopg2 separately
 
-The Aurora DSQL Python Connector installer does not install the underlying libraries.
+The Aurora DSQL Connector for Python installer does not install the underlying libraries.
 They need to be installed separately, e.g.:
 
 
