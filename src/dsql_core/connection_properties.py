@@ -5,10 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 
 import logging
 import re
-import boto3
+from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
-from enum import Enum
+
+import boto3
 
 logger = logging.getLogger(__name__)
 

@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import os
 import threading
+
 from psycopg_pool import ConnectionPool as PsycopgPool
 
 import aurora_dsql_psycopg as dsql

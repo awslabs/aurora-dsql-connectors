@@ -5,9 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 
 from typing import Any, Dict, Optional
 
-
-from dsql_core.token_manager import TokenManager
 from dsql_core.connection_properties import ConnectionProperties
+from dsql_core.token_manager import TokenManager
 
 
 class ConnectionUtilities:

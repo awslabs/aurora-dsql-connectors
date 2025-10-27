@@ -3,10 +3,11 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 """
 
-import psycopg2
 from typing import Optional
-from psycopg2 import pool
+
+import psycopg2
 from botocore.credentials import CredentialProvider
+from psycopg2 import pool
 
 from dsql_core.connection_properties import ConnectionProperties
 from dsql_core.token_manager import TokenManager
