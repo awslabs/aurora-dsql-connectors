@@ -3,9 +3,8 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 """
 
-from example_with_connection_pool_concurrent import main
-
 import pytest
+from example_with_connection_pool_concurrent import main
 
 
 # Smoke tests that our example works fine

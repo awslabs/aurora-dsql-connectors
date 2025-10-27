@@ -3,7 +3,7 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 """
 
-from .connection_class import DSQLConnection, DSQLAsyncConnection
+from .connection_class import DSQLAsyncConnection, DSQLConnection
 
 # DBAPI compliance
 connect = DSQLConnection.connect

@@ -6,11 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 from unittest.mock import Mock, patch
 
 import pytest
-
 from psycopg_pool import ConnectionPool as PsycopgPool
 
-from dsql_core.connection_properties import DefaultValues
 import aurora_dsql_psycopg as dsql
+from dsql_core.connection_properties import DefaultValues
 
 
 # @pytest.mark.integration

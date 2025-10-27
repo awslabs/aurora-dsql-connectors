@@ -8,10 +8,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 from botocore.credentials import CredentialProvider
-from botocore.exceptions import ClientError, BotoCoreError
+from botocore.exceptions import BotoCoreError, ClientError
 
-from dsql_core.token_manager import TokenManager
 from dsql_core.connection_properties import DefaultValues
+from dsql_core.token_manager import TokenManager
 
 
 @dataclass

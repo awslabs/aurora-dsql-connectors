@@ -4,6 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import os
+
 from psycopg import pq
 
 import aurora_dsql_psycopg as dsql

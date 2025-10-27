@@ -4,11 +4,11 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import logging
-import psycopg2
-
 from typing import Any, Optional
 
+import psycopg2
 from botocore.credentials import CredentialProvider
+
 from dsql_core.connection_utils import ConnectionUtilities
 
 logger = logging.getLogger(__name__)

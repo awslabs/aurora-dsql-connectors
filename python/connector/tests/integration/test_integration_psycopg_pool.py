@@ -4,9 +4,10 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import os
-import pytest
 
+import pytest
 from psycopg_pool import ConnectionPool as PsycopgPool
+
 import aurora_dsql_psycopg as dsql
 
 

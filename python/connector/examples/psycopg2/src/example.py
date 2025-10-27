@@ -3,9 +3,10 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 """
 
+import os
+
 import psycopg2
 import psycopg2.extensions
-import os
 
 import aurora_dsql_psycopg2 as dsql
 

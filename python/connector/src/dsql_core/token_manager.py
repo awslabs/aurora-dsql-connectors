@@ -4,10 +4,11 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import logging
+from typing import Any, Dict
+
 import boto3
 import botocore.session
-from botocore.exceptions import ClientError, BotoCoreError
-from typing import Dict, Any
+from botocore.exceptions import BotoCoreError, ClientError
 
 logger = logging.getLogger(__name__)
 
