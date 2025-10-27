@@ -48,7 +48,7 @@ class TestPsycopgPool:
         mock_psycopg_connect.return_value = mock_connection
 
         # Directly test DSQLConnection.connect
-        conn = dsql.DSQLConnection.connect(**cluster_config)
+        _ = dsql.DSQLConnection.connect(**cluster_config)
 
         # Verify that TokenManager.get_token was called
         mock_get_token.assert_called()
@@ -83,7 +83,7 @@ class TestPsycopgPool:
         )
 
         with pool as p:
-            with p.connection() as conn:
+            with p.connection() as _:
                 pass  # Just getting a connection should trigger the calls
 
         # Verify that TokenManager.get_token was called
