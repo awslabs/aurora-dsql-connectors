@@ -6,9 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 import os
 
 import pytest
-from psycopg2 import OperationalError as Psycopg2Error
-
-import aurora_dsql_psycopg2 as dsql
 
 
 # @pytest.mark.integration
