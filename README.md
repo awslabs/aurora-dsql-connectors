@@ -155,7 +155,7 @@ To make it work, provide region as a parameter as in example below:
     import aurora_dsql_psycopg2 as dsql
 
     config = {
-        'host': "eaabtyvhmt2bqdgps2yfkyhdsu.dsql-gamma.us-east-1.on.aws",
+        'host': "your-cluster.dsql.us-east-1.on.aws",
         'region': "us-east-1",
         'user': "admin",
         "profile": "default",
