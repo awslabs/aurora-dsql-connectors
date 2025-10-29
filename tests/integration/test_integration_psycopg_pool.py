@@ -51,6 +51,7 @@ class TestIntegrationPool:
             kwargs=cluster_config,  # Pass IAM params as kwargs
             min_size=2,
             max_size=8,
+            max_lifetime=3300,
         )
 
         with pool as p:

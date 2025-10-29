@@ -33,6 +33,7 @@ def connect_with_pool_concurrent_connections(cluster_user, cluster_endpoint, reg
         kwargs=conn_params,  # Pass params as kwargs
         min_size=2,
         max_size=8,
+        max_lifetime=3300,
         open=True,
     )
 
