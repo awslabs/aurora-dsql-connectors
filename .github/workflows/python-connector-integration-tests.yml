@@ -6,14 +6,14 @@ on:
   push:
     branches: [ main ]
     paths:
-      - './src/**'
-      - './tests/**'
+      - 'src/**'
+      - 'tests/**'
       - '.github/workflows/python-connector-integration-tests.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - './src/**'
-      - './tests/**'
+      - 'src/**'
+      - 'tests/**'
       - '.github/workflows/python-connector-integration-tests.yml'
   # Give us a button to allow running the workflow on demand for testing.
   workflow_dispatch:
@@ -27,12 +27,15 @@ jobs:
   connector-integ-test:
     name: Python connector integration tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     permissions:
       contents: read
       id-token: write # required by aws-actions/configure-aws-credentials
     concurrency:
       # Ensure only 1 job uses the workflow cluster at a time.
-      group: ${{ github.workflow }}
+      group: ${{ github.workflow }}-${{ matrix.python-version }}
 
     steps:
     - name: Checkout code
@@ -41,7 +44,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.10'
+        python-version: ${{ matrix.python-version }}
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
