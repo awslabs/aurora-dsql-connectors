@@ -35,7 +35,7 @@ client libraries that handles IAM token generation, allowing users to connect to
 ### Installation
 
 ```bash
-pip install aurora_dsql_python_connector
+pip install aurora-dsql-python-connector
 ```
 
 #### Install psycopg or psycopg2 separately

@@ -32,7 +32,7 @@ def connect_with_pool(cluster_user, cluster_endpoint, region):
         kwargs=conn_params,  # Pass params as kwargs
         min_size=2,
         max_size=8,
-        max_lifetime=3300
+        max_lifetime=3300,
     )
 
     # Use the pool as a context manager
