@@ -9,6 +9,9 @@
   },
   "homepage": "https://github.com/awslabs/aurora-dsql-nodejs-connector",
   "keywords": ["aws", "aurora", "dsql", "postgres", "database", "iam", "authentication"],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
