@@ -1,0 +1,50 @@
+{
+  "name": "@aws/aurora-dsql-postgresjs-connector",
+  "version": "0.1.0",
+  "description": "An AWS Aurora DSQL connector with IAM authentication for Postgres.js",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/awslabs/aurora-dsql-nodejs-connector"
+  },
+  "homepage": "https://github.com/awslabs/aurora-dsql-nodejs-connector",
+  "keywords": ["aws", "aurora", "dsql", "postgres", "database", "iam", "authentication"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:unit": "jest --testPathIgnorePatterns=test/integration",
+    "test:integration": "jest test/integration",
+    "test:all": "jest",
+    "test:watch": "jest --watch",
+    "dev": "tsc --watch",
+    "lint": "eslint src/**/*.ts test/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts test/**/*.ts --fix"
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "dependencies": {
+    "@aws-sdk/credential-providers": "^3.901.0",
+    "@aws-sdk/dsql-signer": "^3.917.0"
+  },
+  "peerDependencies": {
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "@eslint/js": "^9.37.0",
+    "eslint": "^9.38.0",
+    "eslint-plugin-header": "^3.1.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.9.2",
+    "postgres": "^3.4.7"
+  }
+}
