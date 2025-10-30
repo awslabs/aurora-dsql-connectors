@@ -26,24 +26,24 @@
   ],
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.894.0",
-    "@aws-sdk/dsql-signer": "^3.917.0"
+    "@aws-sdk/dsql-signer": "^3.920.0"
   },
   "peerDependencies": {
     "pg": "^8.16.3"
   },
   "devDependencies": {
-    "@types/jest": "^30.0.0",
-    "@types/node": "^24.9.1",
-    "@types/pg": "^8.15.5",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.1.0",
-    "tsx": "^4.20.6",
-    "typescript": "^5.9.2",
-    "@typescript-eslint/eslint-plugin": "^8.46.0",
-    "@typescript-eslint/parser": "^8.46.0",
     "@eslint/js": "^9.37.0",
-    "eslint": "^9.37.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.9.2",
+    "@types/pg": "^8.15.6",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
     "eslint-plugin-header": "^3.1.1",
-    "pg": "^8.16.3"
+    "jest": "^30.2.0",
+    "pg": "^8.16.3",
+    "ts-jest": "^29.4.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   }
 }
