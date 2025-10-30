@@ -1,0 +1,154 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import postgres, {PostgresType} from "postgres";
+import {AwsCredentialIdentity, AwsCredentialIdentityProvider} from "@aws-sdk/types";
+import {DsqlSigner, DsqlSignerConfig} from "@aws-sdk/dsql-signer";
+
+const ADMIN = "admin";
+const DEFAULT_DATABASE = "postgres";
+const DEFAULT_EXPIRY = 30; // Based on default Postgres.js connect_timeout
+// String components of a DSQL hostname, <Cluster ID>.dsql.<region>.on.aws
+const PRE_REGION_HOST_PATTERN = ".dsql.";
+const POST_REGION_HOST_PATTERN = ".on.aws";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export function auroraDSQLPostgres<T extends Record<string, postgres.PostgresType> = {}>(
+    url: string,
+    options?: AuroraDSQLConfig<T>
+): postgres.Sql<Record<string, postgres.PostgresType> extends T ? {} : {
+    [type in keyof T]: T[type] extends {
+        serialize: (value: infer R) => any,
+        parse: (raw: any) => infer R
+    } ? R : never
+}>;
+
+export function auroraDSQLPostgres<T extends Record<string, postgres.PostgresType> = {}>(
+    options: AuroraDSQLConfig<T>
+): postgres.Sql<Record<string, postgres.PostgresType> extends T ? {} : {
+    [type in keyof T]: T[type] extends {
+        serialize: (value: infer R) => any,
+        parse: (raw: any) => infer R
+    } ? R : never
+}>;
+
+export function auroraDSQLPostgres<T extends Record<string, postgres.PostgresType> = {}>(
+    urlOrOptions: string | AuroraDSQLConfig<T>,
+    options?: AuroraDSQLConfig<T>
+): postgres.Sql<Record<string, postgres.PostgresType> extends T ? {} : {
+    [type in keyof T]: T[type] extends {
+        serialize: (value: infer R) => any,
+        parse: (raw: any) => infer R
+    } ? R : never
+}> {
+/* eslint-enable @typescript-eslint/no-explicit-any */
+    let opts: AuroraDSQLConfig<T>;
+    let host: string;
+    let username: string;
+    let database: string | undefined;
+    let ssl: object | boolean | string | undefined;
+    if (typeof urlOrOptions === 'string') {
+        // Called with (url, options)
+        let parsedOptions = parseConnectionString(urlOrOptions);
+        host = options?.hostname || options?.host || parsedOptions.host || process.env.PGHOST!;
+        username = options?.username || options?.user || parsedOptions.username! || process.env.PGUSERNAME || process.env.USER || ADMIN;
+        database = options?.database || options?.db || parsedOptions.database || process.env.PGDATABASE;
+        ssl = options?.ssl || parsedOptions.ssl;
+        opts = {...options!};
+    } else {
+        // Called with (options) only
+        host = urlOrOptions?.hostname || urlOrOptions?.host || process.env.PGHOST!;
+        username = urlOrOptions?.username || urlOrOptions?.user || process.env.PGUSERNAME || process.env.USER || ADMIN;
+        database = urlOrOptions?.database || urlOrOptions?.db || process.env.PGDATABASE;
+        ssl = urlOrOptions?.ssl;
+        opts = {...urlOrOptions!};
+    }
+    if (Array.isArray(host)) {
+        throw new Error('Multi-host configurations are not supported for Aurora DSQL');
+    }
+    let region = opts.region || parseRegionFromHost(host);
+    if (isClusterID(host)) {
+        host = buildHostnameFromIdAndRegion(host, region);
+        opts.host = host;
+    }
+    let signerConfig: DsqlSignerConfig = {
+        hostname: host,
+        region: opts.region || parseRegionFromHost(host),
+        expiresIn: opts.tokenDurationSecs ?? opts.connect_timeout ?? (process.env.PGCONNECT_TIMEOUT ? parseInt(process.env.PGCONNECT_TIMEOUT) : undefined) ?? DEFAULT_EXPIRY,
+        profile: opts.profile || process.env.AWS_PROFILE || "default",
+    };
+    if (opts.customCredentialsProvider) {
+        signerConfig.credentials = opts.customCredentialsProvider;
+    }
+    let signer = new DsqlSigner(signerConfig);
+    if (!database) opts.database = DEFAULT_DATABASE;
+    if (!ssl) opts.ssl = true;
+    const postgresOpts: postgres.Options<T> = {
+        ...opts,
+        pass: () => getToken(signer, username),
+    };
+    return typeof urlOrOptions === 'string' ? postgres(urlOrOptions, postgresOpts) : postgres(postgresOpts);
+}
+
+function parseConnectionString(url: string): {
+    database?: string;
+    host?: string;
+    username?: string;
+    ssl?: string;
+} {
+    let decodedUrl = decodeURI(url);
+    const parsed = new URL(decodedUrl);
+
+    // Check for multi-host
+    if (parsed.hostname?.includes(',')) {
+        throw new Error('Multi-host connection strings are not supported for Aurora DSQL');
+    }
+
+    return {
+        username: parsed.username,
+        host: parsed.hostname,
+        database: parsed.pathname?.slice(1),
+        ssl: parsed.searchParams.get("ssl") || parsed.searchParams.get("sslmode") || undefined,
+    };
+}
+
+function parseRegionFromHost(host: string): string | undefined {
+    if (!host) {
+        throw new Error("Hostname is required to parse region");
+    }
+
+    const match = host.match(/^(?<instance>[^.]+)\.(?<dns>dsql(?:-[^.]+)?)\.(?<domain>(?<region>[a-zA-Z0-9-]+)\.on\.aws\.?)$/i);
+    if (match?.groups) {
+        return match.groups.region;
+    }
+    throw new Error(`Unable to parse region from hostname: ${host}`);
+}
+
+function isClusterID(host: string) {
+    return !host.includes(".");
+}
+
+function buildHostnameFromIdAndRegion(host: string, region: string | undefined) {
+    return host + PRE_REGION_HOST_PATTERN + region + POST_REGION_HOST_PATTERN;
+}
+
+async function getToken(signer: DsqlSigner, username: string): Promise<string> {
+    if (username === ADMIN) {
+        return await signer.getDbConnectAdminAuthToken();
+    } else {
+        return await signer.getDbConnectAuthToken();
+    }
+}
+
+export interface AuroraDSQLConfig<T extends Record<string, PostgresType<T>>> extends Omit<postgres.Options<T>, 'password' | 'pass'> {
+
+    region?: string;
+
+    profile?: string;
+
+    tokenDurationSecs?: number;
+
+    customCredentialsProvider?: AwsCredentialIdentity | AwsCredentialIdentityProvider;
+
+}

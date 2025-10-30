@@ -1,0 +1,35 @@
+name: Publish Aurora DSQL Connector for Postgres.js
+permissions:
+  contents: read
+  id-token: write
+on:
+  release:
+    types: [published]
+
+jobs:
+  test:
+    if: startsWith(github.event.release.tag_name, 'aurora-dsql-postgresjs-connector-v')
+    uses: ./.github/workflows/postgres-js-integration-tests.yml
+    secrets: inherit
+
+  publish:
+    needs: test
+    if: startsWith(github.event.release.tag_name, 'aurora-dsql-postgresjs-connector-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - run: |
+          npm install
+          npm run build
+        working-directory: packages/postgres-js
+      
+      - run: npm publish --provenance
+        working-directory: packages/postgres-js
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

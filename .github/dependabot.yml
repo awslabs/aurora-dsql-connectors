@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/packages/node-postgres"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "npm"
+    directory: "/packages/postgres-js"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5

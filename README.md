@@ -1,0 +1,47 @@
+# Aurora DSQL Connectors for Node.js
+
+This repository contains Node.js connectors for [Amazon Aurora DSQL](https://aws.amazon.com/rds/aurora/dsql/), a distributed SQL database service that provides high availability and scalability for PostgreSQL-compatible applications.
+
+Aurora DSQL requires IAM-based authentication with time-limited tokens that existing Node.js PostgreSQL drivers do not natively support. These connectors bridge that gap by providing seamless IAM authentication on top of popular PostgreSQL clients.
+
+## Available Connectors
+
+### [Aurora DSQL Connector for node-postgres](./packages/node-postgres/)
+
+Built on [node-postgres](https://node-postgres.com/), the most popular PostgreSQL client for Node.js. This connector extends the node-postgres Client and Pool with automatic IAM authentication for Aurora DSQL.
+
+[View Documentation](./packages/node-postgres/README.md)
+
+[Sample Usage](./packages/node-postgres/example/)
+
+### [Aurora DSQL Connector for Postgres.js](./packages/postgres-js/)
+
+Built on [Postgres.js](https://github.com/porsager/postgres), a fast and modern PostgreSQL client. This connector provides IAM authentication while maintaining Postgres.js's tagged template literal query syntax.
+
+[View Documentation](./packages/postgres-js/README.md)
+
+[Sample Usage](./packages/postgres-js/example/)
+
+## Key Features
+
+Both connectors provide:
+
+- **Automatic IAM Authentication** - Handles DSQL token generation and refresh
+- **Seamless Integration** - Built on popular PostgreSQL clients to support existing PostgreSQL applications
+- **Region Auto-Discovery** - Extracts AWS region from DSQL cluster hostname  
+- **Full TypeScript Support** - Complete type safety for your applications
+- **Custom Credentials** - Support for custom AWS credential providers
+
+## Prerequisites
+
+- Node.js 20+
+- AWS credentials configured (via AWS CLI, environment variables, or IAM roles)
+- Access to an Aurora DSQL cluster
+
+## Contributing
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This project is licensed under the Apache License 2.0. See [LICENSE](./LICENSE) for details.

@@ -1,0 +1,68 @@
+name: Aurora DSQL Connector for node-postgres Tests
+
+permissions: {}
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "packages/node-postgres/**"
+      - ".github/workflows/node-postgres-integration-tests.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "packages/node-postgres/**"
+      - ".github/workflows/node-postgres-integration-tests.yml"
+  # Give us a button to allow running the workflow on demand for testing.
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Manual Workflow Run'
+        required: false
+        type: string
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: '20'
+      target-versions: ${{ steps.versions.outputs.matrix }}
+    steps:
+      - id: versions
+        run: echo "matrix=[20, 22, 24]" >> $GITHUB_OUTPUT
+
+  run-tests:
+    name: Node-postgres tests
+    needs: [setup]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required by aws-actions/configure-aws-credentials
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        node-version: ${{ fromJson(needs.setup.outputs.target-versions) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+          aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+
+      - name: Run tests
+        working-directory: ./packages/node-postgres
+        run: |
+          npm install
+          npm run lint
+          npm run test
