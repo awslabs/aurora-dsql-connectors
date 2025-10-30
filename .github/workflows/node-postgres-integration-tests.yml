@@ -20,6 +20,7 @@ on:
         description: 'Manual Workflow Run'
         required: false
         type: string
+  workflow_call:
 
 jobs:
   setup:
