@@ -1,6 +1,6 @@
 [project]
 name = "aurora-dsql-test-psycopg2"
-version = "0.1.0"
+version = "0.1.1"
 description = "A test project that utilizes Aurora DSQL Python Connector with psycopg2 to connect to Amazon Aurora DSQL clusters."
 readme = "README.md"
 license = "Apache-2.0"

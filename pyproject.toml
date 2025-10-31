@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aurora-dsql-python-connector"
-version = "0.1.0"
+version = "0.1.1"
 description = "A connector that integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters"
 readme = "README.md"
 license = "Apache-2.0"
@@ -47,10 +47,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/aws/aurora-dsql-connector"
-Repository = "https://github.com/aws/aurora-dsql-connector"
-Documentation = "https://github.com/aws/aurora-dsql-connector"
-"Bug Tracker" = "https://github.com/aws/aurora-dsql-connector/issues"
+Homepage = "https://github.com/awslabs/aurora-dsql-python-connector"
+Repository = "https://github.com/awslabs/aurora-dsql-python-connector"
+Documentation = "https://github.com/awslabs/aurora-dsql-python-connector"
+"Bug Tracker" = "https://github.com/awslabs/aurora-dsql-python-connector/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
