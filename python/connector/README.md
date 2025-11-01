@@ -110,14 +110,14 @@ If the client needs both, then they both need to be installed.
 
 **Note:** 
 
-In the above scenario the region is used that was set prviously on the machine, e.g.:
+In the above scenario, the region is used that was set previously on the machine, e.g.:
 
 ```bash
 aws configure set region us-east-1
 ```
 
-If the region has not been set, or the given cluster ID is in a different region the connection will fail.
-To make it work, provide region as a parameter as in example below:
+If the region has not been set, or the given cluster ID is in a different region, the connection will fail.
+To make it work, provide region as a parameter as in the example below:
 
 ```python
     # Use this import for psycopg
