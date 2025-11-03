@@ -1,0 +1,19 @@
+{
+  "name": "dsql_node_postgres_howto",
+  "version": "1.0.0",
+  "description": "How To",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern='test/smoke.test.js' --runInBand --detectOpenHandles --forceExit"
+  },
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@aws/aurora-dsql-node-postgres-connector": "^0.1.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
