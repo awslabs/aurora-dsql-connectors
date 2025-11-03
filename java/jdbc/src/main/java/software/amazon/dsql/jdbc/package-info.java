@@ -15,12 +15,12 @@
  */
 
 /**
- * Aurora DSQL JDBC Connector - IAM authentication plugin for PostgreSQL JDBC connections to Amazon
- * Aurora DSQL.
+ * Aurora DSQL Connector for JDBC - IAM authentication plugin for PostgreSQL JDBC connections to
+ * Amazon Aurora DSQL.
  *
  * <h2>Overview</h2>
  *
- * <p>The Aurora DSQL JDBC Connector extends the PostgreSQL JDBC driver to enable IAM-based
+ * <p>The Aurora DSQL Connector for JDBC extends the PostgreSQL JDBC driver to enable IAM-based
  * authentication for Amazon Aurora DSQL clusters. It automatically generates and manages
  * time-limited IAM authentication tokens, allowing applications to connect to Aurora DSQL using
  * standard JDBC patterns without manual token handling. The connector acts as an authentication

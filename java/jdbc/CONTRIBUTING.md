@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-Thank you for your interest in contributing to the Aurora DSQL JDBC Connector!
+Thank you for your interest in contributing to the Aurora DSQL Connector for JDBC!
 
 ## How to contribute
 

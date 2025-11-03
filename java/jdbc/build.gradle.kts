@@ -109,7 +109,7 @@ tasks.named<Javadoc>("javadoc") {
 tasks.named<Jar>("jar") {
     manifest {
         attributes(
-            "Implementation-Title" to "Aurora DSQL JDBC Connector",
+            "Implementation-Title" to "Aurora DSQL Connector for JDBC",
             "Implementation-Version" to version,
             "Implementation-Vendor" to "Amazon Web Services",
         )
@@ -175,7 +175,7 @@ tasks.register("generateVersionClass") {
             package software.amazon.dsql.jdbc;
 
             /**
-             * Version information for Aurora DSQL JDBC Connector.
+             * Version information for Aurora DSQL Connector for JDBC.
              * Generated automatically during build.
              *
              * @since 1.1.1
@@ -223,8 +223,8 @@ publishing {
             from(components["java"])
 
             pom {
-                name.set("Aurora DSQL JDBC Connector")
-                description.set("A PgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
+                name.set("Aurora DSQL Connector for JDBC")
+                description.set("A pgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
                 url.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
                 inceptionYear.set("2025")
 
@@ -277,9 +277,9 @@ if ("UPLOAD".equals(System.getenv("JRELEASER_MAVENCENTRAL_STAGE"))) {
     jreleaser {
         project {
             name.set("aurora-dsql-jdbc-connector")
-            description.set("A PgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
+            description.set("A pgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
             longDescription.set(
-                "The Aurora DSQL JDBC Connector is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.",
+                "The Aurora DSQL Connector for JDBC is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.",
             )
             links {
                 homepage.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")

@@ -1,40 +1,40 @@
-# Aurora DSQL JDBC Connector
+# Aurora DSQL Connector for JDBC
 [![Maven Central Version](https://img.shields.io/maven-central/v/software.amazon.dsql/aurora-dsql-jdbc-connector?style=for-the-badge)](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector)
 [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg?style=for-the-badge)](https://javadoc.io/doc/software.amazon.dsql/aurora-dsql-jdbc-connector/latest/software/amazon/dsql/jdbc/package-summary.html)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
 
-A PgJDBC connector that integrates IAM Authentication for connecting Java applications to Amazon Aurora DSQL clusters.
+A pgJDBC connector that integrates IAM Authentication for connecting Java applications to Amazon Aurora DSQL clusters.
 
-The **Aurora DSQL JDBC Connector** is designed as an authentication plugin that extends the functionality of the PostgreSQL JDBC driver to enable applications to authenticate with Amazon Aurora DSQL using IAM credentials. The connector does not connect directly to the database, but provides seamless IAM authentication on top of the underlying PostgreSQL JDBC driver.
+The **Aurora DSQL Connector for JDBC** is designed as an authentication plugin that extends the functionality of the PostgreSQL JDBC driver to enable applications to authenticate with Amazon Aurora DSQL using IAM credentials. The connector does not connect directly to the database, but provides seamless IAM authentication on top of the underlying PostgreSQL JDBC driver.
 
-The Aurora DSQL JDBC Connector is built to work with the [PostgreSQL JDBC Driver](https://github.com/pgjdbc/pgjdbc) and provides seamless integration with Amazon Aurora DSQL's IAM authentication requirements.
+The Aurora DSQL Connector for JDBC is built to work with the [PostgreSQL JDBC Driver](https://github.com/pgjdbc/pgjdbc) and provides seamless integration with Amazon Aurora DSQL's IAM authentication requirements.
 
-In conjunction with the PostgreSQL JDBC Driver, the Aurora DSQL JDBC Connector enables IAM-based authentication for Amazon Aurora DSQL. It introduces deep integration with AWS authentication services such as [AWS Identity and Access Management (IAM)](https://aws.amazon.com/iam/).
+In conjunction with the PostgreSQL JDBC Driver, the Aurora DSQL Connector for JDBC enables IAM-based authentication for Amazon Aurora DSQL. It introduces deep integration with AWS authentication services such as [AWS Identity and Access Management (IAM)](https://aws.amazon.com/iam/).
 
 ## About the Connector
 Amazon Aurora DSQL is a distributed SQL database service that provides high availability and scalability for PostgreSQL-compatible applications. Aurora DSQL requires IAM-based authentication with time-limited tokens that existing JDBC drivers do not natively support.
 
-The main idea behind the Aurora DSQL JDBC Connector is to add an authentication layer on top of the PostgreSQL JDBC driver that handles IAM token generation, allowing users to connect to Aurora DSQL without changing their existing JDBC workflows.
+The main idea behind the Aurora DSQL Connector for JDBC is to add an authentication layer on top of the PostgreSQL JDBC driver that handles IAM token generation, allowing users to connect to Aurora DSQL without changing their existing JDBC workflows.
 
 ### What is Aurora DSQL Authentication?
 In Amazon Aurora DSQL, **authentication** involves:
 - **IAM Authentication**: All connections use IAM-based authentication with time-limited tokens
 - **Token Generation**: Authentication tokens are generated using AWS credentials and have configurable lifetimes
 
-The Aurora DSQL JDBC Connector is designed to understand these requirements and automatically generate IAM authentication tokens when establishing connections.
+The Aurora DSQL Connector for JDBC is designed to understand these requirements and automatically generate IAM authentication tokens when establishing connections.
 
-### Benefits of the Aurora DSQL JDBC Connector
-Although Aurora DSQL provides a PostgreSQL-compatible interface, existing PostgreSQL drivers do not currently support Aurora DSQL's IAM authentication requirements. The Aurora DSQL JDBC Connector allows customers to continue using their existing PostgreSQL workflows while enabling IAM authentication through:
+### Benefits of the Aurora DSQL Connector for JDBC
+Although Aurora DSQL provides a PostgreSQL-compatible interface, existing PostgreSQL drivers do not currently support Aurora DSQL's IAM authentication requirements. The Aurora DSQL Connector for JDBC allows customers to continue using their existing PostgreSQL workflows while enabling IAM authentication through:
 
 1. **Automatic Token Generation**: IAM tokens are generated automatically using AWS credentials
 2. **Seamless Integration**: Works with existing JDBC connection patterns
 3. **AWS Credentials Support**: Supports various AWS credential providers (default, profile-based, etc.)
 
-### Using the Aurora DSQL JDBC Connector with Connection Pooling
-The Aurora DSQL JDBC Connector works with connection pooling libraries such as HikariCP. The connector handles IAM token generation during connection establishment, allowing connection pools to operate normally.
+### Using the Aurora DSQL Connector for JDBC with Connection Pooling
+The Aurora DSQL Connector for JDBC works with connection pooling libraries such as HikariCP. The connector handles IAM token generation during connection establishment, allowing connection pools to operate normally.
 
 ## Getting Started
-For more information on how to download the Aurora DSQL JDBC Connector, minimum requirements to use it, and how to integrate it within your project, please refer to the sections below.
+For more information on how to download the Aurora DSQL Connector for JDBC, minimum requirements to use it, and how to integrate it within your project, please refer to the sections below.
 
 ### Prerequisites
 - Java 8 or higher
@@ -59,7 +59,7 @@ implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:VERSION")
 
 ## Dependencies
 
-The Aurora DSQL JDBC Connector automatically includes all necessary dependencies when added to your project:
+The Aurora DSQL Connector for JDBC automatically includes all necessary dependencies when added to your project:
 
 - **PostgreSQL JDBC Driver**: Provides the underlying PostgreSQL connectivity that Aurora DSQL is compatible with
 - **AWS SDK for Aurora DSQL**: Enables IAM authentication token generation for Aurora DSQL clusters
@@ -68,7 +68,7 @@ These dependencies are included transitively, so you don't need to add them expl
 
 ## Connection Methods
 
-The Aurora DSQL JDBC Connector supports the following URL format for connecting to Aurora DSQL clusters:
+The Aurora DSQL Connector for JDBC supports the following URL format for connecting to Aurora DSQL clusters:
 
 ### AWS DSQL PostgreSQL Connector Format
 
@@ -103,7 +103,7 @@ The connector supports the following connection properties:
 **Note:** The database name is specified in the URL path (e.g., `/postgres`). If not specified in the URL, it defaults to `postgres`.
 
 ## Logging
-Enabling logging is a very useful mechanism for troubleshooting any issue one might potentially experience while using the Aurora DSQL JDBC Connector.
+Enabling logging is a very useful mechanism for troubleshooting any issue one might potentially experience while using the Aurora DSQL Connector for JDBC.
 
 The connector uses Java's built-in logging system (java.util.logging). You can configure logging levels by creating a `logging.properties` file:
 
@@ -111,7 +111,7 @@ The connector uses Java's built-in logging system (java.util.logging). You can c
 # Set root logger level to INFO for clean output
 .level = INFO
 
-# Show Aurora DSQL JDBC Connector FINE logs for detailed debugging
+# Show Aurora DSQL Connector for JDBC FINE logs for detailed debugging
 software.amazon.dsql.jdbc.level = FINE
 
 # Console handler configuration
@@ -125,16 +125,14 @@ java.util.logging.SimpleFormatter.format = %1$tH:%1$tM:%1$tS.%1$tL [%4$s] %3$s -
 
 ## Examples
 
-| Description | Examples                                                                                                                                                                                                               |
-|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Using the Aurora DSQL JDBC Connector for basic connections with multiple configuration methods | [BasicConnectionExample](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/pgjdbc_using_dsql_connector/src/main/java/com/amazon/dsql/samples/BasicConnectionExample.java)                     |
-| Using the Aurora DSQL JDBC Connector with custom AWS credentials providers | [CustomCredentialsProviderExample](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/pgjdbc_using_dsql_connector/src/main/java/com/amazon/dsql/samples/CustomCredentialsProviderExample.java) |
-| Using HikariCP with the Aurora DSQL JDBC Connector for production-ready connection pooling | [HikariCP Example](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/pgjdbc_hikaricp_using_dsql_connector/src/main/java/org/example/Example.java)                                                      |
-| Using Spring Boot with HikariCP and the Aurora DSQL JDBC Connector | [Spring Boot HikariCP Example](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/springboot_hikaricp_using_dsql_connector)                                                                             |
-
+| Description | Examples |
+|-------------|----------|
+| Using the Aurora DSQL Connector for JDBC for basic connections | [Basic JDBC Connector Example](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/pgjdbc) |
+| Using HikariCP for connection pooling and the Aurora DSQL connector for JDBC | [HikariCP with DSQL Connector](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/pgjdbc_hikaricp) |
+| Using Spring Boot with HikariCP and the Aurora DSQL connector for JDBC | [Spring Boot HikariCP Example](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/spring_boot)                                                                             |
 
 ## Getting Help and Opening Issues
-If you encounter a bug with the Aurora DSQL JDBC Connector, we would like to hear about it.
+If you encounter a bug with the Aurora DSQL Connector for JDBC, we would like to hear about it.
 Please search the existing issues to see if others are also experiencing the issue before reporting the problem in a new issue.
 
 When opening a new issue, please provide:

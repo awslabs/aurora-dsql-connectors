@@ -36,8 +36,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 /**
- * Integration tests for basic Aurora DSQL JDBC Connector connections. These tests require a live
- * Aurora DSQL cluster and AWS credentials.
+ * Integration tests for basic Aurora DSQL Connector for JDBC connections. These tests require a
+ * live Aurora DSQL cluster and AWS credentials.
  *
  * <p>Environment variables required:
  * <li>CLUSTER_ENDPOINT: Aurora DSQL cluster endpoint
