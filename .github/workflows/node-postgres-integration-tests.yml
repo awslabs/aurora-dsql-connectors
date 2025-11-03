@@ -4,12 +4,12 @@ permissions: {}
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "packages/node-postgres/**"
       - ".github/workflows/node-postgres-integration-tests.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "packages/node-postgres/**"
       - ".github/workflows/node-postgres-integration-tests.yml"
@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       tags:
-        description: 'Manual Workflow Run'
+        description: "Manual Workflow Run"
         required: false
         type: string
   workflow_call:
@@ -27,7 +27,7 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      build-version: '20'
+      build-version: "20"
       target-versions: ${{ steps.versions.outputs.matrix }}
     steps:
       - id: versions
@@ -63,6 +63,10 @@ jobs:
 
       - name: Run tests
         working-directory: ./packages/node-postgres
+        env:
+          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_NODE_POSTGRES_CLUSTER_EDNPOINT }}
+          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          IAM_ROLE: $${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
         run: |
           npm install
           npm run lint

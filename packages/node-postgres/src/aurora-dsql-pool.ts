@@ -26,7 +26,7 @@ class AuroraDSQLPool extends Pool {
     callback: (
       err: Error | undefined,
       client: PoolClient | undefined,
-      done: (release?: any) => void
+      done: (release?: boolean | Error) => void
     ) => void
   ): void;
 
@@ -35,7 +35,7 @@ class AuroraDSQLPool extends Pool {
     callback?: (
       err: Error | undefined,
       client: PoolClient | undefined,
-      done: (release?: any) => void
+      done: (release?: boolean | Error) => void
     ) => void
   ): Promise<PoolClient | void> {
     try {

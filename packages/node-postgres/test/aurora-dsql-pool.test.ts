@@ -110,7 +110,7 @@ describe("AuroraDSQLPool", () => {
         throw new Error("Host is required");
       });
 
-      expect(() => new AuroraDSQLPool({ user: "admin" } as any)).toThrow(
+      expect(() => new AuroraDSQLPool({ user: "admin" })).toThrow(
         "Host is required"
       );
     });
