@@ -1,5 +1,10 @@
 # Aurora DSQL Connector for Python
 
+[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--python--connector-blue?logo=github)](https://github.com/awslabs/aurora-dsql-python-connector)
+[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-python-connector/blob/main/LICENSE)
+[![PyPI - Version](https://img.shields.io/pypi/v/aurora-dsql-python-connector)](https://pypi.org/project/aurora-dsql-python-connector)
+[![Discord chat](https://img.shields.io/discord/500028886025895936.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)
+
 The Aurora DSQL Connector for Python integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters.
 Internally, it utilizes [psycopg](https://github.com/psycopg/psycopg) and [psycopg2](https://github.com/psycopg/psycopg2) client libraries.
 
