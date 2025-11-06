@@ -2,7 +2,7 @@
 
 [![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--nodejs--connector-blue?logo=github)](https://github.com/awslabs/aurora-dsql-nodejs-connector)
 [![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-nodejs-connector/blob/main/LICENSE)
-[![Discord chat](https://img.shields.io/discord/500028886025895936.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)
+[![Discord chat](https://img.shields.io/discord/1435027294837276802.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)
 
 This repository contains Node.js connectors for [Amazon Aurora DSQL](https://aws.amazon.com/rds/aurora/dsql/), a distributed SQL database service that provides high availability and scalability for PostgreSQL-compatible applications.
 
