@@ -1,7 +1,10 @@
 # Aurora DSQL Connector for JDBC
-[![Maven Central Version](https://img.shields.io/maven-central/v/software.amazon.dsql/aurora-dsql-jdbc-connector?style=for-the-badge)](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector)
-[![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg?style=for-the-badge)](https://javadoc.io/doc/software.amazon.dsql/aurora-dsql-jdbc-connector/latest/software/amazon/dsql/jdbc/package-summary.html)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](LICENSE)
+
+[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--jdbc--connector-blue?logo=github)](https://github.com/awslabs/aurora-dsql-jdbc-connector)
+[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-jdbc-connector/blob/main/LICENSE)
+[![Maven Central Version](https://img.shields.io/maven-central/v/software.amazon.dsql/aurora-dsql-jdbc-connector)](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector)
+[![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](https://javadoc.io/doc/software.amazon.dsql/aurora-dsql-jdbc-connector/latest/software/amazon/dsql/jdbc/package-summary.html)
+[![Discord chat](https://img.shields.io/discord/1435027294837276802.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)
 
 A pgJDBC connector that integrates IAM Authentication for connecting Java applications to Amazon Aurora DSQL clusters.
 
