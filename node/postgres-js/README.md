@@ -12,7 +12,7 @@ The Aurora DSQL Connector for Postgres.js is designed as an authentication plugi
 Postgres.js client to enable applications to authenticate with Amazon Aurora DSQL using IAM credentials. The connector 
 does not connect directly to the database, but provides seamless IAM authentication on top of the underlying Postgres.js driver.
 
-## Benefits of the Connector
+## About the Connector
 
 Amazon Aurora DSQL is a distributed SQL database service that provides high availability and scalability for 
 PostgreSQL-compatible applications. Aurora DSQL requires IAM-based authentication with time-limited tokens that 
@@ -24,21 +24,33 @@ client that handles IAM token generation, allowing users to connect to Aurora DS
 The Aurora DSQL Connector for Postgres.js works with most versions of Postgres.js. Users provide their own version by installing
 Postgres.js directly.
 
+### What is Aurora DSQL Authentication?
+
+In Aurora DSQL, authentication involves:
+
+- **IAM Authentication:** All connections use IAM-based authentication with time-limited tokens
+- **Token Generation:** Authentication tokens are generated using AWS credentials and have configurable lifetimes
+
+The Aurora DSQL Connector for Postgres.js is designed to understand these requirements and automatically generate IAM authentication tokens when establishing connections.
+
 ### Features
 
 - **Automatic IAM Authentication** - Handles DSQL token generation and refresh
 - **Built on Postgres.js** - Leverages the fast PostgreSQL client for Node.js
+- **Seamless Integration** - Works with existing Postgres.js connection patterns
 - **Region Auto-Discovery** - Extracts AWS region from DSQL cluster hostname
 - **Full TypeScript Support** - Provides full type safety
-- **Custom Credentials** - Support for custom AWS credential providers
+- **AWS Credentials Support** - Supports various AWS credential providers (default, profile-based, custom)
+- **Connection Pooling Compatibility** - Works seamlessly with Postgres.js' built-in connection pooling
 
 ## Quick start guide
 
 ### Requirements
 
 - Node.js 20+
+- [Access to an Aurora DSQL cluster](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/getting-started.html)
+- Set up appropriate IAM permissions to allow your application to connect to Aurora DSQL.
 - AWS credentials configured (via AWS CLI, environment variables, or IAM roles)
-- Access to an Aurora DSQL cluster
 
 ### Installation
 
