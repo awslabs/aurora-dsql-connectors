@@ -17,13 +17,24 @@ Amazon Aurora DSQL is a cloud-native distributed database with PostgreSQL compat
 
 The Aurora DSQL Connector for node-postgres bridges this gap by implementing an authentication middleware that works seamlessly with node-postgres. This approach allows developers to maintain their existing node-postgres code while gaining secure IAM-based access to Aurora DSQL clusters through automated token management.
 
+### What is Aurora DSQL Authentication?
+
+In Aurora DSQL, authentication involves:
+
+- **IAM Authentication:** All connections use IAM-based authentication with time-limited tokens
+- **Token Generation:** Authentication tokens are generated using AWS credentials and have configurable lifetimes
+
+The Aurora DSQL Connector for node-postgres is designed to understand these requirements and automatically generate IAM authentication tokens when establishing connections.
+
 ### Features
 
 - **Automatic IAM Authentication** - Handles DSQL token generation and refresh
 - **Built on node-postgres** - Leverages the popular PostgreSQL client for Node.js
+- **Seamless Integration** - Works with existing node-postgres connection patterns
 - **Region Auto-Discovery** - Extracts AWS region from DSQL cluster hostname
 - **Full TypeScript Support** - Provides full type safety
-- **Custom Credentials** - Support for custom AWS credential providers
+- **AWS Credentials Support** - Supports various AWS credential providers (default, profile-based, custom)
+- **Connection Pooling Compatibility** - Works seamlessly with built-in connection pooling
 
 ## Example Application
 
@@ -34,8 +45,9 @@ There is an included sample application in [example](https://github.com/awslabs/
 ### Requirements
 
 - Node.js 20+
+- [Access to an Aurora DSQL cluster](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/getting-started.html)
+- Set up appropriate IAM permissions to allow your application to connect to Aurora DSQL.
 - AWS credentials configured (via AWS CLI, environment variables, or IAM roles)
-- Access to an Aurora DSQL cluster
 
 ## Installation
 
