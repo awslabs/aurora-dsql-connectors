@@ -11,7 +11,7 @@ import aurora_dsql_psycopg as dsql
 
 
 # @pytest.mark.integration
-class TestIntegration:
+class TestIntegrationPsycopg:
     """Integration tests requiring real Aurora DSQL cluster."""
 
     @staticmethod

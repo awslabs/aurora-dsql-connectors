@@ -42,8 +42,6 @@ class ConnectionProperties:
         dsn: Optional[str], kwargs: Dict[str, Any]
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
-        # TODO just keep dsql specific parameters in params
-
         params = kwargs.copy()
         if "host" in params and "region" not in params:
             region = ConnectionProperties._extract_region_from_hostname(params["host"])

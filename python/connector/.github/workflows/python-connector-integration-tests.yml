@@ -58,12 +58,14 @@ jobs:
         CLUSTER_USER: "admin"
         CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        SSL_CERT_PATH: "./root.pem"
       run: |
         python3 -m venv .venv
         source .venv/bin/activate
         pip install --upgrade pip
-        pip install -e ".[psycopg,psycopg2,dev]"
+        pip install -e ".[psycopg,psycopg2,asyncpg,dev]"
         python3 -c "import boto3; print(boto3.__version__)"
         pip list
         echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
         python -m pytest tests/integration

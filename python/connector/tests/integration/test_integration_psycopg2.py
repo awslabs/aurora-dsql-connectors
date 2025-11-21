@@ -9,7 +9,7 @@ import pytest
 
 
 # @pytest.mark.integration
-class TestIntegration:
+class TestIntegrationPsycopg2:
     """Integration tests requiring real Aurora DSQL cluster."""
 
     @staticmethod
