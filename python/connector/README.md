@@ -466,7 +466,7 @@ For instructions how to run the examples please refer to the examples READMDE fi
 | Description                                                                     | Examples                                                                                                                                                                                   |
 |---------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example.py)                                                              |
-| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example_with_connection_pool.pyv)                   |
+| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example_with_connection_pool.py)                    |
 |                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example_with_connection_pool_concurrent.py)   |
 
 
