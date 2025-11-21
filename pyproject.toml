@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aurora-dsql-python-connector"
-version = "0.1.1"
+version = "0.2.0"
 description = "A connector that integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters"
 readme = "README.md"
 license = "Apache-2.0"
@@ -34,6 +34,10 @@ psycopg = [
 
 psycopg2 = [
    "psycopg2-binary>=2.9.0",
+]
+
+asyncpg = [
+   "asyncpg>=0.30.0",
 ]
 
 dev = [

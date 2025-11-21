@@ -1,0 +1,16 @@
+"""
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: Apache-2.0
+"""
+
+import pytest
+from example_with_connection_pool_concurrent import main
+
+
+# Smoke tests that our example works fine
+@pytest.mark.asyncio
+async def test_example_with_pool_concurrent():
+    try:
+        await main()
+    except Exception as e:
+        pytest.fail(f"Unexpected exception: {e}")
