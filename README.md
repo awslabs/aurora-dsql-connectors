@@ -347,12 +347,8 @@ To make it work, provide region as a parameter as in the example below:
 | `token_duration_secs`         | `int`                    | No       | Token expiration time in seconds                              |
 
 
-All standard connection options of the underlying psycopg, psycopg2, and asyncpg libraries are also supported.
-
-**Exeption:**
-The following asyncpg parameters do not apply to DSQL and are not supported.
-- krbsrvname
-- gsslib
+All standard connection options of the underlying psycopg, psycopg2, and asyncpg libraries are also supported, with 
+the exception of asyncpg parameters **krbsrvname** and **gsslib** which are not supported by DSQL.
 
 ### Using the Aurora DSQL connector for Python with connection pooling
 
