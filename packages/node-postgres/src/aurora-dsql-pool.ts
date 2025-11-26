@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { Pool, PoolClient } from "pg";
-import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config";
-import { AuroraDSQLUtil } from "./aurora-dsql-util";
+import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config.js";
+import { AuroraDSQLUtil } from "./aurora-dsql-util.js";
 
 class AuroraDSQLPool extends Pool {
   private dsqlConfig?: AuroraDSQLPoolConfig;
