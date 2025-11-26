@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { Client } from "pg";
-import { AuroraDSQLConfig } from "./config/aurora-dsql-config";
-import { AuroraDSQLUtil } from "./aurora-dsql-util";
+import { AuroraDSQLConfig } from "./config/aurora-dsql-config.js";
+import { AuroraDSQLUtil } from "./aurora-dsql-util.js";
 
 class AuroraDSQLClient extends Client {
   private dsqlConfig?: AuroraDSQLConfig;
