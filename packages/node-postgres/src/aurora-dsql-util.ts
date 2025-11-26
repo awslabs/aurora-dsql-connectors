@@ -8,8 +8,8 @@ import {
   AwsCredentialIdentity,
   AwsCredentialIdentityProvider,
 } from "@smithy/types";
-import { AuroraDSQLConfig } from "./config/aurora-dsql-config";
-import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config";
+import { AuroraDSQLConfig } from "./config/aurora-dsql-config.js";
+import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config.js";
 import { parse } from "pg-connection-string";
 
 const ADMIN_USER = "admin";
