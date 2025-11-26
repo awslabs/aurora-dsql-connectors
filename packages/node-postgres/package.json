@@ -29,7 +29,7 @@
   ],
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.894.0",
-    "@aws-sdk/dsql-signer": "^3.920.0"
+    "@aws-sdk/dsql-signer": "^3.940.0"
   },
   "peerDependencies": {
     "pg": "^8.16.3"
@@ -37,11 +37,11 @@
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^24.9.2",
+    "@types/node": "^24.10.1",
     "@types/pg": "^8.15.6",
-    "@typescript-eslint/eslint-plugin": "^8.46.2",
-    "@typescript-eslint/parser": "^8.46.2",
-    "eslint": "^9.38.0",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "eslint": "^9.39.1",
     "eslint-plugin-header": "^3.1.1",
     "jest": "^30.2.0",
     "pg": "^8.16.3",
