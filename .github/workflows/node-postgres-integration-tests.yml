@@ -71,3 +71,17 @@ jobs:
           npm ci
           npm run lint
           npm run test
+
+      - name: Run example smoke test
+        working-directory: ./packages/node-postgres
+        env:
+          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_NODE_POSTGRES_CLUSTER_EDNPOINT }}
+          CLUSTER_USER: admin
+          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        run: |
+          npm run build:prod
+          npm link
+          cd example
+          npm ci
+          npm link @aws/aurora-dsql-node-postgres-connector
+          npm run test
