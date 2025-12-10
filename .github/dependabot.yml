@@ -2,11 +2,25 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/packages/node-postgres"
+    labels: ["dependencies", "javascript", "node-postgres"]
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "npm"
+    directory: "/packages/node-postgres/example"
+    labels: ["dependencies", "javascript", "node-postgres-example"]
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5
   - package-ecosystem: "npm"
     directory: "/packages/postgres-js"
+    labels: ["dependencies", "javascript", "postgres-js"]
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "npm"
+    directory: "/packages/postgres-js/example"
+    labels: ["dependencies", "javascript", "postgres-js-example"]
     schedule:
       interval: "daily"
     open-pull-requests-limit: 5

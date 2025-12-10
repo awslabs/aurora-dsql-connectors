@@ -85,29 +85,3 @@ jobs:
           npm ci
           npm link @aws/aurora-dsql-postgresjs-connector
           npm run test
-
-  verify-versions:
-    name: Verify version consistency
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Verify example dependency version matches package version
-        run: |
-          PKG_VERSION=$(node -p "require('./packages/postgres-js/package.json').version")
-          PKG_LOCK_VERSION=$(node -p "require('./packages/postgres-js/package-lock.json').version")
-          EXAMPLE_DEP=$(node -p "require('./packages/postgres-js/example/package.json').dependencies['@aws/aurora-dsql-postgresjs-connector']")
-          EXAMPLE_LOCK_VERSION=$(node -p "require('./packages/postgres-js/example/package-lock.json').packages['node_modules/@aws/aurora-dsql-postgresjs-connector'].version")
-          if [ "$PKG_LOCK_VERSION" != "$PKG_VERSION" ]; then
-            echo "Parent lock file mismatch: package.json is $PKG_VERSION but package-lock.json is $PKG_LOCK_VERSION"
-            exit 1
-          fi
-          if [ "$EXAMPLE_DEP" != "^$PKG_VERSION" ]; then
-            echo "Example dependency mismatch: package is $PKG_VERSION but example depends on $EXAMPLE_DEP"
-            exit 1
-          fi
-          if [ "$EXAMPLE_LOCK_VERSION" != "$PKG_VERSION" ]; then
-            echo "Example lock file mismatch: package is $PKG_VERSION but example lock file has $EXAMPLE_LOCK_VERSION"
-            exit 1
-          fi
