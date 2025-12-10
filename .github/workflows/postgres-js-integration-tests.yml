@@ -68,6 +68,6 @@ jobs:
           REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
           IAM_ROLE: $${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
         run: |
-          npm install
+          npm ci
           npm run lint
           npm run test
