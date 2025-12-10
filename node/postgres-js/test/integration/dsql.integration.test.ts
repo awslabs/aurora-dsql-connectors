@@ -4,6 +4,7 @@
  */
 import {auroraDSQLPostgres} from '../../src/client';
 import postgres from "postgres";
+import {jest} from '@jest/globals';
 
 jest.setTimeout(30000);
 

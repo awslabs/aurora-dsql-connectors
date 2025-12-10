@@ -13,16 +13,26 @@
     "access": "public"
   },
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "test": "jest",
-    "test:unit": "jest --testPathIgnorePatterns=test/integration",
-    "test:integration": "jest test/integration",
-    "test:all": "jest",
+    "clean": "rm -rf dist/ node_modules/",
+    "build": "npm run build:dev",
+    "build:dev": "npm run typecheck && tsdown \"src/**/*.ts\" --format cjs,esm --dts --sourcemap",
+    "build:prod": "npm run typecheck && tsdown src/index.ts --format cjs,esm --dts",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --testPathIgnorePatterns=integration",
+    "test:integration": "NODE_OPTIONS='--experimental-vm-modules' jest --testPathPatterns=integration",
     "test:watch": "jest --watch",
-    "dev": "tsc --watch",
     "lint": "eslint src/**/*.ts test/**/*.ts",
     "lint:fix": "eslint src/**/*.ts test/**/*.ts --fix"
   },
@@ -45,9 +55,10 @@
     "@typescript-eslint/parser": "^8.48.0",
     "eslint": "^9.39.1",
     "eslint-plugin-header": "^3.1.1",
-    "jest": "^29.7.0",
+    "jest": "^30.2.0",
     "postgres": "^3.4.7",
     "ts-jest": "^29.4.5",
+    "tsdown": "^0.11.4",
     "typescript": "^5.9.3"
   }
 }
