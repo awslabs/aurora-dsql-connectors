@@ -13,11 +13,25 @@
     "access": "public"
   },
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "tsc",
-    "test": "jest",
+    "clean": "rm -rf dist/ node_modules/",
+    "build": "npm run build:dev",
+    "build:dev": "npm run typecheck && tsdown \"src/**/*.ts\" --format cjs,esm --dts --sourcemap",
+    "build:prod": "npm run typecheck && tsdown src/index.ts --format cjs,esm --dts",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "jest --testPathIgnorePatterns=integration",
+    "test:integration": "NODE_OPTIONS='--experimental-vm-modules' jest --testPathPatterns=integration",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "lint": "eslint src/ test/",
@@ -46,6 +60,7 @@
     "jest": "^30.2.0",
     "pg": "^8.16.3",
     "ts-jest": "^29.4.5",
+    "tsdown": "^0.11.4",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
