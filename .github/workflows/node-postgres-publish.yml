@@ -1,7 +1,5 @@
 name: Publish Aurora DSQL Connector for node-postgres
-permissions:
-  contents: read
-  id-token: write
+permissions: {}
 on:
   release:
     types: [published]
@@ -16,12 +14,15 @@ jobs:
     needs: test
     if: startsWith(github.event.release.tag_name, 'aurora-dsql-node-postgres-connector-v')
     runs-on: ubuntu-latest
+    environment: NPM
+    permissions:
+      id-token: write # required for trusted publishing
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '25' # must be new enough so NPM supports trusted publishing
           registry-url: 'https://registry.npmjs.org'
 
       - run: |
@@ -31,5 +32,3 @@ jobs:
 
       - run: npm publish --provenance
         working-directory: packages/node-postgres
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
