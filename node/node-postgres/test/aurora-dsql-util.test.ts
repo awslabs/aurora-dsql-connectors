@@ -207,6 +207,23 @@ describe("AuroraDSQLUtil", () => {
       expect(result.host).toBe("cluster.dsql.us-east-1.on.aws");
     });
 
+    it("should override config values with connectionString values", () => {
+      const config = {
+        host: "config-host.dsql.us-west-2.on.aws",
+        user: "config-user",
+        database: "config-db",
+        connectionString:
+          "postgresql://connstr-user@connstr-host.dsql.us-east-1.on.aws:5432/connstr-db",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.host).toBe("connstr-host.dsql.us-east-1.on.aws");
+      expect(result.user).toBe("connstr-user");
+      expect(result.database).toBe("connstr-db");
+      expect(result.region).toBe("us-east-1");
+    });
+
     it("should build hostname from clusterId and region from config", () => {
       const config = {
         host: "cluster123",
