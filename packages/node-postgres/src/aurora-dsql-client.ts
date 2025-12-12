@@ -28,7 +28,9 @@ class AuroraDSQLClient extends Client {
           this.dsqlConfig.host!,
           this.dsqlConfig.user!,
           this.dsqlConfig.profile!,
-          this.dsqlConfig.region!
+          this.dsqlConfig.region!,
+          this.dsqlConfig.tokenDurationSecs,
+          this.dsqlConfig.customCredentialsProvider,
         );
       } catch (error) {
         if (callback) {

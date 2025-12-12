@@ -5,12 +5,17 @@
 import { AuroraDSQLPool } from "../src/aurora-dsql-pool";
 import { AuroraDSQLUtil } from "../src/aurora-dsql-util";
 import { Pool, PoolClient } from "pg";
+import { AwsCredentialIdentity } from "@smithy/types";
 
 jest.mock("pg");
 jest.mock("../src/aurora-dsql-util");
 
 const mockPool = Pool as jest.MockedClass<typeof Pool>;
 const mockAuroraDSQLUtil = AuroraDSQLUtil as jest.Mocked<typeof AuroraDSQLUtil>;
+const mockCredentials: AwsCredentialIdentity = {
+  accessKeyId: "mockAccessKey",
+  secretAccessKey: "mockSecretKey",
+};
 
 describe("AuroraDSQLPool", () => {
   beforeEach(() => {
@@ -67,7 +72,7 @@ describe("AuroraDSQLPool", () => {
           region: "us-east-1",
           profile: "default",
           ssl: { rejectUnauthorized: true },
-        })
+        }),
       );
       expect(pool).toBeInstanceOf(AuroraDSQLPool);
     });
@@ -101,7 +106,7 @@ describe("AuroraDSQLPool", () => {
           database: "postgres",
           region: "us-west-2",
           profile: "default",
-        })
+        }),
       );
     });
 
@@ -111,7 +116,7 @@ describe("AuroraDSQLPool", () => {
       });
 
       expect(() => new AuroraDSQLPool({ user: "admin" })).toThrow(
-        "Host is required"
+        "Host is required",
       );
     });
 
@@ -145,7 +150,7 @@ describe("AuroraDSQLPool", () => {
           profile: "custom-profile",
           max: 20,
           idleTimeoutMillis: 30000,
-        })
+        }),
       );
     });
   });
@@ -181,7 +186,8 @@ describe("AuroraDSQLPool", () => {
         "admin",
         "default",
         "us-east-1",
-        undefined
+        undefined,
+        undefined,
       );
       expect((pool as any).options.password).toBe("mock-pool-token-456");
       expect(mockConnect).toHaveBeenCalled();
@@ -226,12 +232,12 @@ describe("AuroraDSQLPool", () => {
       mockAuroraDSQLUtil.getDSQLToken.mockRejectedValue(tokenError);
 
       await expect(pool.connect()).rejects.toThrow(
-        "Pool token generation failed"
+        "Pool token generation failed",
       );
       expect(mockConnect).not.toHaveBeenCalled();
     });
 
-    it("should use custom profile when provided", async () => {
+    it("should pass config to the token generator", async () => {
       mockAuroraDSQLUtil.parsePgConfig.mockReturnValueOnce({
         host: "example.dsql.us-east-1.on.aws",
         user: "admin",
@@ -240,12 +246,13 @@ describe("AuroraDSQLPool", () => {
         region: "us-east-1",
         profile: "custom-profile",
         ssl: { rejectUnauthorized: true },
+        tokenDurationSecs: 5,
+        customCredentialsProvider: mockCredentials,
       });
 
       const customPool = new AuroraDSQLPool({
         host: "example.dsql.us-east-1.on.aws",
         user: "admin",
-        profile: "custom-profile",
       });
 
       (customPool as any).options = {
@@ -260,7 +267,8 @@ describe("AuroraDSQLPool", () => {
         "admin",
         "custom-profile",
         "us-east-1",
-        undefined
+        5,
+        mockCredentials,
       );
     });
 
@@ -292,7 +300,8 @@ describe("AuroraDSQLPool", () => {
         "admin",
         "default",
         "eu-west-1",
-        undefined
+        undefined,
+        undefined,
       );
     });
 
@@ -326,7 +335,8 @@ describe("AuroraDSQLPool", () => {
         "admin",
         "default",
         "us-east-1",
-        1800
+        1800,
+        undefined,
       );
     });
 
@@ -338,7 +348,7 @@ describe("AuroraDSQLPool", () => {
       });
 
       await expect(pool.connect()).rejects.toThrow(
-        "options is undefined in this pool"
+        "options is undefined in this pool",
       );
       expect(mockConnect).not.toHaveBeenCalled();
     });
@@ -381,7 +391,7 @@ describe("AuroraDSQLPool", () => {
           max: 15,
           min: 3,
           idleTimeoutMillis: 20000,
-        })
+        }),
       );
     });
   });
