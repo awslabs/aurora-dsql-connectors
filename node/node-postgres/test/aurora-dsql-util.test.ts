@@ -237,6 +237,69 @@ describe("AuroraDSQLUtil", () => {
       expect(result.region).toBe("us-west-2");
     });
 
+    // Tolerate unknown endpoint formats for forward compatibility with potential future changes.
+    it("should use explicit region when host format is unknown", () => {
+      const config = {
+        host: "my-cluster.example.com",
+        region: "us-east-1",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.region).toBe("us-east-1");
+      expect(result.host).toBe("my-cluster.example.com");
+    });
+
+    it("should respect explicit region override even when hostname is parseable", () => {
+      const config = {
+        host: "cluster.dsql.us-east-1.on.aws",
+        region: "eu-west-1",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.region).toBe("eu-west-1");
+    });
+
+    it("should use parsed region from hostname even when env vars are set", () => {
+      process.env.AWS_REGION = "eu-west-1";
+      process.env.AWS_DEFAULT_REGION = "ap-south-1";
+
+      const config = {
+        host: "cluster.dsql.us-east-1.on.aws",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.region).toBe("us-east-1");
+    });
+
+    it("should use AWS_REGION for unknown URL format when region not in config", () => {
+      process.env.AWS_REGION = "eu-west-1";
+
+      const config = {
+        host: "my-cluster.example.com",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.region).toBe("eu-west-1");
+      expect(result.host).toBe("my-cluster.example.com");
+    });
+
+    it("should use AWS_DEFAULT_REGION for unknown URL format when AWS_REGION not set", () => {
+      process.env.AWS_DEFAULT_REGION = "ap-south-1";
+
+      const config = {
+        host: "my-cluster.example.com",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.region).toBe("ap-south-1");
+      expect(result.host).toBe("my-cluster.example.com");
+    });
+
     it("should use AWS_REGION environment variable when region not in config", () => {
       process.env.AWS_REGION = "eu-west-1";
 
@@ -300,11 +363,20 @@ describe("AuroraDSQLUtil", () => {
     it("should throw error when region cannot be determined", () => {
       const config = {
         host: "cluster123",
-        user: "admin",
       };
 
       expect(() => AuroraDSQLUtil.parsePgConfig(config)).toThrow(
-        "Region is not specified"
+        "Region is not specified for cluster 'cluster123'"
+      );
+    });
+
+    it("should throw error with hostname when URL format is unknown and region not specified", () => {
+      const config = {
+        host: "my-cluster.example.com",
+      };
+
+      expect(() => AuroraDSQLUtil.parsePgConfig(config)).toThrow(
+        "Region is not specified and could not be parsed from hostname: 'my-cluster.example.com'"
       );
     });
   });
