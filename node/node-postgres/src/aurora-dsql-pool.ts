@@ -26,8 +26,8 @@ class AuroraDSQLPool extends Pool {
     callback: (
       err: Error | undefined,
       client: PoolClient | undefined,
-      done: (release?: boolean | Error) => void
-    ) => void
+      done: (release?: boolean | Error) => void,
+    ) => void,
   ): void;
 
   // TypeScript doesn't allow multiple declaration of the same name hence the following declaration was used
@@ -35,8 +35,8 @@ class AuroraDSQLPool extends Pool {
     callback?: (
       err: Error | undefined,
       client: PoolClient | undefined,
-      done: (release?: boolean | Error) => void
-    ) => void
+      done: (release?: boolean | Error) => void,
+    ) => void,
   ): Promise<PoolClient | void> {
     try {
       if (this.options !== undefined && this.dsqlConfig !== undefined) {
@@ -45,7 +45,8 @@ class AuroraDSQLPool extends Pool {
           this.dsqlConfig.user!,
           this.dsqlConfig.profile!,
           this.dsqlConfig.region!,
-          this.dsqlConfig.tokenDurationSecs
+          this.dsqlConfig.tokenDurationSecs,
+          this.dsqlConfig.customCredentialsProvider,
         );
       } else {
         throw new Error("options is undefined in this pool");

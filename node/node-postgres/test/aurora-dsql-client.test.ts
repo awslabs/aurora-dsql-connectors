@@ -5,12 +5,17 @@
 import { AuroraDSQLClient } from "../src/aurora-dsql-client";
 import { AuroraDSQLUtil } from "../src/aurora-dsql-util";
 import { Client } from "pg";
+import { AwsCredentialIdentity } from "@smithy/types";
 
 jest.mock("pg");
 jest.mock("../src/aurora-dsql-util");
 
 const mockClient = Client as jest.MockedClass<typeof Client>;
 const mockAuroraDSQLUtil = AuroraDSQLUtil as jest.Mocked<typeof AuroraDSQLUtil>;
+const mockCredentials: AwsCredentialIdentity = {
+  accessKeyId: "mockAccessKey",
+  secretAccessKey: "mockSecretKey",
+};
 
 describe("AuroraDSQLClient", () => {
   beforeEach(() => {
@@ -39,7 +44,7 @@ describe("AuroraDSQLClient", () => {
       const client = new AuroraDSQLClient(connectionString);
 
       expect(mockAuroraDSQLUtil.parsePgConfig).toHaveBeenCalledWith(
-        connectionString
+        connectionString,
       );
       expect(client).toBeInstanceOf(AuroraDSQLClient);
       expect(mockClient).toHaveBeenCalledWith(
@@ -48,7 +53,7 @@ describe("AuroraDSQLClient", () => {
           port: 5432,
           database: "postgres",
           user: "admin",
-        })
+        }),
       );
     });
 
@@ -66,7 +71,7 @@ describe("AuroraDSQLClient", () => {
         expect.objectContaining({
           host: "example.dsql.us-east-1.on.aws",
           user: "admin",
-        })
+        }),
       );
     });
 
@@ -99,7 +104,7 @@ describe("AuroraDSQLClient", () => {
           database: "postgres",
           region: "us-west-2",
           profile: "default",
-        })
+        }),
       );
     });
 
@@ -109,7 +114,7 @@ describe("AuroraDSQLClient", () => {
       });
 
       expect(() => new AuroraDSQLClient({ user: "admin" } as any)).toThrow(
-        "Host is required"
+        "Host is required",
       );
     });
 
@@ -127,7 +132,7 @@ describe("AuroraDSQLClient", () => {
           port: 3306,
           database: "mydb",
           profile: "custom-profile",
-        })
+        }),
       );
     });
   });
@@ -153,7 +158,9 @@ describe("AuroraDSQLClient", () => {
         "example.dsql.us-east-1.on.aws",
         "admin",
         "default",
-        "us-east-1"
+        "us-east-1",
+        undefined,
+        undefined,
       );
       expect(client.password).toBe("mock-token-123");
       expect(mockConnect).toHaveBeenCalled();
@@ -196,7 +203,7 @@ describe("AuroraDSQLClient", () => {
       expect(mockConnect).not.toHaveBeenCalled();
     });
 
-    it("should use custom profile when provided", async () => {
+    it("should pass config to the token generator", async () => {
       mockAuroraDSQLUtil.parsePgConfig.mockReturnValueOnce({
         host: "example.dsql.us-east-1.on.aws",
         user: "admin",
@@ -205,12 +212,13 @@ describe("AuroraDSQLClient", () => {
         region: "us-east-1",
         profile: "custom-profile",
         ssl: { rejectUnauthorized: true },
+        tokenDurationSecs: 15,
+        customCredentialsProvider: mockCredentials,
       });
 
       const customClient = new AuroraDSQLClient({
         host: "example.dsql.us-east-1.on.aws",
         user: "admin",
-        profile: "custom-profile",
       });
 
       await customClient.connect();
@@ -219,7 +227,9 @@ describe("AuroraDSQLClient", () => {
         "example.dsql.us-east-1.on.aws",
         "admin",
         "custom-profile",
-        "us-east-1"
+        "us-east-1",
+        15,
+        mockCredentials,
       );
     });
 
@@ -245,7 +255,9 @@ describe("AuroraDSQLClient", () => {
         "cluster.dsql.eu-west-1.on.aws",
         "admin",
         "default",
-        "eu-west-1"
+        "eu-west-1",
+        undefined,
+        undefined,
       );
     });
 
@@ -271,7 +283,9 @@ describe("AuroraDSQLClient", () => {
         "example.dsql.us-east-1.on.aws",
         "testuser",
         "default",
-        "us-east-1"
+        "us-east-1",
+        undefined,
+        undefined,
       );
     });
   });
