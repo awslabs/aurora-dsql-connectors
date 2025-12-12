@@ -1,6 +1,6 @@
 {
   "name": "@aws/aurora-dsql-node-postgres-connector",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "An AWS Aurora DSQL connector with IAM authentication for node-postgres",
   "license": "Apache-2.0",
   "repository": {
