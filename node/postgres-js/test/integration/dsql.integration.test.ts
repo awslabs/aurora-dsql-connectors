@@ -5,6 +5,7 @@
 import {auroraDSQLPostgres} from '../../src/client';
 import postgres from "postgres";
 import {jest} from '@jest/globals';
+import {fromNodeProviderChain} from "@aws-sdk/credential-providers";
 
 jest.setTimeout(30000);
 
@@ -166,5 +167,63 @@ describe('DSQL Integration Tests', () => {
             region: region
         });
         await verifySuccessfulConnection(sql);
+    });
+
+    test('should connect with custom credentials provider', async () => {
+        let providerCalled = false;
+        const trackingProvider = async () => {
+            providerCalled = true;
+            return fromNodeProviderChain()();
+        };
+
+        const sql = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            customCredentialsProvider: trackingProvider,
+        });
+
+        await verifySuccessfulConnection(sql);
+        expect(providerCalled).toBe(true);
+    });
+
+    test('should connect with custom credentials identity', async () => {
+        const credentials = await fromNodeProviderChain()();
+        const sql = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            customCredentialsProvider: credentials,
+        });
+
+        await verifySuccessfulConnection(sql);
+    });
+
+    // Verifies the provider takes precedence over any other credentials source.
+    test('should fail with invalid custom credentials provider', async () => {
+        const invalidProvider = async () => ({
+            accessKeyId: "INVALID_ACCESS_KEY",
+            secretAccessKey: "INVALID_SECRET_KEY",
+        });
+
+        const sql = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            customCredentialsProvider: invalidProvider,
+        });
+
+        await expect(sql`SELECT 1`).rejects.toThrow();
+    });
+
+    // Verifies the identity takes precedence over any other credentials source.
+    test('should fail with invalid custom credentials identity', async () => {
+        const sql = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            customCredentialsProvider: {
+                accessKeyId: "INVALID_ACCESS_KEY",
+                secretAccessKey: "INVALID_SECRET_KEY",
+            },
+        });
+
+        await expect(sql`SELECT 1`).rejects.toThrow();
     });
 });
