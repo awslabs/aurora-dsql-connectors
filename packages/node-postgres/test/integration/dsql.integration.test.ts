@@ -59,6 +59,13 @@ describe("DSQL Integration Tests", () => {
       await verifySuccessfulConnection(client);
     });
 
+    test("should handle config object with connectionString property", async () => {
+      const client = new AuroraDSQLClient({
+        connectionString: `postgresql://${clusterEndpoint}`,
+      });
+      await verifySuccessfulConnection(client);
+    });
+
     test("should handle parameterized queries", async () => {
       const client = new AuroraDSQLClient({
         host: clusterEndpoint,

@@ -10,13 +10,34 @@ import {
 } from "@smithy/types";
 import { AuroraDSQLConfig } from "./config/aurora-dsql-config.js";
 import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config.js";
-import { parse } from "pg-connection-string";
+import { parseIntoClientConfig } from "pg-connection-string";
 
 const ADMIN_USER = "admin";
 const PRE_REGION_HOST_PATTERN = ".dsql.";
 const POST_REGION_HOST_PATTERN = ".on.aws";
 
 export class AuroraDSQLUtil {
+
+  /**
+   * Parse the provided connection string into an equivalent object.
+   */
+  private static parseConnectionString(connectionString: string): AuroraDSQLConfig {
+    const parsed = parseIntoClientConfig(connectionString) as AuroraDSQLConfig;
+
+    // The user is parsed as an empty string if it is not provided. We remove the
+    // key instead, to make it easier to work with the result.
+    if (!parsed.user) {
+      delete parsed.user;
+    }
+
+    // Upstream parsing gives strings by default, but we need a number here.
+    if (parsed.tokenDurationSecs !== undefined) {
+      parsed.tokenDurationSecs = parseInt(parsed.tokenDurationSecs as unknown as string, 10);
+    }
+
+    return parsed;
+  }
+
   public static parseRegion(host: string): string {
     if (!host) {
       throw new Error("Hostname is required to parse region");
@@ -77,10 +98,11 @@ export class AuroraDSQLUtil {
   ): AuroraDSQLConfig | AuroraDSQLPoolConfig {
     let dsqlConfig: AuroraDSQLConfig | AuroraDSQLPoolConfig;
     if (typeof config === "string") {
-      dsqlConfig = parse(config) as AuroraDSQLConfig;
+      dsqlConfig = AuroraDSQLUtil.parseConnectionString(config) as AuroraDSQLConfig;
     } else if (config.connectionString) {
       // Connection string properties override as set by upstream library.
-      dsqlConfig = Object.assign({}, config, parse(config.connectionString));
+      dsqlConfig = Object.assign({}, config, AuroraDSQLUtil.parseConnectionString(config.connectionString));
+      delete dsqlConfig.connectionString;
     } else {
       dsqlConfig = config;
     }
