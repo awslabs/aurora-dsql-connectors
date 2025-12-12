@@ -27,7 +27,7 @@ export class AuroraDSQLUtil {
       return match[1];
     }
 
-    throw new Error(`Unable to parse region from hostname: ${host}`);
+    throw new Error(`Unable to parse region from hostname: '${host}'`);
   }
 
   public static async getDSQLToken(
@@ -79,7 +79,7 @@ export class AuroraDSQLUtil {
     if (typeof config === "string") {
       dsqlConfig = parse(config) as AuroraDSQLConfig;
     } else if (config.connectionString) {
-      // connection string properties override as set by upstream library
+      // Connection string properties override as set by upstream library.
       dsqlConfig = Object.assign({}, config, parse(config.connectionString));
     } else {
       dsqlConfig = config;
@@ -89,20 +89,36 @@ export class AuroraDSQLUtil {
       throw new Error("Host is required");
     }
 
-    // check if host is a clusterId or cluster endpoint
-    try {
-      dsqlConfig.region = AuroraDSQLUtil.parseRegion(dsqlConfig.host);
-    } catch {
-      //clusterId is specified in the host name
-      dsqlConfig.region =
-        dsqlConfig.region ||
-        process.env.AWS_REGION ||
-        process.env.AWS_DEFAULT_REGION;
-      if (dsqlConfig.region === undefined) {
-        throw new Error("Region is not specified");
+    // If this doesn't look like a URL, we treat it as the cluster ID rather
+    // than the full endpoint.
+    const isClusterId = !dsqlConfig.host.includes('.');
+
+    let parsedRegion: string | undefined;
+    if (!isClusterId) {
+      try {
+        parsedRegion = AuroraDSQLUtil.parseRegion(dsqlConfig.host);
+      } catch {
+        // Couldn't parse region from hostname.
       }
+    }
+
+    dsqlConfig.region =
+      dsqlConfig.region ||
+      parsedRegion ||
+      process.env.AWS_REGION ||
+      process.env.AWS_DEFAULT_REGION;
+
+    if (dsqlConfig.region === undefined) {
+      if (isClusterId) {
+        throw new Error(`Region is not specified for cluster '${dsqlConfig.host}'`);
+      } else {
+        throw new Error(`Region is not specified and could not be parsed from hostname: '${dsqlConfig.host}'`);
+      }
+    }
+
+    if (isClusterId) {
       dsqlConfig.host = AuroraDSQLUtil.buildHostnameFromIdAndRegion(
-        dsqlConfig.host!,
+        dsqlConfig.host,
         dsqlConfig.region
       );
     }
