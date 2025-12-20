@@ -1,26 +1,68 @@
+# Security updates are handled separately. These create PRs immediately when
+# vulnerabilities are detected, regardless of the schedules configured below.
+
 version: 2
 updates:
+  # Monthly updates for all packages. This cadence is chosen to minimize update
+  # spam, and we don't expect significant changes in project dependencies.
   - package-ecosystem: "npm"
     directory: "/packages/node-postgres"
-    labels: ["dependencies", "javascript", "node-postgres"]
+    labels: [ "dependencies", "javascript", "node-postgres" ]
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
-  - package-ecosystem: "npm"
-    directory: "/packages/node-postgres/example"
-    labels: ["dependencies", "javascript", "node-postgres-example"]
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    groups:
+      production:
+        dependency-type: "production"
+      development:
+        dependency-type: "development"
   - package-ecosystem: "npm"
     directory: "/packages/postgres-js"
-    labels: ["dependencies", "javascript", "postgres-js"]
+    labels: [ "dependencies", "javascript", "postgres-js" ]
     schedule:
-      interval: "daily"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    groups:
+      production:
+        dependency-type: "production"
+      development:
+        dependency-type: "development"
+  - package-ecosystem: "npm"
+    directory: "/packages/node-postgres/example"
+    labels: [ "dependencies", "javascript", "node-postgres-example" ]
+    schedule:
+      interval: "monthly"
+    ignore:
+      - dependency-name: "@aws/aurora-dsql-node-postgres-connector"
+    groups:
+      production:
+        dependency-type: "production"
+      development:
+        dependency-type: "development"
   - package-ecosystem: "npm"
     directory: "/packages/postgres-js/example"
-    labels: ["dependencies", "javascript", "postgres-js-example"]
+    labels: [ "dependencies", "javascript", "postgres-js-example" ]
+    schedule:
+      interval: "monthly"
+    ignore:
+      - dependency-name: "@aws/aurora-dsql-postgresjs-connector"
+    groups:
+      production:
+        dependency-type: "production"
+      development:
+        dependency-type: "development"
+
+  # Daily updates for connector packages in examples. This keeps examples in
+  # sync with the parent project when new versions are released.
+  - package-ecosystem: "npm"
+    directory: "/packages/node-postgres/example"
+    labels: [ "dependencies", "javascript", "node-postgres-example" ]
     schedule:
       interval: "daily"
-    open-pull-requests-limit: 5
+    allow:
+      - dependency-name: "@aws/aurora-dsql-node-postgres-connector"
+  - package-ecosystem: "npm"
+    directory: "/packages/postgres-js/example"
+    labels: [ "dependencies", "javascript", "postgres-js-example" ]
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-name: "@aws/aurora-dsql-postgresjs-connector"
