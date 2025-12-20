@@ -145,16 +145,20 @@ export class AuroraDSQLUtil {
       );
     }
 
-    dsqlConfig = {
+    // Filter out undefined/null values so they don't override defaults.
+    const definedConfig = Object.fromEntries(
+      Object.entries(dsqlConfig).filter(([, v]) => v !== undefined && v !== null)
+    );
+
+    return {
       user: "admin",
       port: 5432,
       database: "postgres",
       ssl: { rejectUnauthorized: true },
       idleTimeoutMillis: 600000, // 10 min
       maxLifetimeSeconds: 3300, // 55 min
-      ...dsqlConfig,
+      ...definedConfig,
     };
-    return dsqlConfig;
   }
 
   public static buildHostnameFromIdAndRegion(

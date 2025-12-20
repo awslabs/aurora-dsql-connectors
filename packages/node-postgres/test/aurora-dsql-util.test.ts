@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 import { AuroraDSQLUtil } from "../src/aurora-dsql-util";
+import { AuroraDSQLPoolConfig } from "../src";
 import { DsqlSigner } from "@aws-sdk/dsql-signer";
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 
@@ -397,6 +398,27 @@ describe("AuroraDSQLUtil", () => {
       expect(() => AuroraDSQLUtil.parsePgConfig(config)).toThrow(
         "Region is not specified and could not be parsed from hostname: 'my-cluster.example.com'"
       );
+    });
+
+    it.each([undefined, null])("should ignore %s values and apply defaults", (nullish) => {
+      const config = {
+        host: "cluster.dsql.us-east-1.on.aws",
+        user: nullish,
+        database: nullish,
+        port: nullish,
+        ssl: nullish,
+        idleTimeoutMillis: nullish,
+        maxLifetimeSeconds: nullish,
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config as AuroraDSQLPoolConfig);
+
+      expect(result.user).toBe("admin");
+      expect(result.database).toBe("postgres");
+      expect(result.port).toBe(5432);
+      expect(result.ssl).toEqual({ rejectUnauthorized: true });
+      expect((result as AuroraDSQLPoolConfig).idleTimeoutMillis).toBe(600000);
+      expect((result as AuroraDSQLPoolConfig).maxLifetimeSeconds).toBe(3300);
     });
   });
 
