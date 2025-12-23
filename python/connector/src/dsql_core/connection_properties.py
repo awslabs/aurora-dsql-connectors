@@ -48,6 +48,14 @@ class ConnectionProperties:
             if region:
                 params["region"] = region
 
+        # Expand cluster ID host to full endpoint
+        if "host" in params and ConnectionProperties._is_cluster_id(params["host"]):
+            expanded = ConnectionProperties._construct_dsql_host_from_cluster_id(
+                params["host"], params.get("region")
+            )
+            if expanded:
+                params["host"] = expanded
+
         if dsn:
             dsn_params = ConnectionProperties._parse_dsn(dsn, params.get("region"))
             # User params given in kwargs take precedence over dsn params.
