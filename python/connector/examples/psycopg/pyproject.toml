@@ -19,6 +19,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "aurora-dsql-python-connector",
     "boto3>=1.35.74",
     "psycopg[binary]>=3.1.0",
     "psycopg-pool>=3.2.6",
