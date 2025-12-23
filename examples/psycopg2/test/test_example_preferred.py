@@ -3,12 +3,16 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
+
 import pytest
-from example_with_connection_pool_concurrent import main
+from example_preferred import main
 
 
 # Smoke tests that our example works fine
-def test_example_with_pool_concurrent():
+def test_example_preferred():
     try:
         main()
     except Exception as e:

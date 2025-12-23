@@ -4,11 +4,14 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import pytest
-from example_with_connection_pool import main
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src/alternatives/no_connection_pool'))
+from example_with_no_connection_pool import main
 
 
 # Smoke tests that our example works fine
-def test_example_with_pool():
+def test_example_with_no_connection_pool():
     try:
         main()
     except Exception as e:
