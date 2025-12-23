@@ -18,7 +18,7 @@ async def worker_task(pool, worker_id):
 
 
 async def connect_with_pool_concurrent_connections(
-    cluster_user, cluster_endpoint, region
+    cluster_user, cluster_endpoint
 ):
 
     ssl_cert_path = "./root.pem"
@@ -26,11 +26,8 @@ async def connect_with_pool_concurrent_connections(
         raise FileNotFoundError(f"SSL certificate file not found: {ssl_cert_path}")
 
     pool_params = {
-        "database": "postgres",
         "user": cluster_user,
         "host": cluster_endpoint,
-        "port": 5432,
-        "region": region,
         "ssl": "verify-full",
         "sslrootcert": ssl_cert_path,
         "min_size": 5,
@@ -62,11 +59,8 @@ async def main():
             cluster_endpoint is not None
         ), "CLUSTER_ENDPOINT environment variable is not set"
 
-        region = os.environ.get("REGION", None)
-        assert region is not None, "REGION environment variable is not set"
-
         await connect_with_pool_concurrent_connections(
-            cluster_user, cluster_endpoint, region
+            cluster_user, cluster_endpoint
         )
 
     finally:

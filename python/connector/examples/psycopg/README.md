@@ -110,9 +110,6 @@ export CLUSTER_USER="<your user>"
 
 # e.g. "foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws"
 export CLUSTER_ENDPOINT="<your endpoint>"
-
-# e.g. "us-east-1"
-export REGION="<your region>"
 ```
 
 Run the example:
@@ -129,6 +126,18 @@ pytest ./test
 ```
 
 The example contains comments explaining the code and the operations being performed.
+
+### Connection defaults
+
+The connector automatically handles the following parameters:
+
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `dbname` | `postgres` | Aurora DSQL's default database |
+| `port` | `5432` | Standard PostgreSQL port |
+| `region` | Extracted from endpoint | Parsed from `*.dsql.<region>.on.aws` |
+
+You can override any of these defaults by explicitly passing them in `conn_params`.
 
 ## Additional resources
 
