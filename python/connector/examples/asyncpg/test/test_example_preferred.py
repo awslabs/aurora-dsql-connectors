@@ -3,13 +3,18 @@ Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
+
 import pytest
-from example import main
+from example_preferred import main
 
 
 # Smoke tests that our example works fine
-def test_example():
+@pytest.mark.asyncio
+async def test_example_preferred():
     try:
-        main()
+        await main()
     except Exception as e:
         pytest.fail(f"Unexpected exception: {e}")

@@ -4,13 +4,15 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import pytest
-from example_with_connection_pool_async import main
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../src'))
+from example_preferred import main
 
 
-# Smoke tests that our async example works fine
-@pytest.mark.asyncio
-async def test_example_with_pool_async():
+# Smoke tests that our example works fine
+def test_example_preferred():
     try:
-        await main()
+        main()
     except Exception as e:
         pytest.fail(f"Unexpected exception: {e}")

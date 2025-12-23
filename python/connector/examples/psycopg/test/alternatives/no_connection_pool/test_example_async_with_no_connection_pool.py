@@ -4,12 +4,15 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import pytest
-from example_async import main
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src/alternatives/no_connection_pool'))
+from example_async_with_no_connection_pool import main
 
 
 # Smoke tests that our async example works fine
 @pytest.mark.asyncio
-async def test_example_async():
+async def test_example_async_with_no_connection_pool():
     try:
         await main()
     except Exception as e:
