@@ -96,3 +96,17 @@ class TestDSNParsing:
         for hostname, expected_region in test_cases:
             region = ConnectionProperties._extract_region_from_hostname(hostname)
             assert region == expected_region
+
+    def test_cluster_id_as_dsn_expands_to_full_endpoint(self):
+        """Test that cluster ID as dsn is expanded to full endpoint."""
+        dsql_params, _ = ConnectionProperties.parse_properties(
+            "clusterid", {"region": "us-east-1"}
+        )
+        assert dsql_params["host"] == "clusterid.dsql.us-east-1.on.aws"
+
+    def test_cluster_id_as_host_kwarg_expands_to_full_endpoint(self):
+        """Test that cluster ID in host kwarg is expanded to full endpoint."""
+        dsql_params, _ = ConnectionProperties.parse_properties(
+            "", {"host": "clusterid", "region": "us-east-1"}
+        )
+        assert dsql_params["host"] == "clusterid.dsql.us-east-1.on.aws"
