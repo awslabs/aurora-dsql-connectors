@@ -1,11 +1,11 @@
 {
   "name": "dsql_postgres_howto",
   "version": "1.0.0",
-  "description": "How To",
-  "main": "index.js",
+  "description": "Aurora DSQL Postgres.js examples",
+  "main": "src/example_preferred.js",
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns='test/smoke.test.js' --runInBand --detectOpenHandles --forceExit"
+    "test": "node --experimental-vm-modules node_modules/.bin/jest --runInBand --detectOpenHandles --forceExit"
   },
   "author": "",
   "license": "ISC",
