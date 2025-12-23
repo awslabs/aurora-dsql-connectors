@@ -138,6 +138,13 @@ jobs:
         CLUSTER_USER: "admin"
       run: ./gradlew integrationTest
 
+    - name: Run example smoke tests
+      working-directory: ./examples/pgjdbc
+      env:
+        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
+        CLUSTER_USER: "admin"
+      run: ../../gradlew test
+
   # We run the integration tests using pre-built jar files for each JVM targeted
   # for support. Gradle 9+ no longer supports JDK 8 so the tests must be built
   # into a jar by a newer JDK version ahead of time.
