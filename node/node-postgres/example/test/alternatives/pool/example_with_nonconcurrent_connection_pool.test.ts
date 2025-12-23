@@ -4,8 +4,8 @@
  */
 
 import { test } from "@jest/globals";
-import { example } from "../src/index";
+import { example } from "../../../src/alternatives/pool/example_with_nonconcurrent_connection_pool";
 
-test("Smoke test", async () => {
+test("Example with nonconcurrent connection pool", async () => {
   await example();
 });
