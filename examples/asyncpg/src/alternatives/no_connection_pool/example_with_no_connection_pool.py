@@ -9,17 +9,14 @@ import os
 import aurora_dsql_asyncpg as dsql
 
 
-async def create_connection(cluster_user, cluster_endpoint, region):
+async def create_connection(cluster_user, cluster_endpoint):
     ssl_cert_path = "./root.pem"
     if not os.path.isfile(ssl_cert_path):
         raise FileNotFoundError(f"SSL certificate file not found: {ssl_cert_path}")
 
     conn_params = {
-        "database": "postgres",
         "user": cluster_user,
         "host": cluster_endpoint,
-        "port": 5432,
-        "region": region,
         "ssl": "verify-full",
         "sslrootcert": ssl_cert_path,
     }
@@ -85,10 +82,7 @@ async def main():
             cluster_endpoint is not None
         ), "CLUSTER_ENDPOINT environment variable is not set"
 
-        region = os.environ.get("REGION", None)
-        assert region is not None, "REGION environment variable is not set"
-
-        conn = await create_connection(cluster_user, cluster_endpoint, region)
+        conn = await create_connection(cluster_user, cluster_endpoint)
         await exercise_connection(conn)
     finally:
         if conn is not None:
