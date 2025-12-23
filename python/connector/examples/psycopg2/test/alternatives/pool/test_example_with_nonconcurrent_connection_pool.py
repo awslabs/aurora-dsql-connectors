@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src/alternatives/pool'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../src/alternatives/pool'))
 
 import pytest
 from example_with_nonconcurrent_connection_pool import main

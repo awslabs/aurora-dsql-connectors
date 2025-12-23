@@ -8,12 +8,14 @@ on:
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'examples/**'
       - '.github/workflows/python-connector-integration-tests.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/**'
       - 'tests/**'
+      - 'examples/**'
       - '.github/workflows/python-connector-integration-tests.yml'
   # Give us a button to allow running the workflow on demand for testing.
   workflow_dispatch:
@@ -53,7 +55,6 @@ jobs:
         aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
 
     - name: Configure and run integration tests - admin
-      working-directory: ./
       env:
         CLUSTER_USER: "admin"
         CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
@@ -69,3 +70,42 @@ jobs:
         echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
         python -m pytest tests/integration
+
+    - name: Run psycopg example smoke tests
+      working-directory: ./examples/psycopg
+      env:
+        CLUSTER_USER: "admin"
+        CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
+        REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        SSL_CERT_PATH: "./root.pem"
+      run: |
+        source ../../.venv/bin/activate
+        pip install -e ".[test]"
+        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
+        python -m pytest
+
+    - name: Run psycopg2 example smoke tests
+      working-directory: ./examples/psycopg2
+      env:
+        CLUSTER_USER: "admin"
+        CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
+        REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        SSL_CERT_PATH: "./root.pem"
+      run: |
+        source ../../.venv/bin/activate
+        pip install -e ".[test]"
+        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
+        python -m pytest
+
+    - name: Run asyncpg example smoke tests
+      working-directory: ./examples/asyncpg
+      env:
+        CLUSTER_USER: "admin"
+        CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
+        REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        SSL_CERT_PATH: "./root.pem"
+      run: |
+        source ../../.venv/bin/activate
+        pip install -e ".[test]"
+        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
+        python -m pytest
