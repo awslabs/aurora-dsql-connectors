@@ -3,11 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import pg from "pg";
 import assert from "node:assert";
 import { AuroraDSQLClient } from "@aws/aurora-dsql-node-postgres-connector";
-
-const { Client } = pg;
 
 const ADMIN = "admin";
 const NON_ADMIN_SCHEMA = "myschema";
@@ -19,30 +16,26 @@ interface Owner {
 
 async function getConnection(
   clusterEndpoint: string,
-  user: string,
-  region: string
-): Promise<pg.Client> {
+  user: string
+): Promise<AuroraDSQLClient> {
   const client = new AuroraDSQLClient({
     host: clusterEndpoint,
     user: user,
   });
 
-  // Connect
   await client.connect();
   return client;
 }
 
 async function example(): Promise<void> {
   const clusterEndpoint = process.env.CLUSTER_ENDPOINT;
-  assert(clusterEndpoint);
+  assert(clusterEndpoint, "CLUSTER_ENDPOINT environment variable is not set");
   const user = process.env.CLUSTER_USER;
-  assert(user);
-  const region = process.env.REGION;
-  assert(region);
+  assert(user, "CLUSTER_USER environment variable is not set");
 
-  let client: pg.Client | undefined;
+  let client: AuroraDSQLClient | undefined;
   try {
-    client = await getConnection(clusterEndpoint, user, region);
+    client = await getConnection(clusterEndpoint, user);
 
     if (user !== ADMIN) {
       await client.query("SET search_path=" + NON_ADMIN_SCHEMA);
@@ -75,7 +68,7 @@ async function example(): Promise<void> {
     console.error(error);
     throw error;
   } finally {
-    client?.end();
+    await client?.end();
   }
 }
 
