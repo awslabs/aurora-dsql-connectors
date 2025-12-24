@@ -8,7 +8,7 @@ import { AuroraDSQLPool } from "@aws/aurora-dsql-node-postgres-connector";
 
 const NUM_CONCURRENT_QUERIES = 8;
 
-function createPool(clusterEndpoint: string, user: string): AuroraDSQLPool {
+function createPool(clusterEndpoint, user) {
   return new AuroraDSQLPool({
     host: clusterEndpoint,
     user: user,
@@ -18,16 +18,13 @@ function createPool(clusterEndpoint: string, user: string): AuroraDSQLPool {
   });
 }
 
-async function worker(
-  pool: AuroraDSQLPool,
-  workerId: number
-): Promise<void> {
+async function worker(pool, workerId) {
   const result = await pool.query("SELECT $1::int as worker_id", [workerId]);
   console.log(`Worker ${workerId} result: ${result.rows[0].worker_id}`);
   assert.strictEqual(result.rows[0].worker_id, workerId);
 }
 
-async function example(): Promise<void> {
+async function example() {
   const clusterEndpoint = process.env.CLUSTER_ENDPOINT;
   assert(clusterEndpoint, "CLUSTER_ENDPOINT environment variable is not set");
   const user = process.env.CLUSTER_USER;
@@ -37,7 +34,7 @@ async function example(): Promise<void> {
 
   try {
     // Run concurrent queries using the connection pool
-    const workers: Promise<void>[] = [];
+    const workers = [];
     for (let i = 1; i <= NUM_CONCURRENT_QUERIES; i++) {
       workers.push(worker(pool, i));
     }

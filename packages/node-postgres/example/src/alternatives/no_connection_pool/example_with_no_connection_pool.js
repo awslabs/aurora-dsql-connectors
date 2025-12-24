@@ -9,15 +9,7 @@ import { AuroraDSQLClient } from "@aws/aurora-dsql-node-postgres-connector";
 const ADMIN = "admin";
 const NON_ADMIN_SCHEMA = "myschema";
 
-interface Owner {
-  id: string;
-  city: string;
-}
-
-async function getConnection(
-  clusterEndpoint: string,
-  user: string
-): Promise<AuroraDSQLClient> {
+async function getConnection(clusterEndpoint, user) {
   const client = new AuroraDSQLClient({
     host: clusterEndpoint,
     user: user,
@@ -27,13 +19,13 @@ async function getConnection(
   return client;
 }
 
-async function example(): Promise<void> {
+async function example() {
   const clusterEndpoint = process.env.CLUSTER_ENDPOINT;
   assert(clusterEndpoint, "CLUSTER_ENDPOINT environment variable is not set");
   const user = process.env.CLUSTER_USER;
   assert(user, "CLUSTER_USER environment variable is not set");
 
-  let client: AuroraDSQLClient | undefined;
+  let client;
   try {
     client = await getConnection(clusterEndpoint, user);
 
@@ -56,7 +48,7 @@ async function example(): Promise<void> {
     );
 
     // Check that data is inserted by reading it back
-    const result = await client.query<Owner>(
+    const result = await client.query(
       "SELECT id, city FROM owner where name='John Doe'"
     );
     assert.deepEqual(result.rows[0].city, "Anytown");
