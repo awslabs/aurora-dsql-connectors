@@ -4,8 +4,8 @@
  */
 
 import { test } from "@jest/globals";
-import { example } from "../src/example_preferred";
+import { example } from "../../../src/alternatives/no_connection_pool/example_with_no_connection_pool.js";
 
-test("Preferred example (connection pool concurrent)", async () => {
+test("Example with no connection pool", async () => {
   await example();
 });
