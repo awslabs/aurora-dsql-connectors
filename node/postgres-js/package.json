@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/awslabs/aurora-dsql-nodejs-connector"
+    "url": "git+https://github.com/awslabs/aurora-dsql-nodejs-connector.git"
   },
   "homepage": "https://github.com/awslabs/aurora-dsql-nodejs-connector",
   "keywords": ["aws", "aurora", "dsql", "postgres", "database", "iam", "authentication"],
@@ -31,8 +31,8 @@
   "scripts": {
     "clean": "rm -rf dist/ node_modules/",
     "build": "npm run build:dev",
-    "build:dev": "npm run typecheck && tsdown \"src/**/*.ts\" --format cjs,esm --dts --sourcemap",
-    "build:prod": "npm run typecheck && tsdown src/index.ts --format cjs,esm --dts",
+    "build:dev": "npm run typecheck && tsdown \"src/**/*.ts\" --sourcemap --no-publint",
+    "build:prod": "npm run typecheck && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest --testPathIgnorePatterns=integration",
@@ -62,6 +62,7 @@
     "eslint-plugin-header": "^3.1.1",
     "jest": "^30.2.0",
     "postgres": "^3.4.7",
+    "publint": "^0.3.16",
     "ts-jest": "^29.4.5",
     "tsdown": "^0.18.0",
     "typescript": "^5.9.3"
