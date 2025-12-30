@@ -31,7 +31,7 @@
   "scripts": {
     "clean": "rm -rf dist/ node_modules/",
     "build": "npm run build:dev",
-    "build:dev": "npm run typecheck && tsdown \"src/**/*.ts\" --sourcemap --no-publint",
+    "build:dev": "npm run typecheck && tsdown \"src/**/*.ts\" --sourcemap --no-publint --no-attw",
     "build:prod": "npm run typecheck && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:integration",
@@ -53,6 +53,7 @@
     "postgres": "^3.4.7"
   },
   "devDependencies": {
+    "@arethetypeswrong/core": "^0.18.2",
     "@eslint/js": "^9.37.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.0",
