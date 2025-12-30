@@ -1,6 +1,6 @@
 {
   "name": "@aws/aurora-dsql-postgresjs-connector",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "An AWS Aurora DSQL connector with IAM authentication for Postgres.js",
   "license": "Apache-2.0",
   "repository": {
