@@ -50,7 +50,8 @@
   ],
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.894.0",
-    "@aws-sdk/dsql-signer": "^3.940.0"
+    "@aws-sdk/dsql-signer": "^3.940.0",
+    "@smithy/types": "^4.11.0"
   },
   "peerDependencies": {
     "pg": "^8.16.3",
@@ -60,7 +61,6 @@
     "@arethetypeswrong/core": "^0.18.2",
     "@eslint/js": "^9.37.0",
     "@jest/globals": "^30.2.0",
-    "@smithy/types": "^4.11.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.0",
     "@types/pg": "^8.15.6",
@@ -69,6 +69,7 @@
     "depcheck": "^1.4.7",
     "eslint": "^9.39.1",
     "eslint-plugin-header": "^3.1.1",
+    "eslint-plugin-import-x": "^4.16.1",
     "jest": "^30.2.0",
     "pg": "^8.16.3",
     "publint": "^0.3.16",
