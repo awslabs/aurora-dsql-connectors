@@ -6,6 +6,7 @@ import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import header from 'eslint-plugin-header';
+import importPlugin from 'eslint-plugin-import-x';
 
 header.rules.header.meta.schema = false;
 
@@ -28,7 +29,8 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint,
-      'header': header
+      'header': header,
+      'import': importPlugin
     },
     rules: {
       'semi': ['error', 'always'],
@@ -53,9 +55,22 @@ export default [
     }
   },
   {
-    files: ['test/**/*.ts'],
+    files: ['src/**/*.ts'],
+    plugins: {
+      'import': importPlugin
+    },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'off'
+      'import/no-extraneous-dependencies': ['error', { devDependencies: false }]
+    }
+  },
+  {
+    files: ['test/**/*.ts'],
+    plugins: {
+      'import': importPlugin
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'import/no-extraneous-dependencies': ['error', { devDependencies: true }]
     }
   }
 ];
