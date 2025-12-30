@@ -31,7 +31,7 @@
   "scripts": {
     "clean": "rm -rf dist/ node_modules/",
     "build": "npm run build:dev",
-    "build:dev": "npm run check:types && tsdown \"src/**/*.ts\" --sourcemap --no-publint",
+    "build:dev": "npm run check:types && tsdown \"src/**/*.ts\" --sourcemap --no-publint --no-attw",
     "build:prod": "npm run check:types && tsdown",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest --testPathIgnorePatterns=integration",
@@ -57,6 +57,7 @@
     "pg-connection-string": "^2.7.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/core": "^0.18.2",
     "@eslint/js": "^9.37.0",
     "@jest/globals": "^30.2.0",
     "@smithy/types": "^4.11.0",
