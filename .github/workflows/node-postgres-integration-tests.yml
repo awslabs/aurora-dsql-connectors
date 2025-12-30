@@ -68,7 +68,7 @@ jobs:
           IAM_ROLE: $${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
         run: |
           npm ci
-          npm run lint
+          npm run check
           npm run test
 
       - name: Run example smoke test
