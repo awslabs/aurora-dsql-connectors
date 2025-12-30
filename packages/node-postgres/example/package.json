@@ -10,7 +10,7 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@aws/aurora-dsql-node-postgres-connector": "^0.1.6",
+    "@aws/aurora-dsql-node-postgres-connector": "^0.1.7",
     "pg": "^8.16.3"
   },
   "devDependencies": {
