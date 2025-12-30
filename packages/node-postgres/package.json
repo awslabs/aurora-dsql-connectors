@@ -51,7 +51,8 @@
     "@aws-sdk/dsql-signer": "^3.940.0"
   },
   "peerDependencies": {
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "pg-connection-string": "^2.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
