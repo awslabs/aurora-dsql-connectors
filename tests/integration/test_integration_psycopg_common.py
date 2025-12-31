@@ -83,16 +83,13 @@ class TestIntegrationPsycopgCommon:
             dsql2,
         ],
     )
-    def test_connection_with_cluster_id_only(self, cluster_config, dsql_connector):
+    def test_connection_with_cluster_id_only(self, cluster_config, dsql_connector, monkeypatch):
+        """Test connection with cluster ID using default region from environment."""
+        monkeypatch.setenv("AWS_DEFAULT_REGION", cluster_config["region"])
+
         cluster_id = cluster_config["host"].split(".")[0]
-        try:
-            # Note: This works conditionally depending on the local region set correctly to match the cluster's region.
-            conn = dsql_connector.connect(cluster_id)
-            self._assert_connection_functional(conn)
-        except Exception as e:
-            pytest.skip(str(e))
-        finally:
-            pass
+        conn = dsql_connector.connect(cluster_id)
+        self._assert_connection_functional(conn)
 
     @pytest.mark.parametrize(
         "dsql_connector",
