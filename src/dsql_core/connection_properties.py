@@ -43,10 +43,6 @@ class ConnectionProperties:
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
         params = kwargs.copy()
-        if "host" in params and "region" not in params:
-            region = ConnectionProperties._extract_region_from_hostname(params["host"])
-            if region:
-                params["region"] = region
 
         # Expand cluster ID host to full endpoint
         if "host" in params and ConnectionProperties._is_cluster_id(params["host"]):
@@ -55,6 +51,11 @@ class ConnectionProperties:
             )
             if expanded:
                 params["host"] = expanded
+
+        if "host" in params and "region" not in params:
+            region = ConnectionProperties._extract_region_from_hostname(params["host"])
+            if region:
+                params["region"] = region
 
         if dsn:
             dsn_params = ConnectionProperties._parse_dsn(dsn, params.get("region"))
