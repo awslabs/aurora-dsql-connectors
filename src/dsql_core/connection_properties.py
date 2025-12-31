@@ -96,8 +96,7 @@ class ConnectionProperties:
                 host = ConnectionProperties._construct_dsql_host_from_cluster_id(
                     dsn, region
                 )
-                if host:
-                    params["host"] = host
+                params["host"] = host if host else dsn
             else:
                 params["host"] = dsn
         else:
