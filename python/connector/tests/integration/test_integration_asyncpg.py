@@ -72,16 +72,13 @@ class TestIntegrationAsyncpg:
         await self._assert_connection_functional(conn)
 
     @pytest.mark.asyncio
-    async def test_connection_with_cluster_id_only(self, cluster_config):
+    async def test_connection_with_cluster_id_only(self, cluster_config, monkeypatch):
+        """Test connection with cluster ID using default region from environment."""
+        monkeypatch.setenv("AWS_DEFAULT_REGION", cluster_config["region"])
+
         cluster_id = cluster_config["host"].split(".")[0]
-        try:
-            # Note: This works conditionally depending on the local region set correctly to match the cluster's region.
-            conn = await dsql.connect(cluster_id)
-            await self._assert_connection_functional(conn)
-        except Exception as e:
-            pytest.skip(str(e))
-        finally:
-            pass
+        conn = await dsql.connect(cluster_id)
+        await self._assert_connection_functional(conn)
 
     @pytest.mark.asyncio
     async def test_connection_with_cluster_id_and_region(self, cluster_config):
