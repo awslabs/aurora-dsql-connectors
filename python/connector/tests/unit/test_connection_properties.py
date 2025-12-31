@@ -47,14 +47,12 @@ class TestDSNParsing:
         assert params["token_duration_secs"] == "3600"
         assert params["profile"] == "test"
 
-    def test_parse_cluster_id(self):
-        """Test parsing DSN with additional parameters."""
+    def test_parse_cluster_id(self, mock_no_default_region):
+        """Test parsing cluster ID without region falls back to cluster ID as host."""
         dsn = "clusterabcdfg"
         params = ConnectionProperties._parse_dsn(dsn)
-
-        # The result here depends whether local aws region has been set or not
-        if params.get("host"):
-            assert params["region"]
+        assert params["host"] == "clusterabcdfg"
+        assert "region" not in params
 
     def test_parse_cluster_id_with_region(self):
         """Test parsing DSN with additional parameters."""
@@ -90,6 +88,24 @@ class TestDSNParsing:
             match="Missing required parameters: region\n  region was not provided and could not be extracted from host",
         ):
             ConnectionProperties._check_required_params(params)
+
+    @pytest.mark.parametrize(
+        "dsn,kwargs,expected_missing",
+        [
+            ("", {}, {"host", "region"}),
+            ("", {"host": "clusterid"}, {"region"}),
+            ("", {"region": "us-east-1"}, {"host"}),
+            ("clusterid", {}, {"region"}),
+        ],
+    )
+    def test_missing_required_params(self, dsn, kwargs, expected_missing, mock_no_default_region):
+        """Test error messages for missing required parameters."""
+        with pytest.raises(ValueError) as exc_info:
+            ConnectionProperties.parse_properties(dsn, kwargs)
+        first_line = str(exc_info.value).split("\n")[0]
+        assert "Missing required parameters" in first_line
+        assert ("host" in first_line) == ("host" in expected_missing)
+        assert ("region" in first_line) == ("region" in expected_missing)
 
     def test_kwargs_override_dsn(self):
         """Test that kwargs override DSN parameters."""
