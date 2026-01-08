@@ -6,12 +6,17 @@ import postgres, {PostgresType} from "postgres";
 import {AwsCredentialIdentity, AwsCredentialIdentityProvider} from "@aws-sdk/types";
 import {DsqlSigner, DsqlSignerConfig} from "@aws-sdk/dsql-signer";
 
+// Version is injected at build time via tsdown
+declare const __VERSION__: string;
+const version = typeof __VERSION__ !== "undefined" ? __VERSION__ : "0.0.0";
+
 const ADMIN = "admin";
 const DEFAULT_DATABASE = "postgres";
 const DEFAULT_EXPIRY = 30; // Based on default Postgres.js connect_timeout
 // String components of a DSQL hostname, <Cluster ID>.dsql.<region>.on.aws
 const PRE_REGION_HOST_PATTERN = ".dsql.";
 const POST_REGION_HOST_PATTERN = ".on.aws";
+const APPLICATION_NAME = `aurora-dsql-nodejs-postgresjs/${version}`;
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function auroraDSQLPostgres<T extends Record<string, postgres.PostgresType> = {}>(
@@ -84,9 +89,17 @@ export function auroraDSQLPostgres<T extends Record<string, postgres.PostgresTyp
     let signer = new DsqlSigner(signerConfig);
     if (!database) opts.database = DEFAULT_DATABASE;
     if (!ssl) opts.ssl = true;
+
+    // Build application_name with optional ORM prefix
+    const applicationName = buildApplicationName(opts.connection?.application_name);
+
     const postgresOpts: postgres.Options<T> = {
         ...opts,
         pass: () => getToken(signer, username),
+        connection: {
+            ...opts.connection,
+            application_name: applicationName,
+        },
     };
     return typeof urlOrOptions === 'string' ? postgres(urlOrOptions, postgresOpts) : postgres(postgresOpts);
 }
@@ -139,6 +152,21 @@ async function getToken(signer: DsqlSigner, username: string): Promise<string> {
     } else {
         return await signer.getDbConnectAuthToken();
     }
+}
+
+/**
+ * Build the application_name with optional ORM prefix.
+ * If ormPrefix is provided (doesn't contain '/'), prepend it to the connector name.
+ * Otherwise, use the connector's application_name.
+ */
+function buildApplicationName(ormPrefix?: string): string {
+    if (ormPrefix) {
+        const trimmed = ormPrefix.trim();
+        if (trimmed && !trimmed.includes('/')) {
+            return `${trimmed}:${APPLICATION_NAME}`;
+        }
+    }
+    return APPLICATION_NAME;
 }
 
 export interface AuroraDSQLConfig<T extends Record<string, PostgresType<T>>> extends Omit<postgres.Options<T>, 'password' | 'pass'> {

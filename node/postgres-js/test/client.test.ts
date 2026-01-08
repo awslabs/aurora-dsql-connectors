@@ -253,4 +253,58 @@ describe('AuroraDSQLPostgres', () => {
             expect(signerConfig.profile).toBe('my-aws-profile');
         });
     });
+
+    describe('application_name', () => {
+        test('should set default application_name', () => {
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin',
+                region: 'us-east-1'
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][0];
+            expect(options.connection.application_name).toMatch(/^aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+$/);
+        });
+
+        test('should prepend ORM prefix to application_name', () => {
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin',
+                region: 'us-east-1',
+                connection: {
+                    application_name: 'prisma'
+                }
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][0];
+            expect(options.connection.application_name).toMatch(/^prisma:aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+$/);
+        });
+
+        test('should ignore user application_name that contains slash', () => {
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin',
+                region: 'us-east-1',
+                connection: {
+                    application_name: 'my-app/1.0.0'
+                }
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][0];
+            expect(options.connection.application_name).toMatch(/^aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+$/);
+        });
+
+        test('should set application_name with connection string', () => {
+            AuroraDSQLPostgres('postgres://admin@cluster.dsql.us-east-1.on.aws/postgres', {
+                region: 'us-east-1'
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][1];
+            expect(options.connection.application_name).toMatch(/^aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+$/);
+        });
+    });
 });
