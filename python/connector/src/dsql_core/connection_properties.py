@@ -29,9 +29,16 @@ def build_application_name(driver_name: str, orm_prefix: Optional[str] = None) -
     """
     Build the application_name with optional ORM prefix.
 
+    If orm_prefix is provided and non-empty after trimming, prepends it to
+    the connector identifier. Otherwise, returns the connector's application_name.
+
+    PostgreSQL limits application_name to 64 characters. After accounting for
+    the connector identifier and separator, 30 characters are available for
+    the ORM name.
+
     Args:
         driver_name: The driver name (e.g., 'psycopg', 'psycopg2', 'asyncpg')
-        orm_prefix: Optional ORM prefix to prepend
+        orm_prefix: Optional ORM name to prepend (e.g., 'django', 'sqlalchemy')
 
     Returns:
         The formatted application_name string
@@ -39,7 +46,7 @@ def build_application_name(driver_name: str, orm_prefix: Optional[str] = None) -
     base_name = f"aurora-dsql-python-{driver_name}/{_VERSION}"
     if orm_prefix:
         orm_prefix = orm_prefix.strip()
-        if orm_prefix and "/" not in orm_prefix:
+        if orm_prefix:
             return f"{orm_prefix}:{base_name}"
     return base_name
 

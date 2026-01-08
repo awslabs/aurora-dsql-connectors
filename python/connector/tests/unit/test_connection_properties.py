@@ -179,13 +179,81 @@ class TestApplicationName:
         result = build_application_name("psycopg", "sqlalchemy")
         assert result.startswith("sqlalchemy:aurora-dsql-python-psycopg/")
 
-    def test_build_application_name_ignores_prefix_with_slash(self):
-        """Test that prefix containing slash is ignored."""
+    def test_build_application_name_empty_string(self):
+        """Test that empty string prefix returns default."""
         from dsql_core.connection_properties import build_application_name
 
-        result = build_application_name("psycopg", "my-app/1.0.0")
+        result = build_application_name("psycopg", "")
         assert result.startswith("aurora-dsql-python-psycopg/")
-        assert "my-app" not in result
+        assert ":" not in result
+
+    def test_build_application_name_whitespace_only(self):
+        """Test that whitespace-only prefix returns default."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "   ")
+        assert result.startswith("aurora-dsql-python-psycopg/")
+        assert ":" not in result
+
+    def test_build_application_name_with_colon(self):
+        """Test that ORM prefix with colon is accepted."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "sql:alchemy")
+        assert result.startswith("sql:alchemy:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_with_at_sign(self):
+        """Test that ORM prefix with @ sign is accepted."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "sql@alchemy")
+        assert result.startswith("sql@alchemy:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_with_slash(self):
+        """Test that ORM prefix with slash is now accepted."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "myapp/1.0")
+        assert result.startswith("myapp/1.0:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_with_newline(self):
+        """Test that ORM prefix with newline is trimmed."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "my\napp")
+        # Newline should be preserved (not trimmed by strip())
+        assert result.startswith("my\napp:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_with_tab(self):
+        """Test that ORM prefix with tab is trimmed."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "my\tapp")
+        # Tab should be preserved (not trimmed by strip())
+        assert result.startswith("my\tapp:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_very_long_string(self):
+        """Test that very long ORM prefix is accepted (PostgreSQL will truncate)."""
+        from dsql_core.connection_properties import build_application_name
+
+        long_prefix = "a" * 100  # Way over 64 char limit
+        result = build_application_name("psycopg", long_prefix)
+        assert result.startswith(long_prefix + ":")
+        # We don't truncate - let PostgreSQL handle it
+
+    def test_build_application_name_with_unicode(self):
+        """Test that unicode characters in ORM prefix are accepted."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "日本語")
+        assert result.startswith("日本語:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_with_emoji(self):
+        """Test that emoji in ORM prefix are accepted."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "🚀app")
+        assert result.startswith("🚀app:aurora-dsql-python-psycopg/")
 
     def test_build_application_name_different_drivers(self):
         """Test application_name for different drivers."""
