@@ -12,9 +12,14 @@ import { AuroraDSQLConfig } from "./config/aurora-dsql-config.js";
 import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config.js";
 import { parseIntoClientConfig } from "pg-connection-string";
 
+// Version is injected at build time via tsdown
+declare const __VERSION__: string;
+const version = typeof __VERSION__ !== "undefined" ? __VERSION__ : "0.0.0";
+
 const ADMIN_USER = "admin";
 const PRE_REGION_HOST_PATTERN = ".dsql.";
 const POST_REGION_HOST_PATTERN = ".on.aws";
+const APPLICATION_NAME = `aurora-dsql-nodejs-pg/${version}`;
 
 export class AuroraDSQLUtil {
 
@@ -150,6 +155,9 @@ export class AuroraDSQLUtil {
       Object.entries(dsqlConfig).filter(([, v]) => v !== undefined && v !== null)
     );
 
+    // Build application_name with optional ORM prefix
+    const applicationName = AuroraDSQLUtil.buildApplicationName(dsqlConfig.application_name);
+
     return {
       user: "admin",
       port: 5432,
@@ -158,7 +166,23 @@ export class AuroraDSQLUtil {
       idleTimeoutMillis: 600000, // 10 min
       maxLifetimeSeconds: 3300, // 55 min
       ...definedConfig,
+      application_name: applicationName,
     };
+  }
+
+  /**
+   * Build the application_name with optional ORM prefix.
+   * If ormPrefix is provided (doesn't contain '/'), prepend it to the connector name.
+   * Otherwise, use the connector's application_name.
+   */
+  public static buildApplicationName(ormPrefix?: string): string {
+    if (ormPrefix) {
+      const trimmed = ormPrefix.trim();
+      if (trimmed && !trimmed.includes('/')) {
+        return `${trimmed}:${APPLICATION_NAME}`;
+      }
+    }
+    return APPLICATION_NAME;
   }
 
   public static buildHostnameFromIdAndRegion(

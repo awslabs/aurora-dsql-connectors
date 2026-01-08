@@ -440,4 +440,64 @@ describe("AuroraDSQLUtil", () => {
       ).toBe("xyz.dsql.ap-south-1.on.aws");
     });
   });
+
+  describe("application_name", () => {
+    it("should set default application_name", () => {
+      const config = {
+        host: "cluster.dsql.us-east-1.on.aws",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.application_name).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should prepend ORM prefix to application_name", () => {
+      const config = {
+        host: "cluster.dsql.us-east-1.on.aws",
+        application_name: "prisma",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.application_name).toMatch(/^prisma:aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should ignore user application_name that contains slash", () => {
+      const config = {
+        host: "cluster.dsql.us-east-1.on.aws",
+        application_name: "my-app/1.0.0",
+      };
+
+      const result = AuroraDSQLUtil.parsePgConfig(config);
+
+      expect(result.application_name).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+  });
+
+  describe("buildApplicationName", () => {
+    it("should return connector name when no ORM prefix", () => {
+      const result = AuroraDSQLUtil.buildApplicationName();
+
+      expect(result).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should prepend ORM prefix when provided", () => {
+      const result = AuroraDSQLUtil.buildApplicationName("sequelize");
+
+      expect(result).toMatch(/^sequelize:aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should ignore prefix containing slash", () => {
+      const result = AuroraDSQLUtil.buildApplicationName("some-app/2.0");
+
+      expect(result).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should handle empty string prefix", () => {
+      const result = AuroraDSQLUtil.buildApplicationName("");
+
+      expect(result).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+  });
 });
