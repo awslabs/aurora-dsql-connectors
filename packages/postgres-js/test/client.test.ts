@@ -282,19 +282,50 @@ describe('AuroraDSQLPostgres', () => {
             expect(options.connection.application_name).toMatch(/^prisma:aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+$/);
         });
 
-        test('should ignore user application_name that contains slash', () => {
+        test('should handle empty string application_name', () => {
             AuroraDSQLPostgres({
                 host: 'cluster.dsql.us-east-1.on.aws',
                 username: 'admin',
                 region: 'us-east-1',
                 connection: {
-                    application_name: 'my-app/1.0.0'
+                    application_name: ''
                 }
             });
 
             expect(mockPostgres).toHaveBeenCalledTimes(1);
             const options = mockPostgres.mock.calls[0][0];
             expect(options.connection.application_name).toMatch(/^aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+$/);
+        });
+
+        test('should accept very long application_name', () => {
+            const longName = 'a'.repeat(100);
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin',
+                region: 'us-east-1',
+                connection: {
+                    application_name: longName
+                }
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][0];
+            expect(options.connection.application_name).toMatch(new RegExp(`^${longName}:aurora-dsql-nodejs-postgresjs`));
+        });
+
+        test('should accept special characters in application_name', () => {
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin',
+                region: 'us-east-1',
+                connection: {
+                    application_name: 'my-app@2.0'
+                }
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][0];
+            expect(options.connection.application_name).toMatch(/^my-app@2\.0:aurora-dsql-nodejs-postgresjs/);
         });
 
         test('should set application_name with connection string', () => {

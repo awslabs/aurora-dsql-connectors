@@ -463,10 +463,10 @@ describe("AuroraDSQLUtil", () => {
       expect(result.application_name).toMatch(/^prisma:aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
     });
 
-    it("should ignore user application_name that contains slash", () => {
+    it("should handle empty string application_name", () => {
       const config = {
         host: "cluster.dsql.us-east-1.on.aws",
-        application_name: "my-app/1.0.0",
+        application_name: "",
       };
 
       const result = AuroraDSQLUtil.parsePgConfig(config);
@@ -488,16 +488,35 @@ describe("AuroraDSQLUtil", () => {
       expect(result).toMatch(/^sequelize:aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
     });
 
-    it("should ignore prefix containing slash", () => {
-      const result = AuroraDSQLUtil.buildApplicationName("some-app/2.0");
-
-      expect(result).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
-    });
-
     it("should handle empty string prefix", () => {
       const result = AuroraDSQLUtil.buildApplicationName("");
 
       expect(result).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should handle whitespace-only prefix", () => {
+      const result = AuroraDSQLUtil.buildApplicationName("   ");
+
+      expect(result).toMatch(/^aurora-dsql-nodejs-pg\/\d+\.\d+\.\d+$/);
+    });
+
+    it("should accept very long prefix", () => {
+      const longPrefix = "a".repeat(100);
+      const result = AuroraDSQLUtil.buildApplicationName(longPrefix);
+
+      expect(result).toMatch(new RegExp(`^${longPrefix}:aurora-dsql-nodejs-pg`));
+    });
+
+    it("should accept special characters", () => {
+      const result = AuroraDSQLUtil.buildApplicationName("my-app@2.0");
+
+      expect(result).toMatch(/^my-app@2\.0:aurora-dsql-nodejs-pg/);
+    });
+
+    it("should accept unicode characters", () => {
+      const result = AuroraDSQLUtil.buildApplicationName("日本語");
+
+      expect(result).toMatch(/^日本語:aurora-dsql-nodejs-pg/);
     });
   });
 });
