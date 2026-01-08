@@ -158,3 +158,43 @@ class TestDSNParsing:
         )
         assert dsql_params["host"] == "clusterid.dsql.us-west-2.on.aws"
         assert dsql_params["region"] == "us-west-2"
+
+
+@pytest.mark.unit
+class TestApplicationName:
+    """Test application_name functionality."""
+
+    def test_build_application_name_default(self):
+        """Test building default application_name."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg")
+        assert result.startswith("aurora-dsql-python-psycopg/")
+        assert "/" in result
+
+    def test_build_application_name_with_orm_prefix(self):
+        """Test building application_name with ORM prefix."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "sqlalchemy")
+        assert result.startswith("sqlalchemy:aurora-dsql-python-psycopg/")
+
+    def test_build_application_name_ignores_prefix_with_slash(self):
+        """Test that prefix containing slash is ignored."""
+        from dsql_core.connection_properties import build_application_name
+
+        result = build_application_name("psycopg", "my-app/1.0.0")
+        assert result.startswith("aurora-dsql-python-psycopg/")
+        assert "my-app" not in result
+
+    def test_build_application_name_different_drivers(self):
+        """Test application_name for different drivers."""
+        from dsql_core.connection_properties import build_application_name
+
+        psycopg_name = build_application_name("psycopg")
+        psycopg2_name = build_application_name("psycopg2")
+        asyncpg_name = build_application_name("asyncpg")
+
+        assert "psycopg/" in psycopg_name
+        assert "psycopg2/" in psycopg2_name
+        assert "asyncpg/" in asyncpg_name

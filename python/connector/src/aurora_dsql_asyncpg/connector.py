@@ -117,7 +117,9 @@ async def connect(
         kwargs["ssl"] = ssl
 
     params = ConnectionUtilities.parse_properties_and_set_token(
-        dsn, {**kwargs, "custom_credentials_provider": custom_credentials_provider}
+        dsn,
+        {**kwargs, "custom_credentials_provider": custom_credentials_provider},
+        driver_name="asyncpg",
     )
 
     # Map default names to asyncpg parameter names
@@ -129,6 +131,13 @@ async def connect(
         params.pop(default_dbname_param)
 
     await _handleSSLParameters(params)
+
+    # asyncpg uses server_settings for application_name, not a direct parameter
+    application_name = params.pop("application_name", None)
+    if application_name:
+        if server_settings is None:
+            server_settings = {}
+        server_settings = {**server_settings, "application_name": application_name}
 
     # Create asyncpg connection
     logger.debug(f"Connecting to Aurora DSQL at {params.get('host')}")

@@ -9,7 +9,7 @@ import psycopg2
 from botocore.credentials import CredentialProvider
 from psycopg2 import pool
 
-from dsql_core.connection_properties import ConnectionProperties
+from dsql_core.connection_properties import ConnectionProperties, build_application_name
 from dsql_core.token_manager import TokenManager
 
 
@@ -30,6 +30,11 @@ class AuroraDSQLThreadedConnectionPool(pool.ThreadedConnectionPool):
 
         dsql_params, pool_params = ConnectionProperties.parse_properties(None, kwargs)
         self._dsql_params = dsql_params
+
+        # Set application_name with optional ORM prefix
+        orm_prefix = pool_params.get("application_name")
+        pool_params["application_name"] = build_application_name("psycopg2", orm_prefix)
+
         # Initialize with dummy password, will be replaced per connection
         super().__init__(minconn, maxconn, *args, **pool_params)
 

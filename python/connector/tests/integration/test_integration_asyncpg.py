@@ -394,3 +394,39 @@ class TestIntegrationAsyncpg:
 
         error_message = exc_info.value.args[0]
         assert "SSL is mandatory" in error_message
+
+    @pytest.mark.asyncio
+    async def test_application_name_is_set(self, cluster_config):
+        """Test that application_name is correctly set in PostgreSQL."""
+        conn = await dsql.connect(**cluster_config)
+        try:
+            result = await conn.fetchrow("SELECT current_setting('application_name')")
+            app_name = result[0]
+            assert app_name is not None, "Application name should not be None"
+            assert "aurora-dsql-python-asyncpg" in app_name, f"Application name should contain 'aurora-dsql-python-asyncpg', got: {app_name}"
+            assert "/" in app_name, f"Application name should contain version separator '/', got: {app_name}"
+            print(f"Application name: {app_name}")
+        finally:
+            await conn.close()
+
+    @pytest.mark.asyncio
+    async def test_application_name_with_orm_prefix(self, cluster_config):
+        """Test that application_name with ORM prefix is correctly set."""
+        config = cluster_config.copy()
+        config["application_name"] = "prisma"
+
+        conn = await dsql.connect(**config)
+        try:
+            result = await conn.fetchrow(
+                "SELECT current_setting('application_name')"
+            )
+            app_name = result[0]
+            assert app_name is not None, "Application name should not be None"
+            expected_prefix = "prisma:aurora-dsql-python-asyncpg"
+            assert app_name.startswith(expected_prefix), (
+                f"Application name should start with '{expected_prefix}', "
+                f"got: {app_name}"
+            )
+            print(f"Application name with ORM prefix: {app_name}")
+        finally:
+            await conn.close()

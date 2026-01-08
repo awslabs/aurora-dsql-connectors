@@ -6,12 +6,42 @@ SPDX-License-Identifier: Apache-2.0
 import logging
 import re
 from enum import Enum
+from importlib.metadata import version as get_version
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import boto3
 
 logger = logging.getLogger(__name__)
+
+# Get package version
+try:
+    _VERSION = get_version("aurora-dsql-python-connector")
+except Exception:
+    _VERSION = "0.0.0"
+    logger.warning(
+        "Could not determine aurora-dsql-python-connector package version, "
+        "using 0.0.0 for application_name"
+    )
+
+
+def build_application_name(driver_name: str, orm_prefix: Optional[str] = None) -> str:
+    """
+    Build the application_name with optional ORM prefix.
+
+    Args:
+        driver_name: The driver name (e.g., 'psycopg', 'psycopg2', 'asyncpg')
+        orm_prefix: Optional ORM prefix to prepend
+
+    Returns:
+        The formatted application_name string
+    """
+    base_name = f"aurora-dsql-python-{driver_name}/{_VERSION}"
+    if orm_prefix:
+        orm_prefix = orm_prefix.strip()
+        if orm_prefix and "/" not in orm_prefix:
+            return f"{orm_prefix}:{base_name}"
+    return base_name
 
 
 class DefaultValues(Enum):
