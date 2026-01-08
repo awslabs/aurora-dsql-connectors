@@ -43,13 +43,17 @@ class ConnWrapper {
     }
 
     /**
-     * Build the application_name with optional ORM prefix. If ormPrefix is provided (doesn't
-     * contain '/'), prepend it to the connector name. Otherwise, use the connector's
-     * application_name.
+     * Build the application_name with optional ORM prefix.
+     *
+     * <p>If ormPrefix is provided and non-empty after trimming, prepends it to the connector
+     * identifier. Otherwise, returns the connector's application_name.
+     *
+     * @param ormPrefix Optional ORM name to prepend (e.g., "hibernate")
+     * @return Formatted application_name string
      */
     static String buildApplicationName(final String ormPrefix) {
         final String trimmed = ormPrefix != null ? ormPrefix.trim() : null;
-        if (trimmed != null && !trimmed.isEmpty() && !trimmed.contains("/")) {
+        if (trimmed != null && !trimmed.isEmpty()) {
             return trimmed + ":" + BASE_APPLICATION_NAME;
         }
         return BASE_APPLICATION_NAME;

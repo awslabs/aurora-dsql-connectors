@@ -39,18 +39,38 @@ class ConnWrapperTest {
     }
 
     @Test
-    void testBuildApplicationName_IgnoresPrefixWithSlash() {
-        String result = ConnWrapper.buildApplicationName("my-app/1.0.0");
-
-        assertTrue(result.startsWith("aurora-dsql-jdbc/"));
-        assertTrue(!result.contains("my-app"));
-    }
-
-    @Test
     void testBuildApplicationName_EmptyPrefix() {
         String result = ConnWrapper.buildApplicationName("");
 
         assertTrue(result.startsWith("aurora-dsql-jdbc/"));
+    }
+
+    @Test
+    void testBuildApplicationName_WhitespacePrefix() {
+        String result = ConnWrapper.buildApplicationName("   ");
+
+        assertTrue(result.startsWith("aurora-dsql-jdbc/"));
+        assertTrue(!result.contains(":"));
+    }
+
+    @Test
+    void testBuildApplicationName_VeryLongPrefix() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 100; i++) {
+            sb.append("a");
+        }
+        String longPrefix = sb.toString();
+        String result = ConnWrapper.buildApplicationName(longPrefix);
+
+        assertTrue(result.startsWith(longPrefix + ":"));
+        // We don't truncate - let PostgreSQL handle it
+    }
+
+    @Test
+    void testBuildApplicationName_WithSpecialCharacters() {
+        String result = ConnWrapper.buildApplicationName("my-app@2.0");
+
+        assertTrue(result.startsWith("my-app@2.0:aurora-dsql-jdbc/"));
     }
 
     @Test

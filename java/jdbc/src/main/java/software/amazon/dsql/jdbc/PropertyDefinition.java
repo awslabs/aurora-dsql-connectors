@@ -130,19 +130,22 @@ public final class PropertyDefinition {
     /**
      * Specifies the application name for connection tracking.
      *
-     * <p>This property is optional. If set to a value without a '/' character, it will be prepended
-     * to the connector identifier (e.g., "hibernate" becomes "hibernate:aurora-dsql-jdbc/1.0.0").
-     * If the value contains a '/', it will be ignored and the default connector identifier will be
-     * used.
+     * <p>This property is optional and intended for ORM frameworks to identify themselves. If
+     * provided, the ORM name will be prepended to the connector identifier (e.g., "hibernate"
+     * becomes "hibernate:aurora-dsql-jdbc/1.0.0").
      *
-     * <p>This is primarily used by ORM frameworks to identify themselves in connection metrics.
+     * <p>PostgreSQL limits application_name to 64 characters. After accounting for the connector
+     * identifier and separator, up to 39 characters are available for the ORM name.
+     *
+     * <p>Empty or whitespace-only values will be ignored, resulting in the default connector
+     * identifier being used.
      */
     public static final AuroraDsqlProperty APPLICATION_NAME =
             new AuroraDsqlProperty(
                     "ApplicationName",
                     null,
-                    "Application name for connection tracking. ORM frameworks can set this to "
-                            + "identify themselves (e.g., 'hibernate'). Values containing '/' are ignored.");
+                    "Application name for connection tracking. ORM frameworks should set this to "
+                            + "their name (e.g., 'hibernate'). Max 39 characters.");
 
     private static final Map<String, AuroraDsqlProperty> PROPS_BY_NAME = new ConcurrentHashMap<>();
 
