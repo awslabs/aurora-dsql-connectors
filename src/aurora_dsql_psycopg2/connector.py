@@ -46,7 +46,9 @@ def connect(
     """
 
     params = ConnectionUtilities.parse_properties_and_set_token(
-        dsn, {**kwargs, "custom_credentials_provider": custom_credentials_provider}
+        dsn,
+        {**kwargs, "custom_credentials_provider": custom_credentials_provider},
+        driver_name="psycopg2",
     )
 
     # Create psycopg2 connection

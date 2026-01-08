@@ -243,3 +243,54 @@ class TestIntegrationPsycopgCommon:
             custom_provider.load_called
         ), "Custom credentials provider load() was not called"
         self._assert_connection_functional(conn)
+
+    @pytest.mark.parametrize(
+        "dsql_connector",
+        [
+            dsql,
+            dsql2,
+        ],
+    )
+    def test_application_name_is_set(self, cluster_config, dsql_connector):
+        """Test that application_name is correctly set in PostgreSQL."""
+        conn = dsql_connector.connect(**cluster_config)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT current_setting('application_name')")
+                result = cur.fetchone()
+                app_name = result[0]
+                assert app_name is not None, "Application name should not be None"
+                # Check for psycopg or psycopg2 in the name
+                assert "aurora-dsql-python-" in app_name, f"Application name should contain 'aurora-dsql-python-', got: {app_name}"
+                assert "/" in app_name, f"Application name should contain version separator '/', got: {app_name}"
+                print(f"Application name: {app_name}")
+        finally:
+            conn.close()
+
+    @pytest.mark.parametrize(
+        "dsql_connector",
+        [
+            dsql,
+            dsql2,
+        ],
+    )
+    def test_application_name_with_orm_prefix(self, cluster_config, dsql_connector):
+        """Test that application_name with ORM prefix is correctly set."""
+        config = cluster_config.copy()
+        config["application_name"] = "sqlalchemy"
+
+        conn = dsql_connector.connect(**config)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT current_setting('application_name')")
+                result = cur.fetchone()
+                app_name = result[0]
+                assert app_name is not None, "Application name should not be None"
+                expected_prefix = "sqlalchemy:aurora-dsql-python-"
+                assert app_name.startswith(expected_prefix), (
+                    f"Application name should start with '{expected_prefix}', "
+                    f"got: {app_name}"
+                )
+                print(f"Application name with ORM prefix: {app_name}")
+        finally:
+            conn.close()

@@ -52,6 +52,7 @@ class DSQLConnection(psycopg.Connection):
         params = ConnectionUtilities.parse_properties_and_set_token(
             conninfo,
             {**kwargs, "custom_credentials_provider": custom_credentials_provider},
+            driver_name="psycopg",
         )
 
         return super().connect(
@@ -105,6 +106,7 @@ class DSQLAsyncConnection(psycopg.AsyncConnection):
         params = ConnectionUtilities.parse_properties_and_set_token(
             conninfo,
             {**kwargs, "custom_credentials_provider": custom_credentials_provider},
+            driver_name="psycopg",
         )
 
         return await super().connect(
