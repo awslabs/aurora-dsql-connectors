@@ -226,4 +226,43 @@ describe('DSQL Integration Tests', () => {
 
         await expect(sql`SELECT 1`).rejects.toThrow();
     });
+
+    test('should set default application_name', async () => {
+        const sql = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            region: region,
+        });
+
+        try {
+            const result = await sql`SELECT current_setting('application_name') as app_name`;
+            const appName = result[0].app_name;
+            expect(appName).toBeTruthy();
+            expect(appName).toMatch(/^aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+/);
+            console.log(`Application name: ${appName}`);
+        } finally {
+            await sql.end();
+        }
+    });
+
+    test('should set application_name with ORM prefix', async () => {
+        const sql = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            region: region,
+            connection: {
+                application_name: 'prisma'
+            }
+        });
+
+        try {
+            const result = await sql`SELECT current_setting('application_name') as app_name`;
+            const appName = result[0].app_name;
+            expect(appName).toBeTruthy();
+            expect(appName).toMatch(/^prisma:aurora-dsql-nodejs-postgresjs\/\d+\.\d+\.\d+/);
+            console.log(`Application name with ORM prefix: ${appName}`);
+        } finally {
+            await sql.end();
+        }
+    });
 });
