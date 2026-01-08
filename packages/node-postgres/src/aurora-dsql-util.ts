@@ -172,13 +172,21 @@ export class AuroraDSQLUtil {
 
   /**
    * Build the application_name with optional ORM prefix.
-   * If ormPrefix is provided (doesn't contain '/'), prepend it to the connector name.
-   * Otherwise, use the connector's application_name.
+   *
+   * If ormPrefix is provided and non-empty after trimming, prepends it to
+   * the connector identifier. Otherwise, returns the connector's application_name.
+   *
+   * PostgreSQL limits application_name to 64 characters. After accounting for
+   * the connector identifier and separator, 35 characters are available for
+   * the ORM name.
+   *
+   * @param ormPrefix Optional ORM name to prepend (e.g., "prisma", "sequelize")
+   * @returns Formatted application_name string
    */
   public static buildApplicationName(ormPrefix?: string): string {
     if (ormPrefix) {
       const trimmed = ormPrefix.trim();
-      if (trimmed && !trimmed.includes('/')) {
+      if (trimmed) {
         return `${trimmed}:${APPLICATION_NAME}`;
       }
     }
