@@ -309,4 +309,52 @@ public class BasicConnectionIntegrationTest {
                 },
                 "Should throw SQLException for invalid endpoint");
     }
+
+    @Test
+    void testApplicationNameIsSet() throws SQLException {
+        try (Connection conn = createConnection()) {
+            assertNotNull(conn, "Connection should not be null");
+
+            // Query pg_stat_activity to verify application_name is set
+            // Note: DSQL may not support pg_stat_activity, so we query the connection parameter
+            String query = "SELECT current_setting('application_name') as app_name";
+            try (Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery(query)) {
+                assertTrue(rs.next(), "Result set should have at least one row");
+                String appName = rs.getString("app_name");
+                assertNotNull(appName, "Application name should not be null");
+                assertTrue(
+                        appName.startsWith("aurora-dsql-jdbc/"),
+                        "Application name should start with 'aurora-dsql-jdbc/', got: " + appName);
+                System.out.println("Application name: " + appName);
+            }
+        }
+    }
+
+    @Test
+    void testApplicationNameWithOrmPrefix() throws SQLException {
+        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
+        Properties props = new Properties();
+        props.setProperty("user", user);
+        props.setProperty("ApplicationName", "hibernate");
+
+        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres";
+
+        try (Connection conn = DriverManager.getConnection(url, props)) {
+            assertNotNull(conn, "Connection should not be null");
+
+            String query = "SELECT current_setting('application_name') as app_name";
+            try (Statement stmt = conn.createStatement();
+                    ResultSet rs = stmt.executeQuery(query)) {
+                assertTrue(rs.next(), "Result set should have at least one row");
+                String appName = rs.getString("app_name");
+                assertNotNull(appName, "Application name should not be null");
+                assertTrue(
+                        appName.startsWith("hibernate:aurora-dsql-jdbc/"),
+                        "Application name should start with 'hibernate:aurora-dsql-jdbc/', got: "
+                                + appName);
+                System.out.println("Application name with ORM prefix: " + appName);
+            }
+        }
+    }
 }

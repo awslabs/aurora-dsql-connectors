@@ -127,6 +127,23 @@ public final class PropertyDefinition {
             new AuroraDsqlProperty(
                     "database", "postgres", "The database name to connect to (default: postgres)");
 
+    /**
+     * Specifies the application name for connection tracking.
+     *
+     * <p>This property is optional. If set to a value without a '/' character, it will be prepended
+     * to the connector identifier (e.g., "hibernate" becomes "hibernate:aurora-dsql-jdbc/1.0.0").
+     * If the value contains a '/', it will be ignored and the default connector identifier will be
+     * used.
+     *
+     * <p>This is primarily used by ORM frameworks to identify themselves in connection metrics.
+     */
+    public static final AuroraDsqlProperty APPLICATION_NAME =
+            new AuroraDsqlProperty(
+                    "ApplicationName",
+                    null,
+                    "Application name for connection tracking. ORM frameworks can set this to "
+                            + "identify themselves (e.g., 'hibernate'). Values containing '/' are ignored.");
+
     private static final Map<String, AuroraDsqlProperty> PROPS_BY_NAME = new ConcurrentHashMap<>();
 
     static {
