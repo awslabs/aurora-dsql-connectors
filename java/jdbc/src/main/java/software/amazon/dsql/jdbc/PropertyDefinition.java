@@ -147,6 +147,58 @@ public final class PropertyDefinition {
                     "Application name for connection tracking. ORM frameworks should set this to "
                             + "their name (e.g., 'hibernate'). Max 39 characters.");
 
+    /**
+     * Specifies the SSL mode for the connection.
+     *
+     * <p>This property controls how SSL/TLS encryption is negotiated with the server. Aurora DSQL
+     * requires SSL connections, so this defaults to {@code verify-full} which validates both the
+     * server certificate and hostname.
+     *
+     * <p>This is a pass-through property to the underlying PostgreSQL JDBC driver.
+     *
+     * @see <a href="https://jdbc.postgresql.org/documentation/ssl/">pgJDBC SSL documentation</a>
+     */
+    public static final AuroraDsqlProperty SSL_MODE =
+            new AuroraDsqlProperty(
+                    "sslmode",
+                    "verify-full",
+                    "SSL mode for the connection. Aurora DSQL requires SSL (default: verify-full)");
+
+    /**
+     * Specifies the SSL negotiation method.
+     *
+     * <p>When set to {@code direct}, the driver initiates SSL immediately without first requesting
+     * if the server supports it, saving one round trip. This requires pgJDBC 42.7.4 or later; older
+     * versions will ignore this property and use standard SSL negotiation.
+     *
+     * <p>This is a pass-through property to the underlying PostgreSQL JDBC driver.
+     *
+     * @see <a href="https://jdbc.postgresql.org/documentation/ssl/">pgJDBC SSL documentation</a>
+     */
+    public static final AuroraDsqlProperty SSL_NEGOTIATION =
+            new AuroraDsqlProperty(
+                    "sslNegotiation",
+                    "direct",
+                    "SSL negotiation method. 'direct' skips negotiation round trip "
+                            + "(default: direct, requires pgJDBC 42.7.4+)");
+
+    /**
+     * Specifies the SSL socket factory class.
+     *
+     * <p>This defaults to {@code org.postgresql.ssl.DefaultJavaSSLFactory} which uses Java's
+     * default trust store for certificate validation. This allows Aurora DSQL's certificates to be
+     * validated against the standard CA certificates.
+     *
+     * <p>This is a pass-through property to the underlying PostgreSQL JDBC driver.
+     *
+     * @see <a href="https://jdbc.postgresql.org/documentation/ssl/">pgJDBC SSL documentation</a>
+     */
+    public static final AuroraDsqlProperty SSL_FACTORY =
+            new AuroraDsqlProperty(
+                    "sslfactory",
+                    "org.postgresql.ssl.DefaultJavaSSLFactory",
+                    "SSL socket factory class (default: org.postgresql.ssl.DefaultJavaSSLFactory)");
+
     private static final Map<String, AuroraDsqlProperty> PROPS_BY_NAME = new ConcurrentHashMap<>();
 
     static {

@@ -249,6 +249,11 @@ public class DSQLConnector implements java.sql.Driver {
                             tokenDurationInSecond);
             props.setProperty("password", authToken);
 
+            // Apply SSL defaults if not already specified (secure by default)
+            applyDefaultIfAbsent(props, PropertyDefinition.SSL_MODE);
+            applyDefaultIfAbsent(props, PropertyDefinition.SSL_NEGOTIATION);
+            applyDefaultIfAbsent(props, PropertyDefinition.SSL_FACTORY);
+
             // Use ConnWrapper to create PostgreSQL connection with auth token
             final ConnWrapper connWrapper = new ConnWrapper(validatedUrl, props);
             return connWrapper.makeConnection();
@@ -289,6 +294,18 @@ public class DSQLConnector implements java.sql.Driver {
             return ProfileCredentialsProvider.create(profile);
         }
         return AuroraDsqlCredentialsManager.getProvider();
+    }
+
+    /**
+     * Applies the default value for a property if it's not already set.
+     *
+     * @param props the properties to modify
+     * @param property the property definition containing the default value
+     */
+    private void applyDefaultIfAbsent(final Properties props, final AuroraDsqlProperty property) {
+        if (property.get(props) == null && property.defaultValue != null) {
+            property.set(props, property.defaultValue);
+        }
     }
 
     /**
