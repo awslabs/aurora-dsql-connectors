@@ -118,7 +118,7 @@ const sql = AuroraDSQLPostgres({
 });
 ```
 
-## Configuration Options
+### Configuration Options
 
 | Option                      | Type                             | Required | Description                                              |
 |-----------------------------|----------------------------------|----------|----------------------------------------------------------|
@@ -130,6 +130,62 @@ const sql = AuroraDSQLPostgres({
 | `tokenDurationSecs`         | `number?`                        | No       | Token expiration time in seconds                         |
 
 All standard [Postgres.js options](https://github.com/porsager/postgres?tab=readme-ov-file#connection-details) are also supported.
+
+## Websocket Connector 
+The websocket connector provides an alternative connection method to Aurora DSQL using WebSockets instead of standard TCP sockets. This approach is designed to work in use cases where TCP sockets are not provided by the platform. For Node.js server applications, use the standard TCP socket connector shown above.
+
+### Use cases
+- Browser Compatibility - Web browsers don't support raw TCP sockets (Node.js net module). WebSockets are a common way  to establish persistent database connections from browser-based applications.
+
+- Simplified Architecture - Eliminates the need for a separate backend API layer when building prototypes or internal tools, allowing direct browser-to-database connections.
+
+### AWS Credentials 
+- DSQL access tokens are not secrets and can be accessed by the user in the browser
+- Access tokens should be time limited, and use a role with access permissions that are scoped to data accessible by that user
+
+### Basic Usage
+
+```typescript
+import type { AwsCredentialIdentity } from '@aws-sdk/types';
+import { auroraDSQLWsPostgres, AuroraDSQLWsConfig } from '@aws/aurora-dsql-postgresjs-connector';
+
+// For testing only, DO NOT USE in a production environment
+const simulateSecureGetCredentialsAPI = (): Promise<AwsCredentialIdentity> => {
+  // Users must retrieve the AwsCredentialIdentity through a secure API
+  // DO NOT store the IAM accessKeyId and secretAccessKey inside the JavaScript source code
+  // for more details, refer to the example in the folder "example/src/alternative/websocket"
+};
+
+const config: AuroraDSQLWsConfig<{}> = {
+  host: 'your-cluster.dsql.us-east-1.on.aws',
+  database: "postgres",
+  user: "admin",
+  customCredentialsProvider: simulateSecureGetCredentialsAPI,
+};
+
+const sql = auroraDSQLWsPostgres(config);
+
+const result = await sql`SELECT version()`;
+console.log(result);
+await sql.end();
+```
+
+### Configuration Options
+
+| Option                      | Type                             | Required | Description                                              |
+|-----------------------------|----------------------------------|----------|----------------------------------------------------------|
+| `host`                      | `string`                         | Yes      | DSQL cluster hostname or cluster ID                      |
+| `database`                  | `string?`                        | No       | Database name                                            |
+| `username`                  | `string?`                        | No       | Database username (uses admin if not provided)           |
+| `region`                    | `string?`                        | No       | AWS region (auto-detected from hostname if not provided) |
+| `customCredentialsProvider` | `AwsCredentialIdentityProvider?` | No       | Custom AWS credentials provider                          |
+| `tokenDurationSecs`         | `number?`                        | No       | Token expiration time in seconds                         |
+| `connectionCheck`           | `boolean?`                       | No       | Perform a heart beat connectivity check with`Select 1` before every query (Default: false)
+| `connectionId`              | `string?`                        | No       | An optional connection identifier to be used in the `onReservedConnectionClose` callback
+| `onReservedConnectionClose`         | `(connectionId?: string) => void?`                        | No       | A callback that is executed upon unexpected closure of a reserved connection, such as a heartbeat failure. The connectionId is passed to the callback when available.
+Other standard [Postgres.js options](https://github.com/porsager/postgres?tab=readme-ov-file#connection-details) are also supported, except for `socket`, `port`, and `ssl`, which have default values.
+
+
 
 ## Authentication
 
