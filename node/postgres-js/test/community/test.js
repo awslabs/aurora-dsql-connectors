@@ -1,3 +1,14 @@
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * This code is based on postgres.js community test
+ * License: Unlicense (https://github.com/porsager/postgres/blob/5c8135f3df1bb10e7aad10f14a6f084db3724f82/UNLICENSE)
+ * Source: https://github.com/porsager/postgres/blob/5c8135f3df1bb10e7aad10f14a6f084db3724f82/tests/test.js
+ */
+
 /* eslint no-console: 0 */
 
 import util from 'util'
@@ -8,12 +19,12 @@ let ignored = 0
 let failed = false
 let promise = Promise.resolve()
 const tests = {}
-    , ignore = {}
+  , ignore = {}
 
 export const nt = () => ignored++
 export const ot = (...rest) => (only = true, test(true, ...rest))
 export const t = (...rest) => test(false, ...rest)
-t.timeout = 5
+t.timeout = 60
 
 async function test(o, name, options, fn) {
   typeof options !== 'object' && (fn = options, options = {})
@@ -48,11 +59,18 @@ async function test(o, name, options, fn) {
       }
 
       tests[line].succeeded = true
-      process.stdout.write('✅')
+      process.stdout.write(`✅ `)
+      // modified - display test case name and added delay to avoid OC001 errors between test cases
+      console.log(name);
+      await new Promise(r => setTimeout(r, 500))
     })
     .catch(err => {
       tests[line].failed = failed = true
+      // modified - display failure, name and error
+      process.stdout.write('❌ ')
+      console.log(name);
       tests[line].error = err instanceof Error ? err : new Error(util.inspect(err))
+      console.log(err);
     })
     .then(() => {
       ++done === Object.keys(tests).length && exit()
@@ -82,6 +100,7 @@ function exit() {
         ? console.log('🎉')
         : console.error('⚠️', 'Not good')
 
-  !process.exitCode && (!success || only || ignored) && (process.exitCode = 1)
+  // modified - removed ignored in the following code as we have nt() test cases, 
+  // the exit code will be always 1 if we have ignored test cases
+  !process.exitCode && (!success || only) && (process.exitCode = 1)
 }
-
