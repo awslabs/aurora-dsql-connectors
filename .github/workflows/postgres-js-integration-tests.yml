@@ -84,3 +84,29 @@ jobs:
           npm ci
           npm link @aws/aurora-dsql-postgresjs-connector
           npm run test
+
+      - name: Run postgres.js modified Community Tests with connectionCheck enabled
+        if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
+        working-directory: ./packages/postgres-js
+        env:
+          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_POSTGRESJS_CLUSTER_EDNPOINT }}
+          CLUSTER_USER: admin
+          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          CONNECTION_CHECK: true
+        run: |
+          npm ci
+          npm run build:prod 
+          node test/community/index.js
+          
+      - name: Run postgres.js modified Community Tests with connectionCheck disabled
+        if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
+        working-directory: ./packages/postgres-js
+        env:
+          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_POSTGRESJS_CLUSTER_EDNPOINT }}
+          CLUSTER_USER: admin
+          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          CONNECTION_CHECK: false
+        run: |
+          npm ci
+          npm run build:prod 
+          node test/community/index.js
