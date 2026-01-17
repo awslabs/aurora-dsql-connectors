@@ -58,6 +58,15 @@ const options = {
 
 const sql = postgres(options)
 
+t('Clean up tables', async () => {
+  await sql`DROP TABLE IF EXISTS students`
+  await sql`DROP TABLE IF EXISTS users`
+  await sql`DROP TABLE IF EXISTS tester`
+  await sql`DROP TABLE IF EXISTS x`
+  await sql`DROP TABLE IF EXISTS a.b`
+  return ['DROP TABLE', (await sql`DROP TABLE IF EXISTS test`).command]
+})
+
 nt('Connects with no options', async () => {
   const sql = postgres({ max: 1 })
 
