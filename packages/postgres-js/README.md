@@ -183,6 +183,7 @@ await sql.end();
 | `connectionCheck`           | `boolean?`                       | No       | Perform a heart beat connectivity check with`Select 1` before every query (Default: false)
 | `connectionId`              | `string?`                        | No       | An optional connection identifier to be used in the `onReservedConnectionClose` callback
 | `onReservedConnectionClose`         | `(connectionId?: string) => void?`                        | No       | A callback that is executed upon unexpected closure of a reserved connection, such as a heartbeat failure. The connectionId is passed to the callback when available.
+
 Other standard [Postgres.js options](https://github.com/porsager/postgres?tab=readme-ov-file#connection-details) are also supported, except for `socket`, `port`, and `ssl`, which have default values.
 
 
