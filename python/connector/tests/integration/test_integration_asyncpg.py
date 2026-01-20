@@ -213,11 +213,9 @@ class TestIntegrationAsyncpg:
         await self._assert_connection_functional(conn)
 
     @pytest.mark.asyncio
-    async def test_basic_connection_ssl_context_in_named_param(self, cluster_config):
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
+    async def test_basic_connection_ssl_context_in_named_param(
+        self, cluster_config, ssl_cert_path
+    ):
 
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = (
@@ -243,11 +241,9 @@ class TestIntegrationAsyncpg:
         assert "certificate verify failed" in error_message
 
     @pytest.mark.asyncio
-    async def test_basic_connection_ssl_context_in_kwargs(self, cluster_config):
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
+    async def test_basic_connection_ssl_context_in_kwargs(
+        self, cluster_config, ssl_cert_path
+    ):
 
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = (
@@ -263,12 +259,8 @@ class TestIntegrationAsyncpg:
 
     @pytest.mark.asyncio
     async def test_basic_connection_ssl_sslrootcert_not_needed_with_context(
-        self, cluster_config
+        self, cluster_config, ssl_cert_path
     ):
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = (
@@ -286,11 +278,9 @@ class TestIntegrationAsyncpg:
         await self._assert_connection_functional(conn)
 
     @pytest.mark.asyncio
-    async def test_basic_connection_ssl_context_with_verify_ca(self, cluster_config):
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
+    async def test_basic_connection_ssl_context_with_verify_ca(
+        self, cluster_config, ssl_cert_path
+    ):
 
         ssl_context = ssl.create_default_context()
         ssl_context.verify_mode = ssl.CERT_OPTIONAL  # This is equivalent to verify-ca
@@ -315,14 +305,12 @@ class TestIntegrationAsyncpg:
         assert "certificate verify failed" in error_message
 
     @pytest.mark.asyncio
-    async def test_basic_connection_ssl_sslrootcert_direct(self, cluster_config):
+    async def test_basic_connection_ssl_sslrootcert_direct(
+        self, cluster_config, ssl_cert_path
+    ):
 
         # This test works because handling was added in the connector to support these parameters from dsn.
         # The connector internally will use ssl context when handling this scenario.
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         cluster_config["ssl"] = "verify-full"
         cluster_config["sslrootcert"] = ssl_cert_path
@@ -332,12 +320,8 @@ class TestIntegrationAsyncpg:
 
     @pytest.mark.asyncio
     async def test_basic_connection_ssl_sslrootcert_direct_with_verify_ca(
-        self, cluster_config
+        self, cluster_config, ssl_cert_path
     ):
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         cluster_config["ssl"] = "verify-ca"
         cluster_config["sslrootcert"] = ssl_cert_path
@@ -346,12 +330,8 @@ class TestIntegrationAsyncpg:
         await self._assert_connection_functional(conn)
 
     @pytest.mark.asyncio
-    async def test_connect_with_dsn_ssl(self, cluster_config):
+    async def test_connect_with_dsn_ssl(self, cluster_config, ssl_cert_path):
         # The DSN format allows specifying SSL modes and file paths as query parameters
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         conn_str = f"postgresql://{cluster_config['host']}/{cluster_config['database']}?ssl=verify-full&sslrootcert={ssl_cert_path}"
 
@@ -359,12 +339,8 @@ class TestIntegrationAsyncpg:
         await conn.close()
 
     @pytest.mark.asyncio
-    async def test_connect_with_dsn_sslmode(self, cluster_config):
+    async def test_connect_with_dsn_sslmode(self, cluster_config, ssl_cert_path):
         # The DSN format allows specifying SSL modes and file paths as query parameters
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         conn_str = f"postgresql://{cluster_config['host']}/{cluster_config['database']}?sslmode=verify-full&sslrootcert={ssl_cert_path}"
 
@@ -372,12 +348,10 @@ class TestIntegrationAsyncpg:
         await conn.close()
 
     @pytest.mark.asyncio
-    async def test_connect_with_dsn_sslmode_verify_ca(self, cluster_config):
+    async def test_connect_with_dsn_sslmode_verify_ca(
+        self, cluster_config, ssl_cert_path
+    ):
         # The DSN format allows specifying SSL modes and file paths as query parameters
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         conn_str = f"postgresql://{cluster_config['host']}/{cluster_config['database']}?sslmode=verify-ca&sslrootcert={ssl_cert_path}"
 
