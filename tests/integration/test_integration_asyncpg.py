@@ -377,8 +377,12 @@ class TestIntegrationAsyncpg:
             result = await conn.fetchrow("SELECT current_setting('application_name')")
             app_name = result[0]
             assert app_name is not None, "Application name should not be None"
-            assert "aurora-dsql-python-asyncpg" in app_name, f"Application name should contain 'aurora-dsql-python-asyncpg', got: {app_name}"
-            assert "/" in app_name, f"Application name should contain version separator '/', got: {app_name}"
+            assert (
+                "aurora-dsql-python-asyncpg" in app_name
+            ), f"Application name should contain 'aurora-dsql-python-asyncpg', got: {app_name}"
+            assert (
+                "/" in app_name
+            ), f"Application name should contain version separator '/', got: {app_name}"
             print(f"Application name: {app_name}")
         finally:
             await conn.close()
@@ -391,9 +395,7 @@ class TestIntegrationAsyncpg:
 
         conn = await dsql.connect(**config)
         try:
-            result = await conn.fetchrow(
-                "SELECT current_setting('application_name')"
-            )
+            result = await conn.fetchrow("SELECT current_setting('application_name')")
             app_name = result[0]
             assert app_name is not None, "Application name should not be None"
             expected_prefix = "prisma:aurora-dsql-python-asyncpg"

@@ -83,7 +83,9 @@ class TestIntegrationPsycopgCommon:
             dsql2,
         ],
     )
-    def test_connection_with_cluster_id_only(self, cluster_config, dsql_connector, monkeypatch):
+    def test_connection_with_cluster_id_only(
+        self, cluster_config, dsql_connector, monkeypatch
+    ):
         """Test connection with cluster ID using default region from environment."""
         monkeypatch.setenv("AWS_DEFAULT_REGION", cluster_config["region"])
 
@@ -261,8 +263,12 @@ class TestIntegrationPsycopgCommon:
                 app_name = result[0]
                 assert app_name is not None, "Application name should not be None"
                 # Check for psycopg or psycopg2 in the name
-                assert "aurora-dsql-python-" in app_name, f"Application name should contain 'aurora-dsql-python-', got: {app_name}"
-                assert "/" in app_name, f"Application name should contain version separator '/', got: {app_name}"
+                assert (
+                    "aurora-dsql-python-" in app_name
+                ), f"Application name should contain 'aurora-dsql-python-', got: {app_name}"
+                assert (
+                    "/" in app_name
+                ), f"Application name should contain version separator '/', got: {app_name}"
                 print(f"Application name: {app_name}")
         finally:
             conn.close()
