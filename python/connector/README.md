@@ -482,19 +482,32 @@ uv sync --all-extras
 ### Install pre-commit hooks
 
 ```bash
-pre-commit install
+uv run pre-commit install
 ```
 
-### Run tests
+### Run unit tests
 
-```
-# Run unit tests
+```bash
 uv run pytest tests/unit
+```
 
-# Set a cluster for use in integration tests
+### Configure environment variables
+
+Copy `.env.example` to `.env` and update with your cluster details:
+
+```bash
+cp .env.example .env
+```
+
+Alternatively, set the environment variable directly:
+
+```bash
 export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
+```
 
-# Run integration tests
+### Run integration tests
+
+```bash
 uv run pytest tests/integration
 ```
 
