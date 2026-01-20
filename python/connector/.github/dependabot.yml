@@ -5,3 +5,21 @@ updates:
     target-branch: "main"
     schedule:
       interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/examples/asyncpg"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/examples/psycopg"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/examples/psycopg2"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "gitleaks/gitleaks-action"
