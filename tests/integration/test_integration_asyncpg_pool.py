@@ -111,12 +111,10 @@ class TestIntegrationAsyncpgPool:
             await pool.close()
 
     @pytest.mark.asyncio
-    async def test_pool_basic_operations_ssl_context(self, cluster_config):
+    async def test_pool_basic_operations_ssl_context(
+        self, cluster_config, ssl_cert_path
+    ):
         """Test basic pool operations."""
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = (
@@ -137,12 +135,8 @@ class TestIntegrationAsyncpgPool:
             await pool.close()
 
     @pytest.mark.asyncio
-    async def test_pool_basic_operations_dsn_ssl(self, cluster_config):
+    async def test_pool_basic_operations_dsn_ssl(self, cluster_config, ssl_cert_path):
         """Test basic pool operations."""
-
-        ssl_cert_path = os.getenv("SSL_CERT_PATH")
-        if not ssl_cert_path:
-            raise ValueError("SSL_CERT_PATH environment variable not set")
 
         conn_str = f"postgresql://{cluster_config['host']}/{cluster_config['database']}?ssl=verify-full&sslrootcert={ssl_cert_path}"
 
