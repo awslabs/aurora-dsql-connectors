@@ -43,33 +43,27 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
         aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
 
-    - name: Configure and run integration tests - admin
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Run integration tests
       env:
         CLUSTER_USER: "admin"
         CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_ENDPOINT }}
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        python3 -m venv .venv
-        source .venv/bin/activate
-        pip install --upgrade pip
-        pip install -e ".[psycopg,psycopg2,asyncpg,dev]"
-        python3 -c "import boto3; print(boto3.__version__)"
-        pip list
-        echo "$GITHUB_WORKSPACE" >> $GITHUB_PATH
+        uv sync --all-extras
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        python -m pytest tests/integration
+        uv run pytest tests/integration
 
     - name: Run psycopg example smoke tests
       working-directory: ./examples/psycopg
@@ -79,10 +73,9 @@ jobs:
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        source ../../.venv/bin/activate
-        pip install -e ".[test]"
+        uv sync --extra test
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        python -m pytest
+        uv run pytest
 
     - name: Run psycopg2 example smoke tests
       working-directory: ./examples/psycopg2
@@ -92,10 +85,9 @@ jobs:
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        source ../../.venv/bin/activate
-        pip install -e ".[test]"
+        uv sync --extra test
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        python -m pytest
+        uv run pytest
 
     - name: Run asyncpg example smoke tests
       working-directory: ./examples/asyncpg
@@ -105,7 +97,6 @@ jobs:
         REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        source ../../.venv/bin/activate
-        pip install -e ".[test]"
+        uv sync --extra test
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        python -m pytest
+        uv run pytest
