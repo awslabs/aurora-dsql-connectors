@@ -69,22 +69,12 @@ wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
 
 ### Set up environment for examples
 
-1. Create and activate a Python virtual environment:
+Install `uv` using the [official installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+Install the required packages for running the examples:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate  # Linux, macOS
-# or
-.venv\Scripts\activate     # Windows
-```
-
-2. Install the required packages for running the examples:
-
-```bash
-pip install -e .
-
-# Install optional dependencies for tests
-pip install -e ".[test]"
+uv sync --all-extras
 ```
 
 ### Run the code
@@ -116,13 +106,13 @@ Run the example:
 
 ```bash
 # Run example directly
-python src/example.py
+uv run python src/example.py
 
 # Run example using pytest
-pytest ./test/test_example.py
+uv run pytest ./test/test_example.py
 
 # Run all using pytest
-pytest ./test
+uv run pytest ./test
 ```
 
 The example contains comments explaining the code and the operations being performed.

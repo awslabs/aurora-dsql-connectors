@@ -40,32 +40,19 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Setup uv
+      uses: astral-sh/setup-uv@v7
       with:
         python-version: '3.10'
 
-    - name: Configure and install dependencies
-      working-directory: ./
-      run: |
-        python3 -m venv .venv
-        source .venv/bin/activate
-        pip install --upgrade pip
-        pip install -e ".[dev]"
-        pip install poetry
-    
-    - name: Run mypy - static type checking
-      run: |
-        source .venv/bin/activate
-        poetry run mypy .
-    
-    - name: Run flake8 - linting
-      run: |
-        source .venv/bin/activate
-        poetry run flake8 .
-    
-    - name: Run isort - dependency import sorting check
-      run: |
-        source .venv/bin/activate
-        poetry run isort --check-only .
+    - name: Install dependencies
+      run: uv sync --extra dev
 
+    - name: Run mypy - static type checking
+      run: uv run mypy .
+
+    - name: Run flake8 - linting
+      run: uv run flake8 .
+
+    - name: Run isort - dependency import sorting check
+      run: uv run isort --check-only .
