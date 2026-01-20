@@ -13,14 +13,18 @@ from dsql_core.connection_properties import ConnectionProperties
 @pytest.fixture
 def mock_no_default_region():
     """Simulate default region not set."""
-    with patch.object(ConnectionProperties, "_get_user_local_region", return_value=None):
+    with patch.object(
+        ConnectionProperties, "_get_user_local_region", return_value=None
+    ):
         yield
 
 
 @pytest.fixture
 def mock_default_region():
     """Simulate default region set to us-west-2."""
-    with patch.object(ConnectionProperties, "_get_user_local_region", return_value="us-west-2"):
+    with patch.object(
+        ConnectionProperties, "_get_user_local_region", return_value="us-west-2"
+    ):
         yield
 
 
@@ -98,7 +102,9 @@ class TestDSNParsing:
             ("clusterid", {}, {"region"}),
         ],
     )
-    def test_missing_required_params(self, dsn, kwargs, expected_missing, mock_no_default_region):
+    def test_missing_required_params(
+        self, dsn, kwargs, expected_missing, mock_no_default_region
+    ):
         """Test error messages for missing required parameters."""
         with pytest.raises(ValueError) as exc_info:
             ConnectionProperties.parse_properties(dsn, kwargs)
@@ -137,7 +143,9 @@ class TestDSNParsing:
         assert dsql_params["host"] == "clusterid.dsql.us-east-1.on.aws"
         assert dsql_params["region"] == "us-east-1"
 
-    def test_cluster_id_as_host_kwarg_expands_to_full_endpoint_with_explicit_region(self):
+    def test_cluster_id_as_host_kwarg_expands_to_full_endpoint_with_explicit_region(
+        self,
+    ):
         """Test that cluster ID in host kwarg is expanded to full endpoint with explicit region."""
         dsql_params, _ = ConnectionProperties.parse_properties(
             "", {"host": "clusterid", "region": "us-east-1"}
@@ -145,13 +153,17 @@ class TestDSNParsing:
         assert dsql_params["host"] == "clusterid.dsql.us-east-1.on.aws"
         assert dsql_params["region"] == "us-east-1"
 
-    def test_cluster_id_as_dsn_expands_to_full_endpoint_with_default_region(self, mock_default_region):
+    def test_cluster_id_as_dsn_expands_to_full_endpoint_with_default_region(
+        self, mock_default_region
+    ):
         """Test that cluster ID as dsn is expanded to full endpoint with default region."""
         dsql_params, _ = ConnectionProperties.parse_properties("clusterid", {})
         assert dsql_params["host"] == "clusterid.dsql.us-west-2.on.aws"
         assert dsql_params["region"] == "us-west-2"
 
-    def test_cluster_id_as_host_kwarg_expands_to_full_endpoint_with_default_region(self, mock_default_region):
+    def test_cluster_id_as_host_kwarg_expands_to_full_endpoint_with_default_region(
+        self, mock_default_region
+    ):
         """Test that cluster ID in host kwarg is expanded to full endpoint with default region."""
         dsql_params, _ = ConnectionProperties.parse_properties(
             "", {"host": "clusterid"}

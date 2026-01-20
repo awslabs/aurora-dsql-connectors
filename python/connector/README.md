@@ -479,6 +479,12 @@ Install `uv` using the [official installation guide](https://docs.astral.sh/uv/g
 uv sync --all-extras
 ```
 
+### Install pre-commit hooks
+
+```bash
+pre-commit install
+```
+
 ### Run tests
 
 ```
