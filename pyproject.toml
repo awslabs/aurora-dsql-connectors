@@ -44,6 +44,7 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=4.0.0",
     "pytest-asyncio>=1.2.0",
+    "python-dotenv>=1.0.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",
