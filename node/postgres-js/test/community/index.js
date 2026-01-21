@@ -1933,8 +1933,8 @@ nt('Multiple hosts', {
 })
 
 t('Escaping supports schemas and tables', async () => {
-  await sql`create schema a`
-  await sql`create table a.b (c int)`
+  await sql`create schema if not exists a`
+  await sql`create table if not exists a.b (c int)`
   await sql`insert into a.b (c) values (1)`
   return [
     1,
