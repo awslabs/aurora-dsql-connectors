@@ -12,11 +12,6 @@ on:
     branches: [ main ]
   # Give us a button to allow running the workflow on demand for testing.
   workflow_dispatch:
-    inputs:
-      tags:
-        description: 'Manual Workflow Run'
-        required: false
-        type: string
 
 jobs:
   setup:
@@ -76,34 +71,14 @@ jobs:
       run: ./gradlew test
 
   create-cluster:
-    name: Create Aurora DSQL Cluster
     needs: [setup, unit-tests]
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: jdbc-connector
+    secrets:
+      AWS_IAM_ROLE: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
-    outputs:
-      cluster-id: ${{ steps.create.outputs.cluster-id }}
-    steps:
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
-        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
-
-    - name: Create Aurora DSQL cluster
-      id: create
-      run: |
-        RESULT=$(aws dsql create-cluster \
-          --no-deletion-protection-enabled \
-          --region ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }} \
-          --tags Name=jdbc-connector-${{ github.run_id }})
-        CLUSTER_ID=$(echo "$RESULT" | jq -r '.identifier')
-        
-        aws dsql wait cluster-active \
-          --identifier "$CLUSTER_ID" \
-          --region ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
-        
-        echo "cluster-id=$CLUSTER_ID" >> $GITHUB_OUTPUT
 
   # We run the integration tests using Gradle to verify the developer experience
   # when working with a local copy of the repo.
@@ -130,18 +105,18 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
-        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        aws-region: ${{ needs.create-cluster.outputs.region }}
 
     - name: Run integration tests with Gradle
       env:
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
+        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
         CLUSTER_USER: "admin"
       run: ./gradlew integrationTest
 
     - name: Run example smoke tests
       working-directory: ./examples/pgjdbc
       env:
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
+        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
         CLUSTER_USER: "admin"
       run: ../../gradlew test
 
@@ -181,11 +156,11 @@ jobs:
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
-        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+        aws-region: ${{ needs.create-cluster.outputs.region }}
 
     - name: Run integration tests
       env:
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-id }}.dsql.${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}.on.aws
+        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
         CLUSTER_USER: "admin"
       run: |
         java -jar integration-tests-all.jar \
@@ -193,22 +168,13 @@ jobs:
           --fail-if-no-tests
 
   delete-cluster:
-    name: Delete Aurora DSQL Cluster
-    needs: [setup, create-cluster, gradle-integration-tests, integration-tests]
-    runs-on: ubuntu-latest
     if: always() && needs.create-cluster.result == 'success'
+    needs: [create-cluster, gradle-integration-tests, integration-tests]
+    uses: ./.github/workflows/dsql-cluster-delete.yml
+    with:
+      cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
+      region: ${{ needs.create-cluster.outputs.region }}
+    secrets:
+      AWS_IAM_ROLE: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
-    steps:
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ secrets.AURORA_DSQL_JDBC_WRAPPER_IAM_ROLE }}
-        aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
-
-    - name: Delete Aurora DSQL cluster
-      run: |
-        aws dsql delete-cluster \
-          --identifier "${{ needs.create-cluster.outputs.cluster-id }}" \
-          --region ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }} \
-          > /dev/null
