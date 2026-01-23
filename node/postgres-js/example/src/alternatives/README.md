@@ -25,3 +25,7 @@ The connector handles token generation automatically.
 ### `no_connection_pool/`
 Examples without pooling:
 - `example_with_no_connection_pool.js` - Single connection with connector
+
+### `websocket/`
+Aurora DSQL Query Editor React Sample
+- Demonstrate the required webpack configuration for operating a WebSocket connector in the browser. 
