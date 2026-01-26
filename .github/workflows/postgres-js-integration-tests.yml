@@ -15,11 +15,6 @@ on:
       - ".github/workflows/postgres-js-integration-tests.yml"
   # Give us a button to allow running the workflow on demand for testing.
   workflow_dispatch:
-    inputs:
-      tags:
-        description: 'Manual Workflow Run'
-        required: false
-        type: string
   workflow_call:
 
 jobs:
@@ -33,9 +28,18 @@ jobs:
       - id: versions
         run: echo "matrix=[20, 22, 24]" >> $GITHUB_OUTPUT
 
+  create-cluster:
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: postgres-js-tests
+    secrets:
+      AWS_IAM_ROLE: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
   run-tests:
     name: Postgres.js tests
-    needs: [setup]
+    needs: [setup, create-cluster]
     runs-on: ubuntu-latest
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -58,13 +62,13 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
-          aws-region: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
 
       - name: Run tests
         working-directory: ./packages/postgres-js
         env:
-          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_POSTGRESJS_CLUSTER_EDNPOINT }}
-          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
           IAM_ROLE: $${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
         run: |
           npm ci
@@ -74,9 +78,9 @@ jobs:
       - name: Run example smoke test
         working-directory: ./packages/postgres-js
         env:
-          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_POSTGRESJS_CLUSTER_EDNPOINT }}
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           CLUSTER_USER: admin
-          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
         run: |
           npm run build:prod
           npm link
@@ -89,9 +93,9 @@ jobs:
         if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
         working-directory: ./packages/postgres-js
         env:
-          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_POSTGRESJS_CLUSTER_EDNPOINT }}
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           CLUSTER_USER: admin
-          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
           CONNECTION_CHECK: true
         run: |
           npm ci
@@ -102,11 +106,23 @@ jobs:
         if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
         working-directory: ./packages/postgres-js
         env:
-          CLUSTER_ENDPOINT: ${{ secrets.AURORA_DSQL_INTEGRATION_POSTGRESJS_CLUSTER_EDNPOINT }}
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           CLUSTER_USER: admin
-          REGION: ${{ secrets.AURORA_DSQL_INTEGRATION_CLUSTER_REGION }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
           CONNECTION_CHECK: false
         run: |
           npm ci
           npm run build:prod 
           node test/community/index.js
+
+  delete-cluster:
+    if: always() && needs.create-cluster.result == 'success'
+    needs: [create-cluster, run-tests]
+    uses: ./.github/workflows/dsql-cluster-delete.yml
+    with:
+      cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
+      region: ${{ needs.create-cluster.outputs.region }}
+    secrets:
+      AWS_IAM_ROLE: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
