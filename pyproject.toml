@@ -40,6 +40,7 @@ asyncpg = [
    "asyncpg>=0.30.0",
 ]
 
+[dependency-groups]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=4.0.0",
@@ -52,6 +53,19 @@ dev = [
     "hatch-vcs",
     "pre-commit",
 ]
+psycopg = [
+    "psycopg[binary]>=3.1.0",
+    "psycopg-pool>=3.2.6",
+]
+psycopg2 = [
+    "psycopg2-binary>=2.9.0",
+]
+asyncpg = [
+    "asyncpg>=0.30.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "psycopg", "psycopg2", "asyncpg"]
 
 [project.urls]
 Homepage = "https://github.com/awslabs/aurora-dsql-python-connector"

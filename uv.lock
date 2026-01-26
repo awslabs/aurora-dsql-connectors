@@ -82,6 +82,18 @@ dependencies = [
 asyncpg = [
     { name = "asyncpg" },
 ]
+psycopg = [
+    { name = "psycopg", extra = ["binary"] },
+    { name = "psycopg-pool" },
+]
+psycopg2 = [
+    { name = "psycopg2-binary" },
+]
+
+[package.dev-dependencies]
+asyncpg = [
+    { name = "asyncpg" },
+]
 dev = [
     { name = "black" },
     { name = "flake8" },
@@ -104,21 +116,31 @@ psycopg2 = [
 [package.metadata]
 requires-dist = [
     { name = "asyncpg", marker = "extra == 'asyncpg'", specifier = ">=0.30.0" },
-    { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "boto3", specifier = ">=1.35.74" },
-    { name = "flake8", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "isort", marker = "extra == 'dev'", specifier = ">=7.0.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "psycopg", extras = ["binary"], marker = "extra == 'psycopg'", specifier = ">=3.1.0" },
     { name = "psycopg-pool", marker = "extra == 'psycopg'", specifier = ">=3.2.6" },
     { name = "psycopg2-binary", marker = "extra == 'psycopg2'", specifier = ">=2.9.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.2.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
-    { name = "python-dotenv", marker = "extra == 'dev'", specifier = ">=1.0.0" },
 ]
-provides-extras = ["psycopg", "psycopg2", "asyncpg", "dev"]
+provides-extras = ["psycopg", "psycopg2", "asyncpg"]
+
+[package.metadata.requires-dev]
+asyncpg = [{ name = "asyncpg", specifier = ">=0.30.0" }]
+dev = [
+    { name = "black", specifier = ">=23.0.0" },
+    { name = "flake8", specifier = ">=6.0.0" },
+    { name = "isort", specifier = ">=7.0.0" },
+    { name = "mypy", specifier = ">=1.0.0" },
+    { name = "pre-commit" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=1.2.0" },
+    { name = "pytest-cov", specifier = ">=4.0.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+]
+psycopg = [
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.1.0" },
+    { name = "psycopg-pool", specifier = ">=3.2.6" },
+]
+psycopg2 = [{ name = "psycopg2-binary", specifier = ">=2.9.0" }]
 
 [[package]]
 name = "backports-asyncio-runner"

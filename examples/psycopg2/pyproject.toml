@@ -24,9 +24,8 @@ dependencies = [
     "psycopg2-binary>=2.9.0",
 ]
 
-[project.optional-dependencies]
-
-test = [
+[dependency-groups]
+dev = [
     "pytest>=8.0",
 ]
 

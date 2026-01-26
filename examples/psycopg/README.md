@@ -74,7 +74,7 @@ Install `uv` using the [official installation guide](https://docs.astral.sh/uv/g
 Install the required packages for running the examples:
 
 ```bash
-uv sync --all-extras
+uv sync
 ```
 
 ### Run the code

@@ -24,9 +24,8 @@ dependencies = [
     "asyncpg>=0.30.0",
 ]
 
-[project.optional-dependencies]
-
-test = [
+[dependency-groups]
+dev = [
     "pytest>=8.0",
     "pytest-asyncio>=1.2.0",
 ]
