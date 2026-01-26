@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import psycopg2
 from botocore.credentials import CredentialProvider
@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 def connect(
-    dsn: Optional[str] = None,
+    dsn: str | None = None,
     *,
     connection_factory=None,
     cursor_factory=None,
-    custom_credentials_provider: Optional[CredentialProvider] = None,
+    custom_credentials_provider: CredentialProvider | None = None,
     **kwargs: Any,
 ):
     """
@@ -28,7 +28,8 @@ def connect(
             postgresql://hostname/database?user=admin&region=us-east-1&profile=myprofile&token_duration_secs=3600
             or
             hostname, e.g. cluster.dsql.us-east-1.on.aws
-        custom_credentials_provider: Optional custom botocore CredentialProvider for AWS authentication
+        custom_credentials_provider: Optional custom botocore CredentialProvider
+            for AWS authentication
         **kwargs: Additional connection parameters
 
         The connection_factory and  cursor_factory parameters are psycopg2 connect parameters.

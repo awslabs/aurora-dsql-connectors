@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import boto3
 import botocore.session
@@ -15,8 +15,7 @@ class TokenManager:
     """Manages Aurora DSQL authentication tokens with caching."""
 
     @classmethod
-    def get_token(cls, dsql_params: Dict[str, Any]) -> str:
-
+    def get_token(cls, dsql_params: dict[str, Any]) -> str:
         hostname = dsql_params.get("host")
         assert hostname is not None
 
@@ -49,9 +48,7 @@ class TokenManager:
                     hostname, region, token_duration
                 )
             else:
-                token = client.generate_db_connect_auth_token(
-                    hostname, region, token_duration
-                )
+                token = client.generate_db_connect_auth_token(hostname, region, token_duration)
 
             logger.debug(f"Token generated successfully for user: {user}")
             return token

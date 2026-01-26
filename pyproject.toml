@@ -46,11 +46,9 @@ dev = [
     "pytest-cov>=4.0.0",
     "pytest-asyncio>=1.2.0",
     "python-dotenv>=1.0.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
-    "isort>=7.0.0",
     "hatch-vcs",
+    "mypy>=1.0.0",
+    "ruff",
     "pre-commit",
 ]
 psycopg = [
@@ -82,14 +80,19 @@ version-file = "src/dsql_core/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/aurora_dsql_asyncpg", "src/aurora_dsql_psycopg", "src/aurora_dsql_psycopg2", "src/dsql_core"]
 
-[tool.black]
-line-length = 88
-target-version = ['py310']
+[tool.ruff]
+line-length = 100
 
-[tool.isort]
-profile = "black"
-line_length = 88
-extend_skip = ["_version.py"]
+[tool.ruff.lint]
+extend-select = [
+    "E",      # https://docs.astral.sh/ruff/rules/#error-e
+    "F",      # https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+    "I",      # https://docs.astral.sh/ruff/rules/#isort-i
+    "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
+    "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "W",      # https://docs.astral.sh/ruff/rules/#warning-w
+]
 
 [tool.mypy]
 python_version = "3.10"

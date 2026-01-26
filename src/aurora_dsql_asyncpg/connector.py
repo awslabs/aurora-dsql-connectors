@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import asyncpg
 from botocore.credentials import CredentialProvider
@@ -13,8 +13,7 @@ from dsql_core.connection_utils import ConnectionUtilities
 logger = logging.getLogger(__name__)
 
 
-async def _handleSSLParameters(params: Dict[str, Any]) -> None:
-
+async def _handleSSLParameters(params: dict[str, Any]) -> None:
     if ("ssl" not in params) and ("sslmode" in params):
         # asyncpg does not support the sslmode parameter unless embedded in dsn.
         # It has the ssl parameter instead.
@@ -50,7 +49,7 @@ async def _handleSSLParameters(params: Dict[str, Any]) -> None:
 
 
 async def connect(
-    dsn: Optional[str] = None,
+    dsn: str | None = None,
     *,
     host=None,
     port=None,
@@ -70,7 +69,7 @@ async def connect(
     record_class=asyncpg.Record,
     server_settings=None,
     target_session_attrs=None,
-    custom_credentials_provider: Optional[CredentialProvider] = None,
+    custom_credentials_provider: CredentialProvider | None = None,
     **kwargs: Any,
 ) -> asyncpg.Connection:
     """
@@ -81,10 +80,12 @@ async def connect(
              postgresql://hostname/database?user=admin&region=us-east-1&profile=myprofile&token-duration-secs=3600
         or
             hostname, e.g. cluster.dsql.us-east-1.on.aws
-        custom_credentials_provider: Optional custom botocore CredentialProvider for AWS authentication
+        custom_credentials_provider: Optional custom botocore CredentialProvider
+            for AWS authentication
 
         host, port, user, database: can be passed as named arguments or in kwargs.
-        password and passfile: are ignored as the IAM token will be generated and used automatically by the connector.
+        password and passfile: are ignored as the IAM token will be generated
+            and used automatically by the connector.
 
         All other parameters are passed directly to asyncpg.connect().
         Refer to the asyncpg documentation for details on:

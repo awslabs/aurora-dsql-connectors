@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Optional
-
 import psycopg2
 from botocore.credentials import CredentialProvider
 from psycopg2 import pool
@@ -19,10 +17,9 @@ class AuroraDSQLThreadedConnectionPool(pool.ThreadedConnectionPool):
         minconn,
         maxconn,
         *args,
-        custom_credentials_provider: Optional[CredentialProvider] = None,
+        custom_credentials_provider: CredentialProvider | None = None,
         **kwargs,
     ):
-
         if custom_credentials_provider is not None:
             kwargs["custom_credentials_provider"] = custom_credentials_provider
 
