@@ -25,9 +25,8 @@ dependencies = [
     "psycopg-pool>=3.2.6",
 ]
 
-[project.optional-dependencies]
-
-test = [
+[dependency-groups]
+dev = [
     "pytest>=8.0",
     "pytest-asyncio>=1.2.0",
 ]

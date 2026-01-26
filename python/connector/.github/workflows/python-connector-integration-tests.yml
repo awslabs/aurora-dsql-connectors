@@ -67,7 +67,7 @@ jobs:
         CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
         REGION: ${{ needs.create-cluster.outputs.region }}
       run: |
-        uv sync --all-extras
+        uv sync
         uv run pytest tests/integration
 
     - name: Run psycopg example smoke tests
@@ -78,7 +78,7 @@ jobs:
         REGION: ${{ needs.create-cluster.outputs.region }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        uv sync --extra test
+        uv sync
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
         uv run pytest
 
@@ -90,7 +90,7 @@ jobs:
         REGION: ${{ needs.create-cluster.outputs.region }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        uv sync --extra test
+        uv sync
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
         uv run pytest
 
@@ -102,7 +102,7 @@ jobs:
         REGION: ${{ needs.create-cluster.outputs.region }}
         SSL_CERT_PATH: "./root.pem"
       run: |
-        uv sync --extra test
+        uv sync
         wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
         uv run pytest
 
