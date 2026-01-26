@@ -1,4 +1,12 @@
 repos:
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.5
+    hooks:
+      - id: insert-license
+        files: \.py$
+        args:
+          - --license-filepath=LICENSE_HEADER.txt
+
   - repo: https://github.com/pycqa/isort
     rev: 6.0.1
     hooks:
