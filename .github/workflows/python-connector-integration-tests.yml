@@ -4,23 +4,23 @@ permissions: {}
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'examples/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/python-connector-integration-tests.yml'
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/python-connector-integration-tests.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'examples/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/python-connector-integration-tests.yml'
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/python-connector-integration-tests.yml"
   workflow_dispatch:
 
 jobs:
@@ -41,70 +41,70 @@ jobs:
       # Ensure only 1 job uses the workflow cluster at a time.
       max-parallel: 1
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     permissions:
       contents: read
       id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v5
-      with:
-        role-to-assume: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
-        aws-region: ${{ needs.create-cluster.outputs.region }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
 
-    - name: Setup uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Run integration tests
-      env:
-        CLUSTER_USER: "admin"
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
-        REGION: ${{ needs.create-cluster.outputs.region }}
-      run: |
-        uv sync
-        uv run pytest tests/integration
+      - name: Run integration tests
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: |
+          uv sync
+          uv run pytest tests/integration
 
-    - name: Run psycopg example smoke tests
-      working-directory: ./examples/psycopg
-      env:
-        CLUSTER_USER: "admin"
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
-        REGION: ${{ needs.create-cluster.outputs.region }}
-        SSL_CERT_PATH: "./root.pem"
-      run: |
-        uv sync
-        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        uv run pytest
+      - name: Run psycopg example smoke tests
+        working-directory: ./examples/psycopg
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+          SSL_CERT_PATH: "./root.pem"
+        run: |
+          uv sync
+          wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
+          uv run pytest
 
-    - name: Run psycopg2 example smoke tests
-      working-directory: ./examples/psycopg2
-      env:
-        CLUSTER_USER: "admin"
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
-        REGION: ${{ needs.create-cluster.outputs.region }}
-        SSL_CERT_PATH: "./root.pem"
-      run: |
-        uv sync
-        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        uv run pytest
+      - name: Run psycopg2 example smoke tests
+        working-directory: ./examples/psycopg2
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+          SSL_CERT_PATH: "./root.pem"
+        run: |
+          uv sync
+          wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
+          uv run pytest
 
-    - name: Run asyncpg example smoke tests
-      working-directory: ./examples/asyncpg
-      env:
-        CLUSTER_USER: "admin"
-        CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
-        REGION: ${{ needs.create-cluster.outputs.region }}
-        SSL_CERT_PATH: "./root.pem"
-      run: |
-        uv sync
-        wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
-        uv run pytest
+      - name: Run asyncpg example smoke tests
+        working-directory: ./examples/asyncpg
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+          SSL_CERT_PATH: "./root.pem"
+        run: |
+          uv sync
+          wget https://www.amazontrust.com/repository/AmazonRootCA1.pem -O root.pem
+          uv run pytest
 
   delete-cluster:
     if: always() && needs.create-cluster.result == 'success'
