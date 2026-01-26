@@ -1,0 +1,35 @@
+[project]
+name = "aurora-dsql-test-psycopg2"
+version = "0.1.1"
+description = "A test project that utilizes Aurora DSQL Python Connector with psycopg2 to connect to Amazon Aurora DSQL clusters."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [
+    {name = "Amazon Web Services", email = "aws-aurora-dsql-feedback@amazon.com"}
+]
+requires-python = ">=3.10"
+
+classifiers = [
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
+]
+
+dependencies = [
+    "aurora-dsql-python-connector",
+    "boto3>=1.35.74",
+    "psycopg2-binary>=2.9.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
