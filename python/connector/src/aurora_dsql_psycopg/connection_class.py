@@ -1,8 +1,6 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Optional
-
 import psycopg
 from botocore.credentials import CredentialProvider
 
@@ -22,7 +20,7 @@ class DSQLConnection(psycopg.Connection):
         context=None,
         row_factory=None,
         cursor_factory=None,
-        custom_credentials_provider: Optional[CredentialProvider] = None,
+        custom_credentials_provider: CredentialProvider | None = None,
         **kwargs,
     ):
         """
@@ -33,7 +31,8 @@ class DSQLConnection(psycopg.Connection):
                 postgresql://hostname/database?user=admin&region=us-east-1&profile=myprofile&token_duration_secs=3600
                 or
                 hostname, e.g. cluster.dsql.us-east-1.on.aws
-            custom_credentials_provider: Optional custom botocore CredentialProvider for AWS authentication
+            custom_credentials_provider: Optional custom botocore CredentialProvider
+                for AWS authentication
             **kwargs: Additional connection parameters
 
             The other parameters are psycopg connect parameters. Refer to the psycopg documentation.
@@ -76,7 +75,7 @@ class DSQLAsyncConnection(psycopg.AsyncConnection):
         context=None,
         row_factory=None,
         cursor_factory=None,
-        custom_credentials_provider: Optional[CredentialProvider] = None,
+        custom_credentials_provider: CredentialProvider | None = None,
         **kwargs,
     ):
         """
@@ -87,7 +86,8 @@ class DSQLAsyncConnection(psycopg.AsyncConnection):
                 postgresql://hostname/database?user=admin&region=us-east-1&profile=myprofile&token_duration_secs=3600
                 or
                 hostname, e.g. cluster.dsql.us-east-1.on.aws
-            custom_credentials_provider: Optional custom botocore CredentialProvider for AWS authentication
+            custom_credentials_provider: Optional custom botocore CredentialProvider
+                for AWS authentication
             **kwargs: Additional connection parameters
 
             The other parameters are psycopg connect parameters. Refer to the psycopg documentation.

@@ -59,7 +59,8 @@ class TestIntegrationPsycopg:
                 )
                 # Insert data
                 cur.execute(
-                    "INSERT INTO test_integration_db_operations_auto (name) VALUES (%s) RETURNING id",
+                    "INSERT INTO test_integration_db_operations_auto (name) "
+                    "VALUES (%s) RETURNING id",
                     ("integration_test",),
                 )
                 record_id = cur.fetchone()[0]

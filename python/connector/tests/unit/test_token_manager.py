@@ -105,12 +105,8 @@ class TestTokenManager:
         token = TokenManager.get_token(dsql_params)
 
         mocks.botocore.assert_called_once_with(profile=profile)
-        mocks.cred_provider.insert_before.assert_called_once_with(
-            "env", custom_provider
-        )
-        mocks.boto3.assert_called_once_with(
-            botocore_session=mocks.botocore.return_value
-        )
+        mocks.cred_provider.insert_before.assert_called_once_with("env", custom_provider)
+        mocks.boto3.assert_called_once_with(botocore_session=mocks.botocore.return_value)
         assert token is not None
 
     @pytest.mark.parametrize("region", ["us-east-1", "us-west-2", "eu-west-1"])
@@ -119,9 +115,7 @@ class TestTokenManager:
         TokenManager.get_token(
             self._build_params(host=f"cluster.dsql.{region}.on.aws", region=region)
         )
-        mocks.boto3.return_value.client.assert_called_once_with(
-            "dsql", region_name=region
-        )
+        mocks.boto3.return_value.client.assert_called_once_with("dsql", region_name=region)
 
     @pytest.mark.parametrize(
         "hostname,user,token_duration",

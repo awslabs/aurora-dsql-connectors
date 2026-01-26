@@ -11,18 +11,14 @@ from dsql_core.connection_properties import ConnectionProperties
 @pytest.fixture
 def mock_no_default_region():
     """Simulate default region not set."""
-    with patch.object(
-        ConnectionProperties, "_get_user_local_region", return_value=None
-    ):
+    with patch.object(ConnectionProperties, "_get_user_local_region", return_value=None):
         yield
 
 
 @pytest.fixture
 def mock_default_region():
     """Simulate default region set to us-west-2."""
-    with patch.object(
-        ConnectionProperties, "_get_user_local_region", return_value="us-west-2"
-    ):
+    with patch.object(ConnectionProperties, "_get_user_local_region", return_value="us-west-2"):
         yield
 
 
@@ -77,17 +73,24 @@ class TestDSNParsing:
         """Test checking for required parameters."""
 
         # Note:
-        # The _check_required_params method does not do any parsing. It is called when all the parameters were parsed and extracted.
-        # The function only verifies whether the required parameters are present in params keys given to it.
-        # The example params below are missing a region. The region is technically present as a part of the value of the host key.
-        # However, it is not the purpose of _check_required_params method to parse values.
+        # The _check_required_params method does not do any parsing. It is
+        # called when all the parameters were parsed and extracted. The function
+        # only verifies whether the required parameters are present in params
+        # keys given to it.
+        # The example params below are missing a region. The region is
+        # technically present as a part of the value of the host key. However,
+        # it is not the purpose of _check_required_params method to parse
+        # values.
 
         params = {"host": "cluster.dsql.us-east-1.on.aws", "user": "user_name"}
 
         # Exception should be raised for missing 'region'
         with pytest.raises(
             ValueError,
-            match="Missing required parameters: region\n  region was not provided and could not be extracted from host",
+            match=(
+                "Missing required parameters: region\n  region was not provided "
+                "and could not be extracted from host"
+            ),
         ):
             ConnectionProperties._check_required_params(params)
 
@@ -100,9 +103,7 @@ class TestDSNParsing:
             ("clusterid", {}, {"region"}),
         ],
     )
-    def test_missing_required_params(
-        self, dsn, kwargs, expected_missing, mock_no_default_region
-    ):
+    def test_missing_required_params(self, dsn, kwargs, expected_missing, mock_no_default_region):
         """Test error messages for missing required parameters."""
         with pytest.raises(ValueError) as exc_info:
             ConnectionProperties.parse_properties(dsn, kwargs)
@@ -135,9 +136,7 @@ class TestDSNParsing:
 
     def test_cluster_id_as_dsn_expands_to_full_endpoint_with_explicit_region(self):
         """Test that cluster ID as dsn is expanded to full endpoint with explicit region."""
-        dsql_params, _ = ConnectionProperties.parse_properties(
-            "clusterid", {"region": "us-east-1"}
-        )
+        dsql_params, _ = ConnectionProperties.parse_properties("clusterid", {"region": "us-east-1"})
         assert dsql_params["host"] == "clusterid.dsql.us-east-1.on.aws"
         assert dsql_params["region"] == "us-east-1"
 
@@ -163,9 +162,7 @@ class TestDSNParsing:
         self, mock_default_region
     ):
         """Test that cluster ID in host kwarg is expanded to full endpoint with default region."""
-        dsql_params, _ = ConnectionProperties.parse_properties(
-            "", {"host": "clusterid"}
-        )
+        dsql_params, _ = ConnectionProperties.parse_properties("", {"host": "clusterid"})
         assert dsql_params["host"] == "clusterid.dsql.us-west-2.on.aws"
         assert dsql_params["region"] == "us-west-2"
 

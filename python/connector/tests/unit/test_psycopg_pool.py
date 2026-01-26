@@ -12,10 +12,8 @@ from dsql_core.connection_properties import DefaultValues
 
 # @pytest.mark.integration
 class TestPsycopgPool:
-
     @pytest.fixture
     def cluster_config(self):
-
         default_region = "us-east-1"
         config = {
             "host": f"fake-cluster.dsql.${default_region}.on.aws",
@@ -89,6 +87,4 @@ class TestPsycopgPool:
 
         # Check how many times get_token was called
         print(f"get_token called {mock_get_token.call_count} times")
-        assert (
-            mock_get_token.call_count >= 1
-        )  # Pool might call it multiple times for min_size
+        assert mock_get_token.call_count >= 1  # Pool might call it multiple times for min_size

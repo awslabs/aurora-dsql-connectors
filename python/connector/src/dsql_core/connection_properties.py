@@ -5,7 +5,7 @@ import logging
 import re
 from enum import Enum
 from importlib.metadata import version as get_version
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 import boto3
@@ -23,7 +23,7 @@ except Exception:
     )
 
 
-def build_application_name(driver_name: str, orm_prefix: Optional[str] = None) -> str:
+def build_application_name(driver_name: str, orm_prefix: str | None = None) -> str:
     """
     Build the application_name with optional ORM prefix.
 
@@ -74,9 +74,8 @@ class DSQLSpecific(Enum):
 class ConnectionProperties:
     @staticmethod
     def parse_properties(
-        dsn: Optional[str], kwargs: Dict[str, Any]
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-
+        dsn: str | None, kwargs: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         params = kwargs.copy()
 
         # Expand cluster ID host to full endpoint
@@ -95,7 +94,8 @@ class ConnectionProperties:
         if dsn:
             dsn_params = ConnectionProperties._parse_dsn(dsn, params.get("region"))
             # User params given in kwargs take precedence over dsn params.
-            # On the other hand, if dsn has the intended values, kwargs would not be needed for these values.
+            # On the other hand, if dsn has the intended values,
+            # kwargs would not be needed for these values.
             for key, value in dsn_params.items():
                 if key not in params:
                     params[key] = value
@@ -115,12 +115,14 @@ class ConnectionProperties:
         return params, driver_params
 
     @staticmethod
-    def _parse_dsn(dsn: str, region=None) -> Dict[str, Any]:
-        """Parse DSN
-        The region parameter will only be used here if the dsn is just a cluster id and the client provided region value separately.
+    def _parse_dsn(dsn: str, region=None) -> dict[str, Any]:
+        """Parse DSN.
+
+        The region parameter will only be used here if the dsn is just a cluster id
+        and the client provided region value separately.
         """
 
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
 
         parsed = urlparse(dsn)
 
@@ -128,9 +130,7 @@ class ConnectionProperties:
             # DSN is missing scheme, check if this is cluster id or treat as 'barebone' hostname
             # e.g. dsn was just cluster.dsql.us-east-1.on.aws
             if ConnectionProperties._is_cluster_id(dsn):
-                host = ConnectionProperties._construct_dsql_host_from_cluster_id(
-                    dsn, region
-                )
+                host = ConnectionProperties._construct_dsql_host_from_cluster_id(dsn, region)
                 params["host"] = host if host else dsn
             else:
                 params["host"] = dsn
@@ -201,14 +201,14 @@ class ConnectionProperties:
         return ".dsql" not in cluster_id
 
     @staticmethod
-    def _set_default_values(params: Dict[str, Any]) -> None:
+    def _set_default_values(params: dict[str, Any]) -> None:
         for member in DefaultValues:
             property_name = member.value["property_name"]
             if property_name not in params:
                 params[property_name] = member.value["value"]
 
     @staticmethod
-    def _check_required_params(params: Dict[str, Any]) -> None:
+    def _check_required_params(params: dict[str, Any]) -> None:
         missing_values = []
 
         for member in RequiredValues:
@@ -219,15 +219,14 @@ class ConnectionProperties:
             missing_values_str = ", ".join(missing_values)
             if RequiredValues.REGION.value in missing_values:
                 missing_values_str += (
-                    f"\n  {RequiredValues.REGION.value} was not provided and could not be extracted from "
-                    f"{RequiredValues.HOST.value}"
+                    f"\n  {RequiredValues.REGION.value} was not provided and could "
+                    f"not be extracted from {RequiredValues.HOST.value}"
                 )
 
             raise ValueError(f"Missing required parameters: {missing_values_str}")
 
     @staticmethod
-    def _verify_other_params(params: Dict[str, Any]) -> None:
-
+    def _verify_other_params(params: dict[str, Any]) -> None:
         issues = []
         token_duration = params.get("token_duration_secs")
 

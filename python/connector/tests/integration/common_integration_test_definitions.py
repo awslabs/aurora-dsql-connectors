@@ -33,9 +33,7 @@ class CustomCredentialProvider(CredentialProvider):
                 "access_key": creds.access_key,
                 "secret_key": creds.secret_key,
                 "token": creds.token,
-                "expiry_time": (
-                    datetime.now(timezone.utc) + timedelta(hours=1)
-                ).isoformat(),
+                "expiry_time": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
             },
             method=self.METHOD,
         )
