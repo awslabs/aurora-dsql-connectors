@@ -141,16 +141,29 @@ const sql = AuroraDSQLPostgres({
 All standard [Postgres.js options](https://github.com/porsager/postgres?tab=readme-ov-file#connection-details) are also supported.
 
 ## Websocket Connector 
-The websocket connector provides an alternative connection method to Aurora DSQL using WebSockets instead of standard TCP sockets. This approach is designed to work in use cases where TCP sockets are not provided by the platform. For Node.js server applications, use the standard TCP socket connector shown above.
+The websocket connector provides an alternative connection method to Aurora DSQL using WebSockets instead of standard TCP sockets. This is designed for environments where TCP sockets are unavailable. For Node.js server applications, use the standard TCP socket connector shown above.
 
-### Use cases
-- Browser Compatibility - Web browsers don't support raw TCP sockets (Node.js net module). WebSockets are a common way  to establish persistent database connections from browser-based applications.
+### Use Case - Environments Without TCP Sockets
 
-- Simplified Architecture - Eliminates the need for a separate backend API layer when building prototypes or internal tools, allowing direct browser-to-database connections.
+Some JavaScript runtimes don't provide TCP socket support. The WebSocket connector enables DSQL connections from these environments. If credentials remain server-controlled, the security model is similar to traditional server-side applications and credentials can be configured using your platform's secrets management (e.g., environment variables, secrets store).
 
-### AWS Credentials 
-- DSQL access tokens are not secrets and can be accessed by the user in the browser
-- Access tokens should be time limited, and use a role with access permissions that are scoped to data accessible by that user
+### Use Case - Browser Applications
+
+Web browsers don't support TCP sockets. The WebSocket connector enables direct browser-to-database connections for use cases like internal tools, prototypes, or applications where users can safely have direct database access.
+
+#### ⚠️ Security Considerations for Browser Usage
+
+When using the WebSocket connector from a browser, the database connection runs in an environment controlled by the end user. This has important security implications:
+
+- **Users can execute any query their database role permits.** There is no server-side layer to validate, filter, or restrict queries. The browser's JavaScript can be inspected and modified.
+
+- **Database role permissions are your access control boundary.** The IAM role grants connection ability, but the PostgreSQL database role determines what data the user can access. Configure database roles with minimal necessary permissions.
+
+This approach is appropriate when users should have direct database access such as internal admin tools, single-user applications, or scenarios with properly scoped database roles. It is not a substitute for a backend API when you need to control what queries users can run.
+
+For guidance on configuring IAM roles and database permissions, see:
+- [Authentication and authorization for Aurora DSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/authentication-authorization.html)
+- [Using database roles and IAM authentication](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/using-database-and-iam-roles.html)
 
 ### Basic Usage
 
