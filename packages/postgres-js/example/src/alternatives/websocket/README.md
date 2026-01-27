@@ -7,8 +7,18 @@ A React-based web application demonstrating how to connect to Amazon Aurora DSQL
 - Browser-based SQL query execution
 - WebSocket connection to Aurora DSQL
 - Amazon Cognito authentication for secure access to IAM credentials
+- Temporary, scoped DSQL tokens that grant database access only (not broader AWS access)
+- Single-user design, intended for use cases where the credential owner is the only user
 - React UI with query editor
 - Real-time query results display 
+
+## ⚠️ Security Notice
+
+This example demonstrates a browser-based database connection where the end user has direct query access. This architecture is appropriate for internal tools, prototypes, or trusted-user scenarios. Care should be taken to ensure access tokens are associated with PostgreSQL database roles with minimal access.
+
+For production applications where you need to control what queries users can run, consider using a backend API layer instead of direct browser-to-database connections.
+
+See the package `README.md` for details.
 
 ## Prerequisites
 
