@@ -23,7 +23,7 @@ repos:
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: bash -c 'cd python && uv run mypy'
+        entry: bash -c 'cd python && uv run mypy src tests'
         language: system
         types: [python]
         pass_filenames: false
