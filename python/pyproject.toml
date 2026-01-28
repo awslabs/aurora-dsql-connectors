@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "aurora-dsql-python-connector"
-dynamic = ["version"]
+name = "aurora-dsql-connectors"
+version = "1.0.0"
 description = "A connector that integrates IAM Authentication for connecting Python applications to Amazon Aurora DSQL clusters"
 readme = "README.md"
 license = "Apache-2.0"
@@ -71,11 +71,6 @@ Repository = "https://github.com/awslabs/aurora-dsql-python-connector"
 Documentation = "https://github.com/awslabs/aurora-dsql-python-connector"
 "Bug Tracker" = "https://github.com/awslabs/aurora-dsql-python-connector/issues"
 
-[tool.hatch.version]
-source = "vcs"
-
-[tool.hatch.build.hooks.vcs]
-version-file = "src/dsql_core/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/aurora_dsql_asyncpg", "src/aurora_dsql_psycopg", "src/aurora_dsql_psycopg2", "src/dsql_core"]
