@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/python"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/python/examples/asyncpg"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/python/examples/psycopg"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/python/examples/psycopg2"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "gitleaks/gitleaks-action"
