@@ -29,7 +29,7 @@ jobs:
     with:
       workflow_name: python-connector-integ
     secrets:
-      AWS_IAM_ROLE: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+      AWS_IAM_ROLE: ${{ secrets.IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
 
@@ -53,7 +53,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+          role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
 
       - name: Setup uv
@@ -115,6 +115,6 @@ jobs:
       cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
       region: ${{ needs.create-cluster.outputs.region }}
     secrets:
-      AWS_IAM_ROLE: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+      AWS_IAM_ROLE: ${{ secrets.IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
