@@ -73,6 +73,7 @@ Documentation = "https://github.com/awslabs/aurora-dsql-python-connector"
 
 [tool.hatch.version]
 source = "vcs"
+root = ".."
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/dsql_core/_version.py"
