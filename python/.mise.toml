@@ -1,0 +1,3 @@
+[tools]
+shellcheck = "latest"
+uv = "latest"

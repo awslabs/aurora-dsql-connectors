@@ -71,7 +71,6 @@ Repository = "https://github.com/awslabs/aurora-dsql-python-connector"
 Documentation = "https://github.com/awslabs/aurora-dsql-python-connector"
 "Bug Tracker" = "https://github.com/awslabs/aurora-dsql-python-connector/issues"
 
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/aurora_dsql_asyncpg", "src/aurora_dsql_psycopg", "src/aurora_dsql_psycopg2", "src/dsql_core"]
 
