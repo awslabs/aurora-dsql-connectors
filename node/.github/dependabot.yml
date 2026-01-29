@@ -7,7 +7,7 @@ updates:
   # spam, and we don't expect significant changes in project dependencies.
   - package-ecosystem: "npm"
     directory: "/packages/node-postgres"
-    labels: [ "dependencies", "javascript", "node-postgres" ]
+    labels: ["dependencies", "javascript", "node-postgres"]
     schedule:
       interval: "monthly"
     groups:
@@ -17,7 +17,7 @@ updates:
         dependency-type: "development"
   - package-ecosystem: "npm"
     directory: "/packages/postgres-js"
-    labels: [ "dependencies", "javascript", "postgres-js" ]
+    labels: ["dependencies", "javascript", "postgres-js"]
     schedule:
       interval: "monthly"
     groups:
@@ -27,7 +27,7 @@ updates:
         dependency-type: "development"
   - package-ecosystem: "npm"
     directory: "/packages/node-postgres/example"
-    labels: [ "dependencies", "javascript", "node-postgres-example" ]
+    labels: ["dependencies", "javascript", "node-postgres-example"]
     schedule:
       interval: "monthly"
     groups:
@@ -37,7 +37,7 @@ updates:
         dependency-type: "development"
   - package-ecosystem: "npm"
     directory: "/packages/postgres-js/example"
-    labels: [ "dependencies", "javascript", "postgres-js-example" ]
+    labels: ["dependencies", "javascript", "postgres-js-example"]
     schedule:
       interval: "monthly"
     groups:
