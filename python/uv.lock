@@ -71,7 +71,8 @@ wheels = [
 ]
 
 [[package]]
-name = "aurora-dsql-python-connector"
+name = "aurora-dsql-connectors"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -119,7 +120,7 @@ requires-dist = [
     { name = "psycopg-pool", marker = "extra == 'psycopg'", specifier = ">=3.2.6" },
     { name = "psycopg2-binary", marker = "extra == 'psycopg2'", specifier = ">=2.9.0" },
 ]
-provides-extras = ["asyncpg", "psycopg", "psycopg2"]
+provides-extras = ["psycopg", "psycopg2", "asyncpg"]
 
 [package.metadata.requires-dev]
 asyncpg = [{ name = "asyncpg", specifier = ">=0.30.0" }]
