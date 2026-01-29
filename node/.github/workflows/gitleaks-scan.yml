@@ -1,0 +1,24 @@
+name: Gitleaks scan
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v1.6.0
+        env:
+          # GitHub Token automatically created on run
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
