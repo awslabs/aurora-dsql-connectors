@@ -1,0 +1,128 @@
+name: Aurora DSQL Connector for Postgres.js Tests
+
+permissions: {}
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/postgres-js/**"
+      - ".github/workflows/postgres-js-integration-tests.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/postgres-js/**"
+      - ".github/workflows/postgres-js-integration-tests.yml"
+  # Give us a button to allow running the workflow on demand for testing.
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: "20"
+      target-versions: ${{ steps.versions.outputs.matrix }}
+    steps:
+      - id: versions
+        run: echo "matrix=[20, 22, 24]" >> $GITHUB_OUTPUT
+
+  create-cluster:
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: postgres-js-tests
+    secrets:
+      AWS_IAM_ROLE: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  run-tests:
+    name: Postgres.js tests
+    needs: [setup, create-cluster]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        node-version: ${{ fromJson(needs.setup.outputs.target-versions) }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
+
+      - name: Run tests
+        working-directory: ./packages/postgres-js
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+          IAM_ROLE: $${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+        run: |
+          npm ci
+          npm run lint
+          npm run test
+
+      - name: Run example smoke test
+        working-directory: ./packages/postgres-js
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: admin
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: |
+          npm run build:prod
+          npm link
+          cd example
+          npm ci
+          npm link @aws/aurora-dsql-postgresjs-connector
+          npm run test
+
+      - name: Run postgres.js modified Community Tests with connectionCheck enabled
+        if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
+        working-directory: ./packages/postgres-js
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: admin
+          REGION: ${{ needs.create-cluster.outputs.region }}
+          CONNECTION_CHECK: true
+        run: |
+          npm ci
+          npm run build:prod 
+          node test/community/index.js
+
+      - name: Run postgres.js modified Community Tests with connectionCheck disabled
+        if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
+        working-directory: ./packages/postgres-js
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: admin
+          REGION: ${{ needs.create-cluster.outputs.region }}
+          CONNECTION_CHECK: false
+        run: |
+          npm ci
+          npm run build:prod 
+          node test/community/index.js
+
+  delete-cluster:
+    if: always() && needs.create-cluster.result == 'success'
+    needs: [create-cluster, run-tests]
+    uses: ./.github/workflows/dsql-cluster-delete.yml
+    with:
+      cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
+      region: ${{ needs.create-cluster.outputs.region }}
+    secrets:
+      AWS_IAM_ROLE: ${{ secrets.AURORA_DSQL_NODEJS_IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
