@@ -4,12 +4,12 @@ permissions: {}
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "packages/postgres-js/**"
       - ".github/workflows/postgres-js-integration-tests.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "packages/postgres-js/**"
       - ".github/workflows/postgres-js-integration-tests.yml"
@@ -22,7 +22,7 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      build-version: '20'
+      build-version: "20"
       target-versions: ${{ steps.versions.outputs.matrix }}
     steps:
       - id: versions
@@ -101,7 +101,7 @@ jobs:
           npm ci
           npm run build:prod 
           node test/community/index.js
-          
+
       - name: Run postgres.js modified Community Tests with connectionCheck disabled
         if: matrix.node-version != 20 # Websocket is not available by default until node 21 and above
         working-directory: ./packages/postgres-js

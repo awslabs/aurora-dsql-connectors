@@ -21,16 +21,16 @@ jobs:
       id-token: write # required for trusted publishing
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '25' # must be new enough so NPM supports trusted publishing
-          registry-url: 'https://registry.npmjs.org'
-      
+          node-version: "25" # must be new enough so NPM supports trusted publishing
+          registry-url: "https://registry.npmjs.org"
+
       - run: |
           npm ci
           npm run build:prod
         working-directory: packages/postgres-js
-      
+
       - run: npm publish --provenance
         working-directory: packages/postgres-js
