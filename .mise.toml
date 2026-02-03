@@ -1,0 +1,6 @@
+[tools]
+uv = "latest"
+shellcheck = "latest"
+java = "corretto-25"
+node = "22"
+go = "1.24"

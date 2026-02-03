@@ -1,7 +1,7 @@
 # Aurora DSQL Connector for Python
 
-[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--python--connector-blue?logo=github)](https://github.com/awslabs/aurora-dsql-python-connector)
-[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-python-connector/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--connectors-blue?logo=github)](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector)
+[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-connectors/blob/main/LICENSE)
 [![PyPI - Version](https://img.shields.io/pypi/v/aurora-dsql-python-connector)](https://pypi.org/project/aurora-dsql-python-connector)
 [![Discord chat](https://img.shields.io/discord/1435027294837276802.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)
 
@@ -433,37 +433,37 @@ For instructions how to run the examples please refer to the examples READMDE fi
 
 ### psycopg
 
-[Examples README](https://github.com/awslabs/aurora-dsql-python-connector/blob/main/examples/psycopg/README.md)
+[Examples README](https://github.com/awslabs/aurora-dsql-connectors/blob/main/python/connector/examples/psycopg/README.md)
 
 | Description                                                                     | Examples                                                                                                                                                                                   |
 |---------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg/src/example.py)                                                              |
-| Using the Aurora DSQL Connector for Python for basic asynchronous connections   | [Basic Asynchronous Connection Example](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg/src/example_async.py)                                           |
-| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg/src/example_with_connection_pool.py)                    |
-|                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg/src/example_with_connection_pool_concurrent.py)   |
-| Using the Aurora DSQL Connector for Python with asynchronous connection pool    | [Basic Connection Example With Asynchronous Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg/src/example_with_connection_pool_async.py) |
+| Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg/src/example.py)                                                              |
+| Using the Aurora DSQL Connector for Python for basic asynchronous connections   | [Basic Asynchronous Connection Example](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg/src/example_async.py)                                           |
+| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg/src/example_with_connection_pool.py)                    |
+|                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg/src/example_with_connection_pool_concurrent.py)   |
+| Using the Aurora DSQL Connector for Python with asynchronous connection pool    | [Basic Connection Example With Asynchronous Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg/src/example_with_connection_pool_async.py) |
 
 
 ### psycopg2 
 
-[Examples README](https://github.com/awslabs/aurora-dsql-python-connector/blob/main/examples/psycopg2/README.md)
+[Examples README](https://github.com/awslabs/aurora-dsql-connectors/blob/main/python/connector/examples/psycopg2/README.md)
 
 | Description                                                                     | Examples                                                                                                                                                                                   |
 |---------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg2/src/example.py)                                                             |
-| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg2/src/example_with_connection_pool.py)                   |
-|                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/psycopg2/src/example_with_connection_pool_concurrent.py)  |
+| Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg2/src/example.py)                                                             |
+| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg2/src/example_with_connection_pool.py)                   |
+|                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/psycopg2/src/example_with_connection_pool_concurrent.py)  |
 
 
 ### asyncpg
 
-[Examples README](https://github.com/awslabs/aurora-dsql-python-connector/blob/main/examples/asyncpg/README.md)
+[Examples README](https://github.com/awslabs/aurora-dsql-connectors/blob/main/python/connector/examples/asyncpg/README.md)
 
 | Description                                                                     | Examples                                                                                                                                                                                   |
 |---------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example.py)                                                              |
-| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example_with_connection_pool.py)                    |
-|                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-python-connector/tree/main/examples/asyncpg/src/example_with_connection_pool_concurrent.py)   |
+| Using the Aurora DSQL Connector for Python for basic connections                | [Basic Connection Example](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/asyncpg/src/example.py)                                                              |
+| Using the Aurora DSQL Connector for Python with connection pool                 | [Basic Connection Example With Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/asyncpg/src/example_with_connection_pool.py)                    |
+|                                                                                 | [Concurrent Connections Example With Connection Pool](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector/examples/asyncpg/src/example_with_connection_pool_concurrent.py)   |
 
 
 

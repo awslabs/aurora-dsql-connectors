@@ -1,27 +1,16 @@
-name: Python connector integration tests
+name: Python Connector CI
 
 permissions: {}
 
 on:
+  workflow_call: {}
+  workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "examples/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/python-connector-integration-tests.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "src/**"
-      - "tests/**"
-      - "examples/**"
-      - "pyproject.toml"
-      - "uv.lock"
-      - ".github/workflows/python-connector-integration-tests.yml"
-  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: python/connector
 
 jobs:
   create-cluster:
@@ -29,7 +18,7 @@ jobs:
     with:
       workflow_name: python-connector-integ
     secrets:
-      AWS_IAM_ROLE: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
 
@@ -47,13 +36,12 @@ jobs:
       id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+          role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
 
       - name: Setup uv
@@ -71,7 +59,7 @@ jobs:
           uv run pytest tests/integration
 
       - name: Run psycopg example smoke tests
-        working-directory: ./examples/psycopg
+        working-directory: python/connector/examples/psycopg
         env:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
@@ -83,7 +71,7 @@ jobs:
           uv run pytest
 
       - name: Run psycopg2 example smoke tests
-        working-directory: ./examples/psycopg2
+        working-directory: python/connector/examples/psycopg2
         env:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
@@ -95,7 +83,7 @@ jobs:
           uv run pytest
 
       - name: Run asyncpg example smoke tests
-        working-directory: ./examples/asyncpg
+        working-directory: python/connector/examples/asyncpg
         env:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
@@ -114,6 +102,6 @@ jobs:
       cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
       region: ${{ needs.create-cluster.outputs.region }}
     secrets:
-      AWS_IAM_ROLE: ${{ secrets.PYTHON_CONNECTOR_IAM_ROLE }}
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials

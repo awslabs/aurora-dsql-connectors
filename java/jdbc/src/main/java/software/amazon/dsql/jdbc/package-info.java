@@ -97,7 +97,8 @@
  * </ul>
  *
  * <p>For comprehensive setup instructions, installation details, and additional examples, see the
- * <a href="https://github.com/awslabs/aurora-dsql-jdbc-connector/blob/main/README.md">README</a>.
+ * <a
+ * href="https://github.com/awslabs/aurora-dsql-connectors/blob/main/java/jdbc/README.md">README</a>.
  *
  * @see software.amazon.dsql.jdbc.DSQLConnector
  * @see software.amazon.dsql.jdbc.AuroraDsqlCredentialsManager

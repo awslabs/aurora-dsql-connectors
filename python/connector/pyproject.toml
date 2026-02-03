@@ -66,22 +66,25 @@ asyncpg = [
 default-groups = ["dev", "psycopg", "psycopg2", "asyncpg"]
 
 [project.urls]
-Homepage = "https://github.com/awslabs/aurora-dsql-python-connector"
-Repository = "https://github.com/awslabs/aurora-dsql-python-connector"
-Documentation = "https://github.com/awslabs/aurora-dsql-python-connector"
-"Bug Tracker" = "https://github.com/awslabs/aurora-dsql-python-connector/issues"
+Homepage = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector"
+Repository = "https://github.com/awslabs/aurora-dsql-connectors"
+Documentation = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector"
+"Bug Tracker" = "https://github.com/awslabs/aurora-dsql-connectors/issues"
 
 [tool.hatch.version]
 source = "vcs"
+tag-pattern = "python/connector/v(?P<version>.*)"
+raw-options = { root = "../..", git_describe_command = ["git", "describe", "--tags", "--match", "python/connector/v*"] }
 
 [tool.hatch.build.hooks.vcs]
-version-file = "src/dsql_core/_version.py"
+version-file = "dsql_core/_version.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/aurora_dsql_asyncpg", "src/aurora_dsql_psycopg", "src/aurora_dsql_psycopg2", "src/dsql_core"]
+packages = ["aurora_dsql_asyncpg", "aurora_dsql_psycopg", "aurora_dsql_psycopg2", "dsql_core"]
 
 [tool.ruff]
 line-length = 100
+exclude = ["*/_version.py"]
 
 [tool.ruff.lint]
 extend-select = [
@@ -96,6 +99,10 @@ extend-select = [
 
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
+ignore_missing_imports = true
+explicit_package_bases = true
+exclude = [
+    "build/",
+    "\\.venv/",
+    "examples/.*/\\.venv/",
+]

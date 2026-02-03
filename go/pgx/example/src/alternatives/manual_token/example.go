@@ -18,6 +18,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dsql/auth"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/occretry"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -84,6 +85,24 @@ func CreateConnectionURL(dbConfig Config) string {
 	sb.WriteString("?sslmode=verify-full")
 	sb.WriteString("&sslnegotiation=direct")
 	return sb.String()
+}
+
+// execWithOCCRetry executes a SQL statement with retry on OCC conflicts.
+func execWithOCCRetry(ctx context.Context, pool *pgxpool.Pool, sql string, maxRetries int) error {
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		_, err := pool.Exec(ctx, sql)
+		if err == nil {
+			return nil
+		}
+		if occretry.IsOCCError(err) {
+			lastErr = err
+			time.Sleep(time.Duration(100*(attempt+1)) * time.Millisecond)
+			continue
+		}
+		return err
+	}
+	return fmt.Errorf("exec failed after %d retries: %w", maxRetries, lastErr)
 }
 
 func getEnv(key, defaultValue string) string {
@@ -216,15 +235,15 @@ func Example() error {
 		return fmt.Errorf("unable to ping database: %w", err)
 	}
 
-	// Create table
-	_, err = pool.Exec(ctx, `
+	// Create table with OCC retry (DDL can hit schema conflicts in concurrent CI runs)
+	err = execWithOCCRetry(ctx, pool, `
 		CREATE TABLE IF NOT EXISTS owner (
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			name VARCHAR(255),
 			city VARCHAR(255),
 			telephone VARCHAR(255)
 		)
-	`)
+	`, 5)
 	if err != nil {
 		return fmt.Errorf("unable to create table: %w", err)
 	}

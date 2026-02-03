@@ -47,8 +47,8 @@ GitHub provides additional document on [forking a repository](https://help.githu
 
 ```bash
 # Clone the repository
-git clone https://github.com/awslabs/aurora-dsql-jdbc-connector.git
-cd aurora-dsql-jdbc-connector
+git clone https://github.com/awslabs/aurora-dsql-connectors.git
+cd aurora-dsql-connectors/java/jdbc
 
 # Build the project
 ./gradlew build

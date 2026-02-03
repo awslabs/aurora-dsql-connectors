@@ -1,4 +1,4 @@
-module github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector
+module github.com/awslabs/aurora-dsql-connectors/go/pgx
 
 go 1.24.0
 

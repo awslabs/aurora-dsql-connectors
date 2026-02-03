@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/dsql"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql"
 )
 
 func demonstrateBasicConnectionString(ctx context.Context, endpoint, user string) error {

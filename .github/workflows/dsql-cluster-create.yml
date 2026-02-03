@@ -10,7 +10,7 @@ on:
         type: string
         description: "Name of the calling workflow (used for cluster naming)"
     secrets:
-      AWS_IAM_ROLE:
+      IAM_ROLE:
         required: true
     outputs:
       cluster-id:
@@ -44,7 +44,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Create cluster
@@ -75,3 +75,18 @@ jobs:
             echo "cluster-endpoint=${CLUSTER_ID}.dsql.${{ env.AWS_REGION }}.on.aws"
             echo "region=${{ env.AWS_REGION }}"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Create non-admin role
+        env:
+          NON_ADMIN_USER: "testuser"
+          CLUSTER_ENDPOINT: ${{ steps.create.outputs.cluster-endpoint }}
+        run: |
+          PGPASSWORD=$(aws dsql generate-db-connect-admin-auth-token --hostname "$CLUSTER_ENDPOINT" --region "${{ env.AWS_REGION }}" --expires-in 300)
+          export PGHOST="$CLUSTER_ENDPOINT"
+          export PGUSER="admin"
+          export PGPASSWORD
+          export PGDATABASE="postgres"
+          export PGSSLMODE="require"
+
+          psql -c "CREATE ROLE \"$NON_ADMIN_USER\" WITH LOGIN"
+          psql -c "AWS IAM GRANT \"$NON_ADMIN_USER\" TO '${{ secrets.IAM_ROLE }}'"

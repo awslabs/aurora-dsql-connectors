@@ -146,4 +146,4 @@ You can override any of these defaults by explicitly passing them in your connec
 
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-SPDX-License-Identifier: MIT-0
+SPDX-License-Identifier: Apache-2.0

@@ -4,6 +4,7 @@ repos:
     hooks:
       - id: insert-license
         files: \.py$
+        exclude: _version\.py$
         args:
           - --license-filepath=LICENSE_HEADER.txt
 
@@ -11,19 +12,19 @@ repos:
     hooks:
       - id: ruff
         name: ruff
-        entry: bash -c 'cd python && uv run ruff check --fix'
+        entry: bash -c 'cd python/connector && uv run ruff check --fix'
         language: system
         types: [python]
         pass_filenames: false
       - id: ruff-format
         name: ruff-format
-        entry: bash -c 'cd python && uv run ruff format'
+        entry: bash -c 'cd python/connector && uv run ruff format'
         language: system
         types: [python]
         pass_filenames: false
       - id: mypy
         name: mypy
-        entry: bash -c 'cd python && uv run mypy src tests'
+        entry: bash -c 'cd python/connector && uv run mypy aurora_dsql_asyncpg aurora_dsql_psycopg aurora_dsql_psycopg2 dsql_core tests'
         language: system
         types: [python]
         pass_filenames: false
