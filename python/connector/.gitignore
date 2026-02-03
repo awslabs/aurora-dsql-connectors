@@ -22,7 +22,7 @@ var/
 wheels/
 share/python-wheels/
 *.egg-info/
-src/dsql_core/_version.py
+dsql_core/_version.py
 .installed.cfg
 *.egg
 MANIFEST

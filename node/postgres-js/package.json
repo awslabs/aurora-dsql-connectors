@@ -5,9 +5,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/awslabs/aurora-dsql-nodejs-connector.git"
+    "url": "git+https://github.com/awslabs/aurora-dsql-connectors.git",
+    "directory": "node/postgres-js"
   },
-  "homepage": "https://github.com/awslabs/aurora-dsql-nodejs-connector",
+  "homepage": "https://github.com/awslabs/aurora-dsql-connectors/tree/main/node/postgres-js",
   "keywords": [
     "aws",
     "aurora",

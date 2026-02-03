@@ -1,22 +1,47 @@
 version: 2
 updates:
+  # Python connector
   - package-ecosystem: "pip"
-    directory: "/python"
+    directory: "/python/connector"
     target-branch: "main"
     schedule:
       interval: "weekly"
   - package-ecosystem: "pip"
-    directory: "/python/examples/asyncpg"
+    directory: "/python/connector/examples/asyncpg"
     schedule:
       interval: "weekly"
   - package-ecosystem: "pip"
-    directory: "/python/examples/psycopg"
+    directory: "/python/connector/examples/psycopg"
     schedule:
       interval: "weekly"
   - package-ecosystem: "pip"
-    directory: "/python/examples/psycopg2"
+    directory: "/python/connector/examples/psycopg2"
     schedule:
       interval: "weekly"
+
+  # Node.js connectors
+  - package-ecosystem: "npm"
+    directory: "/node/node-postgres"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/node/postgres-js"
+    schedule:
+      interval: "weekly"
+
+  # Java connector
+  - package-ecosystem: "gradle"
+    directory: "/java/jdbc"
+    schedule:
+      interval: "weekly"
+
+  # Go connector
+  - package-ecosystem: "gomod"
+    directory: "/go/pgx"
+    schedule:
+      interval: "weekly"
+
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

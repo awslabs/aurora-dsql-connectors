@@ -1,7 +1,7 @@
 # Aurora DSQL Connector for JDBC
 
-[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--jdbc--connector-blue?logo=github)](https://github.com/awslabs/aurora-dsql-jdbc-connector)
-[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-jdbc-connector/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--connectors-blue?logo=github)](https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc)
+[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-connectors/blob/main/LICENSE)
 [![Maven Central Version](https://img.shields.io/maven-central/v/software.amazon.dsql/aurora-dsql-jdbc-connector)](https://central.sonatype.com/artifact/software.amazon.dsql/aurora-dsql-jdbc-connector)
 [![Javadoc](https://img.shields.io/badge/javadoc-latest-blue.svg)](https://javadoc.io/doc/software.amazon.dsql/aurora-dsql-jdbc-connector/latest/software/amazon/dsql/jdbc/package-summary.html)
 [![Discord chat](https://img.shields.io/discord/1435027294837276802.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)

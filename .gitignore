@@ -1,3 +1,20 @@
 .DS_Store
-CLAUDE.md
-RefactorPlan.md
+
+# Node
+node_modules/
+
+# Python
+dist/
+__pycache__/
+*.egg-info/
+.uv/
+.venv/
+_version.py
+
+# Java
+build/
+.gradle/
+
+# IDE
+.idea/
+*.iml

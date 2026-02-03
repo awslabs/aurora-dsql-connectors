@@ -225,13 +225,13 @@ publishing {
             pom {
                 name.set("Aurora DSQL Connector for JDBC")
                 description.set("A pgJDBC connector that integrates IAM Authentication for Amazon Aurora DSQL clusters")
-                url.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
+                url.set("https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc")
                 inceptionYear.set("2025")
 
                 scm {
-                    url.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
-                    connection.set("scm:git:ssh://git@github.com/awslabs/aurora-dsql-jdbc-connector.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/awslabs/aurora-dsql-jdbc-connector.git")
+                    url.set("https://github.com/awslabs/aurora-dsql-connectors")
+                    connection.set("scm:git:ssh://git@github.com/awslabs/aurora-dsql-connectors.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/awslabs/aurora-dsql-connectors.git")
                 }
 
                 licenses {
@@ -282,7 +282,7 @@ if ("UPLOAD".equals(System.getenv("JRELEASER_MAVENCENTRAL_STAGE"))) {
                 "The Aurora DSQL Connector for JDBC is designed as an JDBC connector that extends the functionality of the PostgreSQL JDBC driver to enable applications to take full advantage of Amazon Aurora DSQL features.",
             )
             links {
-                homepage.set("https://github.com/awslabs/aurora-dsql-jdbc-connector")
+                homepage.set("https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc")
             }
             authors.set(listOf("Aurora DSQL Team"))
             license.set("Apache-2.0")

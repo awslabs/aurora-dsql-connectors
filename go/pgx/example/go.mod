@@ -1,11 +1,11 @@
-module github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/example
+module github.com/awslabs/aurora-dsql-connectors/go/pgx/example
 
 go 1.24.0
 
-replace github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector => ../
+replace github.com/awslabs/aurora-dsql-connectors/go/pgx => ../
 
 require (
-	github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector v0.1.0
+	github.com/awslabs/aurora-dsql-connectors/go/pgx v0.1.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/feature/dsql/auth v1.1.17
 	github.com/jackc/pgx/v5 v5.8.0

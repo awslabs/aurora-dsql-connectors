@@ -1,0 +1,175 @@
+name: Java JDBC CI
+
+permissions: {}
+
+on:
+  workflow_call: {}
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: java/jdbc
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      build-version: "25"
+      target-versions: ${{ steps.versions.outputs.matrix }}
+    steps:
+      - id: versions
+        working-directory: .
+        run: echo "matrix=[8, 11, 17, 21, 22, 23, 24, 25]" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ needs.setup.outputs.build-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ needs.setup.outputs.build-version }}
+          distribution: "corretto"
+          architecture: x64
+          cache: gradle
+
+      - name: Build jar files
+        run: ./gradlew build -x test
+
+      - name: Upload integration test jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-jar
+          path: java/jdbc/integration-tests/build/libs/*-all.jar
+
+  unit-tests:
+    name: Unit Tests
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ needs.setup.outputs.build-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ needs.setup.outputs.build-version }}
+          distribution: "corretto"
+          architecture: x64
+          cache: gradle
+
+      - name: Run unit tests
+        run: ./gradlew test
+
+  create-cluster:
+    needs: [setup, unit-tests]
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: jdbc-connector
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  gradle-integration-tests:
+    name: Gradle Integration Tests
+    needs: [setup, create-cluster]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ needs.setup.outputs.build-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ needs.setup.outputs.build-version }}
+          distribution: "corretto"
+          architecture: x64
+          cache: gradle
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
+
+      - name: Run integration tests with Gradle
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: "admin"
+        run: ./gradlew integrationTest
+
+      - name: Run example smoke tests
+        working-directory: java/jdbc/examples/pgjdbc
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: "admin"
+        run: ../../gradlew test
+
+  integration-tests:
+    name: Integration Tests (Java ${{ matrix.jvm-version }})
+    needs: [setup, create-cluster, gradle-integration-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required by aws-actions/configure-aws-credentials
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        jvm-version: ${{ fromJson(needs.setup.outputs.target-versions) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.jvm-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.jvm-version }}
+          distribution: "corretto"
+          architecture: x64
+
+      - name: Download integration test jar
+        uses: actions/download-artifact@v4
+        with:
+          name: integration-test-jar
+          path: java/jdbc
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
+
+      - name: Run integration tests
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: "admin"
+        run: |
+          java -jar integration-tests-all.jar \
+            --select-package software.amazon.dsql.jdbc.integration \
+            --fail-if-no-tests
+
+  delete-cluster:
+    if: always() && needs.create-cluster.result == 'success'
+    needs: [create-cluster, gradle-integration-tests, integration-tests]
+    uses: ./.github/workflows/dsql-cluster-delete.yml
+    with:
+      cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
+      region: ${{ needs.create-cluster.outputs.region }}
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials

@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	manual_token "github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/example/src/alternatives/manual_token"
+	manual_token "github.com/awslabs/aurora-dsql-connectors/go/pgx/example/src/alternatives/manual_token"
 )
 
 func TestManualTokenExample(t *testing.T) {

@@ -25,8 +25,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/dsql"
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/occretry"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/occretry"
 	"github.com/jackc/pgx/v5"
 )
 

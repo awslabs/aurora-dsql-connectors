@@ -1,0 +1,126 @@
+# Orchestrates all PR CI by detecting changed paths and conditionally invoking
+# per-language workflows. The "gate" job always runs and can be configured as
+# the single required status check in GitHub branch protection.
+name: CI Gate
+
+permissions: {}
+
+on:
+  pull_request:
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      java-jdbc: ${{ steps.detect.outputs.java-jdbc }}
+      go-pgx: ${{ steps.detect.outputs.go-pgx }}
+      python-connector: ${{ steps.detect.outputs.python-connector }}
+      node-postgres: ${{ steps.detect.outputs.node-postgres }}
+      postgres-js: ${{ steps.detect.outputs.postgres-js }}
+    steps:
+      - uses: actions/github-script@v7
+        id: detect
+        with:
+          script: |
+            const config = {
+              'java-jdbc': ['java/jdbc/'],
+              'go-pgx': ['go/pgx/'],
+              'python-connector': ['python/connector/'],
+              'node-postgres': ['node/node-postgres/'],
+              'postgres-js': ['node/postgres-js/'],
+            };
+            const runAllPaths = [
+              '.github/',
+              '.pre-commit-config.yaml',
+            ];
+
+            const pr = context.payload.pull_request;
+
+            let files = [];
+            const paginator = github.paginate.iterator(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            for await (const resp of paginator) {
+              files.push(...resp.data.map(f => f.filename));
+            }
+
+            // If API truncated results, run everything to be safe
+            let runAll = files.length < pr.changed_files;
+
+            if (!runAll) {
+              runAll = files.some(f => runAllPaths.some(p => f === p || f.startsWith(p)));
+            }
+
+            for (const [name, paths] of Object.entries(config)) {
+              const shouldRun = runAll || files.some(f => paths.some(p => f.startsWith(p)));
+              core.setOutput(name, String(shouldRun));
+            }
+
+  pre-commit:
+    needs: changes
+    uses: ./.github/workflows/pre-commit.yml
+
+  java-jdbc:
+    needs: changes
+    if: needs.changes.outputs.java-jdbc == 'true'
+    uses: ./.github/workflows/java-jdbc-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  go-pgx:
+    needs: changes
+    if: needs.changes.outputs.go-pgx == 'true'
+    uses: ./.github/workflows/go-pgx-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  python-connector:
+    needs: changes
+    if: needs.changes.outputs.python-connector == 'true'
+    uses: ./.github/workflows/python-connector-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  node-postgres:
+    needs: changes
+    if: needs.changes.outputs.node-postgres == 'true'
+    uses: ./.github/workflows/node-postgres-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  postgres-js:
+    needs: changes
+    if: needs.changes.outputs.postgres-js == 'true'
+    uses: ./.github/workflows/postgres-js-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    needs:
+      - pre-commit
+      - java-jdbc
+      - go-pgx
+      - python-connector
+      - node-postgres
+      - postgres-js
+    if: always()
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const needs = ${{ toJSON(needs) }};
+            for (const [job, result] of Object.entries(needs)) {
+              if (result.result === 'failure' || result.result === 'cancelled') {
+                core.setFailed(`Job ${job} ${result.result}`);
+              }
+            }
