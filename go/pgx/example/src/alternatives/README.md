@@ -26,7 +26,7 @@ Each example has its own directory with source code and tests:
 
 ```bash
 # Run a specific example
-cd /path/to/dsql-pgx-connector/example
+cd /path/to/aurora-dsql-connectors/go/pgx/example
 export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
 go run ./src/transaction/...
 

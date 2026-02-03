@@ -10,8 +10,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/example/src/occ_retry"
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/occretry"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/example/src/occ_retry"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/occretry"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

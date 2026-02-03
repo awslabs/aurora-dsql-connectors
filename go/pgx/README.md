@@ -37,7 +37,7 @@ The first source that provides valid credentials is used. You can override this 
 ## Installation
 
 ```bash
-go get github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/dsql
+go get github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql
 ```
 
 ## Configuration Options
@@ -67,7 +67,7 @@ import (
     "context"
     "log"
 
-    "github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/dsql"
+    "github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql"
 )
 
 func main() {
@@ -222,7 +222,7 @@ Token duration defaults to 15 minutes (the maximum allowed by Aurora DSQL).
 ### Build
 
 ```bash
-cd go/dsql-pgx-connector
+cd go/pgx
 go build ./...
 ```
 

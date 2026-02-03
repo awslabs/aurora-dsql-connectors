@@ -29,7 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/dsql"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )

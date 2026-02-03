@@ -1,7 +1,7 @@
 # Aurora DSQL Connector for Postgres.js
 
-[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--postgres--js--connector-blue?logo=github)](https://github.com/awslabs/aurora-dsql-nodejs-connector/tree/main/packages/postgres-js)
-[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-nodejs-connector/blob/main/LICENSE)
+[![GitHub](https://img.shields.io/badge/github-awslabs/aurora--dsql--connectors-blue?logo=github)](https://github.com/awslabs/aurora-dsql-connectors/tree/main/node/postgres-js)
+[![License](https://img.shields.io/badge/license-Apache--2.0-brightgreen)](https://github.com/awslabs/aurora-dsql-connectors/blob/main/LICENSE)
 [![NPM Version](https://img.shields.io/npm/v/@aws/aurora-dsql-postgresjs-connector)](https://www.npmjs.com/package/@aws/aurora-dsql-postgresjs-connector)
 [![Discord chat](https://img.shields.io/discord/1435027294837276802.svg?logo=discord)](https://discord.com/invite/nEF6ksFWru)
 

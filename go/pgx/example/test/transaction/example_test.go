@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/aws-samples/aurora-dsql-samples/go/dsql-pgx-connector/example/src/transaction"
+	"github.com/awslabs/aurora-dsql-connectors/go/pgx/example/src/transaction"
 )
 
 func TestTransactionExample(t *testing.T) {
