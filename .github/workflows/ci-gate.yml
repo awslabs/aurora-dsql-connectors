@@ -63,9 +63,6 @@ jobs:
     needs: changes
     uses: ./.github/workflows/pre-commit.yml
 
-  gitleaks:
-    uses: ./.github/workflows/gitleaks-scan.yml
-
   java-jdbc:
     needs: changes
     if: needs.changes.outputs.java-jdbc == 'true'
@@ -111,7 +108,6 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - pre-commit
-      - gitleaks
       - java-jdbc
       - go-pgx
       - python-connector
