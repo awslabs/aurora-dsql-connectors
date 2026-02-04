@@ -7,6 +7,7 @@ permissions: {}
 
 on:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   changes:
@@ -23,18 +24,28 @@ jobs:
         with:
           script: |
             const config = {
-              'java-jdbc': ['java/jdbc/'],
-              'go-pgx': ['go/pgx/'],
-              'python-connector': ['python/connector/'],
-              'node-postgres': ['node/node-postgres/'],
-              'postgres-js': ['node/postgres-js/'],
+              'java-jdbc': ['java/jdbc/', '.github/workflows/java-jdbc-ci.yml'],
+              'go-pgx': ['go/pgx/', '.github/workflows/go-pgx-ci.yml'],
+              'python-connector': ['python/connector/', '.github/workflows/python-connector-ci.yml'],
+              'node-postgres': ['node/node-postgres/', '.github/workflows/node-postgres-ci.yml'],
+              'postgres-js': ['node/postgres-js/', '.github/workflows/postgres-js-ci.yml'],
             };
             const runAllPaths = [
-              '.github/',
+              '.github/workflows/ci-gate.yml',
+              '.github/workflows/dsql-cluster-create.yml',
+              '.github/workflows/dsql-cluster-delete.yml',
               '.pre-commit-config.yaml',
             ];
 
             const pr = context.payload.pull_request;
+
+            // Manual dispatch: run all CI
+            if (!pr) {
+              for (const name of Object.keys(config)) {
+                core.setOutput(name, 'true');
+              }
+              return;
+            }
 
             let files = [];
             const paginator = github.paginate.iterator(github.rest.pulls.listFiles, {
