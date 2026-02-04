@@ -21,7 +21,7 @@ plugins {
     id("jacoco")
     id("com.diffplug.spotless") version "8.0.0"
     id("com.github.spotbugs") version "6.4.+"
-    id("org.jreleaser") version "1.20.0"
+    id("org.jreleaser") version "1.21.0"
 }
 
 group = "software.amazon.dsql"
