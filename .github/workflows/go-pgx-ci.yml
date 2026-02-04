@@ -26,7 +26,6 @@ jobs:
     needs: create-cluster
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write # required by aws-actions/configure-aws-credentials
     env:
       GOPRIVATE: github.com/awslabs/aurora-dsql-connectors
