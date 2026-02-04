@@ -46,9 +46,9 @@ dependencies {
     compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.4")
 
     // Test dependencies
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.14.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.2")
     testImplementation("software.amazon.awssdk:regions:2.41.21")
 
     // Agent recommended for Java 21+ inline mocking.
