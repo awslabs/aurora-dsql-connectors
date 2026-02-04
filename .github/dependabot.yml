@@ -34,6 +34,12 @@ updates:
     directory: "/java/jdbc"
     schedule:
       interval: "weekly"
+    ignore:
+      # JUnit 6.x requires Java 17+, project targets Java 8
+      - dependency-name: "org.junit.platform:*"
+        versions: [">=6.0.0"]
+      - dependency-name: "org.junit.jupiter:*"
+        versions: [">=6.0.0"]
 
   # Go connector
   - package-ecosystem: "gomod"
