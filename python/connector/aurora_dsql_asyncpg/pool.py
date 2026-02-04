@@ -26,7 +26,7 @@ async def create_pool(
     """Create Aurora DSQL connection pool with fresh token generation."""
 
     async def reset_connection(conn):
-        pass
+        await conn.execute("RESET ALL;")
 
     pool = await asyncpg.create_pool(
         dsn,
