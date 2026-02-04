@@ -37,7 +37,7 @@ val mockitoAgent = configurations.create("mockitoAgent")
 
 dependencies {
     // AWS SDK for Aurora DSQL
-    implementation("software.amazon.awssdk:dsql:2.33.8")
+    implementation("software.amazon.awssdk:dsql:2.41.21")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector
     implementation("org.postgresql:postgresql:42.7.7")
@@ -49,7 +49,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
-    testImplementation("software.amazon.awssdk:regions:2.33.8")
+    testImplementation("software.amazon.awssdk:regions:2.41.21")
 
     // Agent recommended for Java 21+ inline mocking.
     testImplementation("org.mockito:mockito-junit-jupiter:5.21.0")
