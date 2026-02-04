@@ -35,7 +35,7 @@ jobs:
       id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
