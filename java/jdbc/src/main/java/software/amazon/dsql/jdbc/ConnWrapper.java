@@ -24,6 +24,12 @@ import org.postgresql.Driver;
 class ConnWrapper {
     private static final String APPLICATION_NAME_KEY = "ApplicationName";
     private static final String BASE_APPLICATION_NAME = "aurora-dsql-jdbc/" + Version.FULL;
+    // Setting assumeMinServerVersion to 9.0 or higher forces pgjdbc to send
+    // application_name in the startup packet instead of via SET command.
+    // This is required for DSQL relay logs to capture the ApplicationName.
+    // See: https://github.com/pgjdbc/pgjdbc/issues/2114
+    private static final String ASSUME_MIN_SERVER_VERSION_KEY = "assumeMinServerVersion";
+    private static final String ASSUME_MIN_SERVER_VERSION_VALUE = "9.0";
 
     private final String url;
     private final Properties info;
@@ -37,6 +43,12 @@ class ConnWrapper {
         // Set application_name with optional ORM prefix
         String applicationName = buildApplicationName(info.getProperty(APPLICATION_NAME_KEY));
         info.setProperty(APPLICATION_NAME_KEY, applicationName);
+
+        // Set assumeMinServerVersion to force application_name into startup packet
+        // This ensures DSQL relay logs capture the ApplicationName
+        if (info.getProperty(ASSUME_MIN_SERVER_VERSION_KEY) == null) {
+            info.setProperty(ASSUME_MIN_SERVER_VERSION_KEY, ASSUME_MIN_SERVER_VERSION_VALUE);
+        }
 
         Driver driver = new Driver();
         return driver.connect(url, info);
