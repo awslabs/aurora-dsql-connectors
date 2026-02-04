@@ -18,7 +18,7 @@ jobs:
       node-postgres: ${{ steps.detect.outputs.node-postgres }}
       postgres-js: ${{ steps.detect.outputs.postgres-js }}
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v8
         id: detect
         with:
           script: |
@@ -115,7 +115,7 @@ jobs:
       - postgres-js
     if: always()
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v8
         with:
           script: |
             const needs = ${{ toJSON(needs) }};
