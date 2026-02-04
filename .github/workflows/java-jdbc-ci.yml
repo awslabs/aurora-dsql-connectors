@@ -28,8 +28,6 @@ jobs:
     name: Build
     needs: setup
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -54,8 +52,6 @@ jobs:
     name: Unit Tests
     needs: [setup, build]
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -85,7 +81,6 @@ jobs:
     needs: [setup, create-cluster]
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
@@ -123,7 +118,6 @@ jobs:
     needs: [setup, create-cluster, gradle-integration-tests]
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write # required by aws-actions/configure-aws-credentials
     strategy:
       max-parallel: 1
