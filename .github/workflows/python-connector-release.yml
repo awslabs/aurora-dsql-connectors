@@ -3,6 +3,7 @@ name: Publish Python Connector to PyPI
 permissions: {}
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "python/connector/v*"

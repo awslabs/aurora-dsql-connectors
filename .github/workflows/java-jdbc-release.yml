@@ -3,6 +3,7 @@ name: Deploy Java JDBC to Maven Central
 permissions: {}
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "java/jdbc/v*"

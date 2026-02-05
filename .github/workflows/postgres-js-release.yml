@@ -3,6 +3,7 @@ name: Publish Postgres.js
 permissions: {}
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "node/postgres-js/v*"
