@@ -40,6 +40,10 @@ updates:
         versions: [">=6.0.0"]
       - dependency-name: "org.junit.jupiter:*"
         versions: [">=6.0.0"]
+      # JGit 7.x breaks JReleaser GPG signing. Keep pinned to 5.13.x.
+      # See: https://github.com/jreleaser/jreleaser/issues/1643
+      - dependency-name: "org.eclipse.jgit:*"
+        versions: [">=6.0.0"]
 
   # Go connector
   - package-ecosystem: "gomod"
