@@ -38,8 +38,8 @@ jobs:
 
       - name: Extract version from tag
         run: |
-          VERSION=${GITHUB_REF_NAME#java/jdbc/v}
-          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
+          VERSION="${GITHUB_REF_NAME#java/jdbc/v}"
+          echo "PROJECT_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "Building version $VERSION"
 
       - name: Deploy to Central Portal
