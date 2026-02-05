@@ -36,12 +36,19 @@ jobs:
           java-version: "25"
           distribution: "corretto"
 
+      - name: Extract version from tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#java/jdbc/v}
+          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Building version $VERSION"
+
       - name: Deploy to Central Portal
         run: |
           ./gradlew build
           ./gradlew publish
           ./gradlew jreleaserDeploy --no-configuration-cache
         env:
+          PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
           JRELEASER_MAVENCENTRAL_STAGE: "UPLOAD"
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
