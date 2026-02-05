@@ -11,7 +11,7 @@ import java.io.Serializable
 buildscript {
     configurations.classpath {
         resolutionStrategy {
-            force("org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r")
+            force("org.eclipse.jgit:org.eclipse.jgit:5.13.5.202508271544-r")
         }
     }
 }
