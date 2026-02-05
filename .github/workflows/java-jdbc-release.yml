@@ -38,9 +38,9 @@ jobs:
 
       - name: Deploy to Central Portal
         run: |
-          ./gradlew build
-          ./gradlew publish
-          ./gradlew jreleaserDeploy --no-configuration-cache
+          ./gradlew build --no-daemon
+          ./gradlew publish --no-daemon
+          ./gradlew jreleaserDeploy --no-daemon --no-configuration-cache
         env:
           JRELEASER_MAVENCENTRAL_STAGE: "UPLOAD"
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
