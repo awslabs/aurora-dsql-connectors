@@ -7,10 +7,11 @@ import java.io.Serializable
 
 // Temporary workaround for JReleaser/Spotless incompatibility.
 // https://github.com/jreleaser/jreleaser/issues/1643
+// JReleaser expects JGit 5.13.x, do NOT upgrade to 7.x (breaks GPG signing).
 buildscript {
     configurations.classpath {
         resolutionStrategy {
-            force("org.eclipse.jgit:org.eclipse.jgit:7.5.0.202512021534-r")
+            force("org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r")
         }
     }
 }
