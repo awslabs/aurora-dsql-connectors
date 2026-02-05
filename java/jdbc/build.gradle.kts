@@ -297,6 +297,7 @@ if ("UPLOAD".equals(System.getenv("JRELEASER_MAVENCENTRAL_STAGE"))) {
 
         deploy {
             maven {
+                active.set(org.jreleaser.model.Active.ALWAYS)
                 mavenCentral {
                     register("sonatype") {
                         active.set(org.jreleaser.model.Active.ALWAYS)
