@@ -37,6 +37,12 @@ jobs:
           node-version: "25"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF_NAME#node/postgres-js/v}
+          echo "Setting version to $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
       - run: |
           npm ci
           npm run build:prod
