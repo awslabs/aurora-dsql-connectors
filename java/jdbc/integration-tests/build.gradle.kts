@@ -17,7 +17,7 @@ tasks.withType<JavaCompile> {
 dependencies {
     testImplementation(project(":"))
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.2")
     testRuntimeOnly("org.junit.platform:junit-platform-console-standalone:1.9.2")
 }
 
