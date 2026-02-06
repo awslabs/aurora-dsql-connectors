@@ -64,20 +64,8 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
   update-changelog:
-    name: Update changelog
     needs: publish-to-pypi
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: main
-      - uses: rhysd/changelog-from-release/action@v3
-        with:
-          file: python/connector/CHANGELOG.md
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          pull_request: true
-          version: ${{ github.ref_name }}
-          args: -e ^python/connector/
+    uses: ./.github/workflows/update-changelog.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

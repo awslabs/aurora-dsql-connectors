@@ -1,0 +1,44 @@
+name: Update Changelog
+
+permissions: {}
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag name (e.g., python/connector/v1.0.0)"
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+jobs:
+  update-changelog:
+    name: Update changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required by rhysd/changelog-from-release/action
+      pull-requests: write # required by rhysd/changelog-from-release/action
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Determine changelog file
+        id: changelog
+        run: |
+          TAG="${{ inputs.tag }}"
+          PREFIX="${TAG%/v*}"
+          echo "file=${PREFIX}/CHANGELOG.md" >> "$GITHUB_OUTPUT"
+          echo "filter=^${PREFIX}/" >> "$GITHUB_OUTPUT"
+
+      - uses: rhysd/changelog-from-release/action@v3
+        with:
+          file: ${{ steps.changelog.outputs.file }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pull_request: true
+          version: ${{ inputs.tag }}
+          args: -e ${{ steps.changelog.outputs.filter }}

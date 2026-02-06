@@ -50,20 +50,8 @@ jobs:
       - run: npm publish --provenance
 
   update-changelog:
-    name: Update changelog
     needs: publish
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: main
-      - uses: rhysd/changelog-from-release/action@v3
-        with:
-          file: node/node-postgres/CHANGELOG.md
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          pull_request: true
-          version: ${{ github.ref_name }}
-          args: -e ^node/node-postgres/
+    uses: ./.github/workflows/update-changelog.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
