@@ -20,7 +20,7 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("jacoco")
-    id("com.diffplug.spotless") version "8.0.0"
+    id("com.diffplug.spotless") version "8.2.1"
     id("com.github.spotbugs") version "6.4.+"
     id("org.jreleaser") version "1.21.0"
 }
