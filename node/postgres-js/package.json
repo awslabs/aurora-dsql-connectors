@@ -74,7 +74,7 @@
     "@typescript-eslint/eslint-plugin": "^8.48.0",
     "@typescript-eslint/parser": "^8.48.0",
     "depcheck": "^1.4.7",
-    "eslint": "^9.39.1",
+    "eslint": "^10.0.0",
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-import-x": "^4.16.1",
     "jest": "^30.2.0",
