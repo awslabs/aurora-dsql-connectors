@@ -19,9 +19,8 @@ Gem::Specification.new do |spec|
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/ruby/pg"
-  spec.metadata["changelog_uri"] = "https://github.com/awslabs/aurora-dsql-connectors/blob/main/ruby/pg/CHANGELOG.md"
 
-  spec.files = Dir.glob("lib/**/*") + %w[README.md NOTICE]
+  spec.files = Dir.glob("lib/**/*") + %w[README.md NOTICE LICENSE]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "pg", "~> 1.5"
@@ -29,6 +28,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "connection_pool", "~> 2.4"
 
   spec.add_development_dependency "rspec", "~> 3.13"
-  spec.add_development_dependency "webmock", "~> 3.0"
   spec.add_development_dependency "rake", "~> 13.0"
 end

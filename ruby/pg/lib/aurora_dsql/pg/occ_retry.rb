@@ -31,22 +31,22 @@ module AuroraDsql
       }.freeze
 
       # Check if an error is an OCC conflict error.
+      # Checks SQLSTATE first (most reliable), then falls back to message matching.
       #
       # @param error [Exception, nil] the error to check
       # @return [Boolean] true if it's an OCC error
       def self.occ_error?(error)
         return false if error.nil?
 
-        msg = error.message.to_s
-        return true if msg.include?(ERROR_CODE_MUTATION) || msg.include?(ERROR_CODE_SCHEMA)
-
-        # Check SQLSTATE via PG error result
+        # Prefer structured SQLSTATE check when available
         if error.respond_to?(:result) && error.result&.respond_to?(:error_field)
           sqlstate = error.result.error_field(PG::Result::PG_DIAG_SQLSTATE)
-          return sqlstate == SQLSTATE_SERIALIZATION_FAILURE
+          return true if sqlstate == SQLSTATE_SERIALIZATION_FAILURE
         end
 
-        false
+        # Fall back to message matching for OCC-specific codes
+        msg = error.message.to_s
+        msg.include?(ERROR_CODE_MUTATION) || msg.include?(ERROR_CODE_SCHEMA)
       end
 
       # Execute a transactional block with automatic retry on OCC conflicts.
@@ -58,6 +58,7 @@ module AuroraDsql
       def self.with_retry(pool, config = {}, &block)
         cfg = DEFAULT_CONFIG.merge(config)
         wait = cfg[:initial_wait]
+        last_error = nil
 
         (0..cfg[:max_retries]).each do |attempt|
           begin
@@ -68,6 +69,8 @@ module AuroraDsql
           rescue StandardError => e
             raise unless occ_error?(e)
 
+            last_error = e
+
             # Sleep before retry (unless this was the last attempt)
             if attempt < cfg[:max_retries]
               sleep(wait + rand * wait / 4)
@@ -76,7 +79,7 @@ module AuroraDsql
           end
         end
 
-        raise "Max retries (#{cfg[:max_retries]}) exceeded"
+        raise AuroraDsql::Pg::Error, "Max retries (#{cfg[:max_retries]}) exceeded, last error: #{last_error&.message}"
       end
 
       # Execute a SQL statement with automatic retry on OCC conflicts.

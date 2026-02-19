@@ -68,6 +68,22 @@ module AuroraDsql
       def finished?
         @pg_conn.finished?
       end
+
+      private
+
+      # Delegate any other method calls to the underlying PG::Connection.
+      # This allows access to methods like prepare, exec_prepared, copy_data, etc.
+      def method_missing(method, ...)
+        if @pg_conn.respond_to?(method)
+          @pg_conn.send(method, ...)
+        else
+          super
+        end
+      end
+
+      def respond_to_missing?(method, include_private = false)
+        @pg_conn.respond_to?(method, include_private) || super
+      end
     end
   end
 end

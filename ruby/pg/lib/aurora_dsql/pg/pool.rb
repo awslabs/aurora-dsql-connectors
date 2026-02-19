@@ -43,28 +43,34 @@ module AuroraDsql
         ) { create_connection }
       end
 
+      # Maximum number of stale connections to discard before giving up.
+      # Prevents infinite loops if create_connection keeps failing.
+      MAX_STALE_RETRIES = 10
+
       # Check out a connection and yield it to the block.
       # Enforces max_lifetime by replacing stale connections on checkout.
       #
       # @yield [PG::Connection] the database connection
       def with(&block)
         result = nil
-        retry_checkout = true
+        stale_retries = 0
 
-        while retry_checkout
+        loop do
           @pool.with do |wrapped|
             if stale?(wrapped)
+              stale_retries += 1
+              if stale_retries > MAX_STALE_RETRIES
+                raise AuroraDsql::Pg::Error,
+                      "unable to acquire a non-stale connection after #{MAX_STALE_RETRIES} attempts"
+              end
               wrapped.conn.close rescue nil
               @pool.discard_current_connection
-              # retry_checkout stays true, loop will continue
             else
               result = block.call(wrapped.conn)
-              retry_checkout = false
+              return result
             end
           end
         end
-
-        result
       end
 
       # Clear all cached authentication tokens.

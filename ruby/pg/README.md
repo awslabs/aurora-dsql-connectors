@@ -86,6 +86,8 @@ conn.exec("SELECT 1")
 conn.close
 ```
 
+The `Connection` wrapper delegates common methods (`exec`, `exec_params`, `query`, `transaction`, `close`, `finished?`) directly. All other `PG::Connection` methods (e.g., `prepare`, `exec_prepared`, `copy_data`) are also available via delegation. The underlying `PG::Connection` can be accessed directly via `conn.pg_conn` if needed.
+
 ## OCC Retry
 
 Aurora DSQL uses optimistic concurrency control. Handle conflicts with retry:

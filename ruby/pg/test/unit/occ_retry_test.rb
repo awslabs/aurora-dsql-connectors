@@ -89,7 +89,7 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
       expect(call_count).to eq(2)
     end
 
-    it "raises after max retries exceeded" do
+    it "raises after max retries exceeded with last error included" do
       allow(mock_pool).to receive(:with) do
         raise StandardError.new("OC000: conflict")
       end
@@ -98,7 +98,7 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
 
       expect {
         described_class.with_retry(mock_pool, max_retries: 2) { |_| }
-      }.to raise_error(/Max retries.*exceeded/)
+      }.to raise_error(AuroraDsql::Pg::Error, /Max retries.*exceeded.*OC000: conflict/)
     end
 
     it "raises immediately for non-OCC error" do
