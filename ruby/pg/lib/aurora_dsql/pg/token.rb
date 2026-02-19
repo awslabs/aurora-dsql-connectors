@@ -29,9 +29,9 @@ module AuroraDsql
 
         begin
           if user == ADMIN_USER
-            token_generator.generate_db_connect_admin_auth_token(params)
+            token_generator.generate_db_connect_admin_auth_token(**params)
           else
-            token_generator.generate_db_connect_auth_token(params)
+            token_generator.generate_db_connect_auth_token(**params)
           end
         rescue Aws::Errors::ServiceError => e
           raise AuroraDsql::Pg::Error, "Failed to generate authentication token: #{e.message}"

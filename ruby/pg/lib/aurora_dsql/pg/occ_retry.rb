@@ -66,10 +66,13 @@ module AuroraDsql
               return result
             end
           rescue StandardError => e
-            raise unless occ_error?(e) && attempt < cfg[:max_retries]
+            raise unless occ_error?(e)
 
-            sleep(wait + rand * wait / 4)
-            wait = [wait * cfg[:multiplier], cfg[:max_wait]].min
+            # Sleep before retry (unless this was the last attempt)
+            if attempt < cfg[:max_retries]
+              sleep(wait + rand * wait / 4)
+              wait = [wait * cfg[:multiplier], cfg[:max_wait]].min
+            end
           end
         end
 

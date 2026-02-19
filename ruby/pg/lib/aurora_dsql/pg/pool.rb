@@ -48,14 +48,23 @@ module AuroraDsql
       #
       # @yield [PG::Connection] the database connection
       def with(&block)
-        @pool.with do |wrapped|
-          if stale?(wrapped)
-            wrapped.conn.close rescue nil
-            @pool.discard_current_connection
-            return self.with(&block)
+        result = nil
+        retry_checkout = true
+
+        while retry_checkout
+          @pool.with do |wrapped|
+            if stale?(wrapped)
+              wrapped.conn.close rescue nil
+              @pool.discard_current_connection
+              # retry_checkout stays true, loop will continue
+            else
+              result = block.call(wrapped.conn)
+              retry_checkout = false
+            end
           end
-          block.call(wrapped.conn)
         end
+
+        result
       end
 
       # Clear all cached authentication tokens.
