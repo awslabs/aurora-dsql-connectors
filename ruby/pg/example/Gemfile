@@ -1,0 +1,5 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+gem "aurora-dsql-ruby-pg", path: ".."
