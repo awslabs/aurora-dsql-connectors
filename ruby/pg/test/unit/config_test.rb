@@ -15,7 +15,6 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(AuroraDsql::Pg::Config::DEFAULTS[:database]).to eq("postgres")
       expect(AuroraDsql::Pg::Config::DEFAULTS[:port]).to eq(5432)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:max_lifetime]).to eq(55 * 60)
-      expect(AuroraDsql::Pg::Config::DEFAULTS[:max_idle_time]).to eq(10 * 60)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:token_duration]).to eq(15 * 60)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:pool_size]).to eq(5)
     end
@@ -174,7 +173,6 @@ RSpec.describe AuroraDsql::Pg::ResolvedConfig do
       token_duration: 900,
       credentials_provider: nil,
       max_lifetime: 3300,
-      max_idle_time: 600,
       pool_size: 5,
       application_name: nil
     )
@@ -241,7 +239,6 @@ RSpec.describe AuroraDsql::Pg::ResolvedConfig do
         token_duration: 900,
         credentials_provider: nil,
         max_lifetime: 3300,
-        max_idle_time: 600,
         pool_size: 5,
         application_name: "rails"
       )

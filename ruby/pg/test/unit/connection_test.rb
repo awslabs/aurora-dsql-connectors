@@ -31,7 +31,6 @@ RSpec.describe AuroraDsql::Pg::Connection do
       token_duration: 900,
       credentials_provider: nil,
       max_lifetime: 3300,
-      max_idle_time: 600,
       pool_size: 5,
       application_name: nil
     )

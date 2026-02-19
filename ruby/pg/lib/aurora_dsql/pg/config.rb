@@ -14,14 +14,13 @@ module AuroraDsql
         database: "postgres",
         port: 5432,
         max_lifetime: 55 * 60,      # 55 minutes in seconds
-        max_idle_time: 10 * 60,     # 10 minutes in seconds
         token_duration: 15 * 60,    # 15 minutes in seconds
         pool_size: 5
       }.freeze
 
       attr_accessor :host, :region, :user, :database, :port,
                     :profile, :token_duration, :credentials_provider,
-                    :max_lifetime, :max_idle_time, :pool_size,
+                    :max_lifetime, :pool_size,
                     :application_name
 
       def initialize(**options)
@@ -34,7 +33,6 @@ module AuroraDsql
         @token_duration = options[:token_duration]
         @credentials_provider = options[:credentials_provider]
         @max_lifetime = options[:max_lifetime]
-        @max_idle_time = options[:max_idle_time]
         @pool_size = options[:pool_size]
         @application_name = options[:application_name]
       end
@@ -100,7 +98,6 @@ module AuroraDsql
           token_duration: @token_duration || DEFAULTS[:token_duration],
           credentials_provider: @credentials_provider,
           max_lifetime: @max_lifetime || DEFAULTS[:max_lifetime],
-          max_idle_time: @max_idle_time || DEFAULTS[:max_idle_time],
           pool_size: @pool_size || DEFAULTS[:pool_size],
           application_name: @application_name
         ).freeze
@@ -121,7 +118,7 @@ module AuroraDsql
     ResolvedConfig = Struct.new(
       :host, :region, :user, :database, :port,
       :profile, :token_duration, :credentials_provider,
-      :max_lifetime, :max_idle_time, :pool_size,
+      :max_lifetime, :pool_size,
       :application_name,
       keyword_init: true
     ) do
