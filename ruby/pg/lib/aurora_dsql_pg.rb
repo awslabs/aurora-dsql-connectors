@@ -10,6 +10,7 @@ require_relative "aurora_dsql/pg/token"
 require_relative "aurora_dsql/pg/token_cache"
 require_relative "aurora_dsql/pg/connection"
 require_relative "aurora_dsql/pg/pool"
+require_relative "aurora_dsql/pg/occ_retry"
 
 module AuroraDsql
   module Pg
