@@ -25,7 +25,7 @@ For information about creating an Aurora DSQL cluster, see the [Getting started 
 
 ### Credentials Resolution
 
-The connector uses the [AWS SDK for Ruby default credential chain](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/CredentialProviderChain.html), which resolves credentials in the following order:
+The connector uses the [AWS SDK for Ruby default credential chain](https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html), which resolves credentials in the following order:
 
 1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN`)
 2. **Shared credentials file** (`~/.aws/credentials`) with optional profile via `AWS_PROFILE` or `profile` config
