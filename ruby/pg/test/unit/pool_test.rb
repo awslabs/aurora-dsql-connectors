@@ -153,6 +153,22 @@ RSpec.describe AuroraDsql::Pg::Pool do
     end
   end
 
+  describe "MAX_STALE_RETRIES limit" do
+    it "raises after exceeding stale retry limit" do
+      pool = described_class.create(
+        host: "cluster.dsql.us-east-1.on.aws",
+        max_lifetime: 1
+      )
+
+      # Stub stale? to always return true so every checkout discards
+      allow(pool).to receive(:stale?).and_return(true)
+
+      expect {
+        pool.with { |_conn| }
+      }.to raise_error(AuroraDsql::Pg::Error, /unable to acquire a non-stale connection/)
+    end
+  end
+
   describe "#clear_token_cache" do
     it "delegates to token cache" do
       pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")

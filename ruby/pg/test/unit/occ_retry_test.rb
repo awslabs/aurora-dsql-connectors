@@ -136,5 +136,17 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
 
       expect(mock_conn).to have_received(:exec).with("CREATE TABLE test (id UUID)")
     end
+
+    it "wraps SQL execution in a transaction" do
+      allow(mock_pool).to receive(:with) do |**_kwargs, &block|
+        block.call(mock_conn)
+      end
+      allow(mock_conn).to receive(:transaction).and_yield
+      allow(mock_conn).to receive(:exec).with("INSERT INTO t (id) VALUES (1)")
+
+      described_class.exec_with_retry(mock_pool, "INSERT INTO t (id) VALUES (1)")
+
+      expect(mock_conn).to have_received(:transaction)
+    end
   end
 end
