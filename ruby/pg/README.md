@@ -18,8 +18,21 @@ A Ruby connector for Amazon Aurora DSQL that wraps the [pg](https://github.com/g
 ## Prerequisites
 
 - Ruby 3.1 or later
-- AWS credentials configured
+- AWS credentials configured (see [Credentials Resolution](#credentials-resolution) below)
 - An Aurora DSQL cluster
+
+For information about creating an Aurora DSQL cluster, see the [Getting started with Aurora DSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/getting-started.html) guide.
+
+### Credentials Resolution
+
+The connector uses the [AWS SDK for Ruby default credential chain](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/Aws/CredentialProviderChain.html), which resolves credentials in the following order:
+
+1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN`)
+2. **Shared credentials file** (`~/.aws/credentials`) with optional profile via `AWS_PROFILE` or `profile` config
+3. **Shared config file** (`~/.aws/config`)
+4. **IAM role for Amazon EC2/ECS/Lambda** (instance metadata or task role)
+
+The first source that provides valid credentials is used. You can override this by specifying `profile` for a specific AWS profile or `credentials_provider` for complete control over credential resolution.
 
 ## Installation
 
@@ -99,6 +112,30 @@ AuroraDsql::Pg::OCCRetry.with_retry(pool) do |conn|
 end
 ```
 
+## Examples
+
+The `example/` directory contains runnable examples demonstrating various patterns:
+
+| Example | Description |
+|---------|-------------|
+| [example_preferred](example/src/example_preferred.rb) | Recommended: Connection pool with concurrent queries |
+| [manual_token](example/src/alternatives/manual_token/) | Manual IAM token generation without the connector |
+
+### Running examples
+
+```bash
+export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
+export CLUSTER_USER=admin
+export REGION=us-east-1
+cd example
+
+# Run the preferred example
+ruby src/example_preferred.rb
+
+# Run the manual token example
+ruby src/alternatives/manual_token/example.rb
+```
+
 ## Development
 
 ```bash
@@ -110,12 +147,25 @@ bundle exec rake integration # Run integration tests (requires CLUSTER_ENDPOINT)
 
 ## DSQL Best Practices
 
-- Use `UUID DEFAULT gen_random_uuid()` for primary keys (no sequences)
-- Handle OCC errors (OC000, OC001) with retry logic
-- Use `CREATE INDEX ASYNC` for index creation
-- No foreign keys, triggers, or temp tables
-- Transaction limits: 3,000 rows, 10 MiB, 5 minutes
+When using this connector with Aurora DSQL, follow these practices:
 
-## License
+1. **UUID Primary Keys**: Always use `UUID DEFAULT gen_random_uuid()` - DSQL doesn't support sequences or SERIAL
+2. **OCC Handling**: DSQL uses optimistic concurrency control. Handle error codes `OC000` (data conflict) and `OC001` (schema conflict) with retry logic
+3. **No Foreign Keys**: DSQL doesn't support foreign key constraints - enforce relationships in your application
+4. **Async Indexes**: Use `CREATE INDEX ASYNC` for index creation
+5. **Transaction Limits**: Transactions are limited to 3,000 rows, 10 MiB, and 5 minutes
+6. **Connection Limits**: Connections timeout after 60 minutes; configure pool `max_lifetime` accordingly
+7. **No SAVEPOINT**: Partial rollbacks via SAVEPOINT are not supported
 
-Apache-2.0
+## Additional Resources
+
+- [Amazon Aurora DSQL Documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html)
+- [pg gem Documentation](https://deveiate.org/code/pg/)
+- [connection_pool Documentation](https://github.com/mperham/connection_pool)
+- [AWS SDK for Ruby](https://docs.aws.amazon.com/sdk-for-ruby/v3/api/)
+
+---
+
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
