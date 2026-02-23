@@ -18,11 +18,21 @@ RSpec.describe "OCC retry integration", order: :defined do
       logger: Logger.new($stdout)
     )
 
-    # Schema setup in its own transaction
-    AuroraDsql::Pg::OCCRetry.exec_with_retry(
-      @pool,
-      "CREATE TABLE IF NOT EXISTS #{TABLE_NAME} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL DEFAULT 0)"
-    )
+    # Retry initial connection to handle DNS propagation delay
+    # on freshly created clusters in CI.
+    retries = 0
+    begin
+      AuroraDsql::Pg::OCCRetry.exec_with_retry(
+        @pool,
+        "CREATE TABLE IF NOT EXISTS #{TABLE_NAME} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL DEFAULT 0)"
+      )
+    rescue PG::ConnectionBad => e
+      retries += 1
+      raise if retries > 5
+
+      sleep(retries * 5)
+      retry
+    end
   end
 
   after(:all) do
