@@ -41,6 +41,11 @@ jobs:
       - name: Run connector unit tests
         run: bundle exec rake unit
 
+      - name: Download Amazon root certificate
+        run: |
+          mkdir -p ~/.postgresql
+          wget -q https://www.amazontrust.com/repository/AmazonRootCA1.pem -O ~/.postgresql/root.crt
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
