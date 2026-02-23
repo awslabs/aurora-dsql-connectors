@@ -47,6 +47,13 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
 
+      - name: Run connector integration tests
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: bundle exec rake integration
+
       - name: Install example dependencies
         working-directory: ruby/pg/example
         run: bundle install
