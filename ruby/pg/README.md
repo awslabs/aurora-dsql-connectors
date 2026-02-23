@@ -113,7 +113,9 @@ The `Connection` wrapper delegates common methods (`exec`, `exec_params`, `query
 
 Aurora DSQL uses optimistic concurrency control (OCC). When two transactions modify the same data, the first to commit wins and the second receives an OCC error.
 
-`pool.with` automatically retries on OCC errors (up to 3 retries with exponential backoff and jitter). No special code is needed:
+`pool.with` automatically retries on OCC errors (up to 3 retries with exponential backoff and jitter). No special code is needed.
+
+> **Note:** On OCC conflict the entire block is re-executed, so it should contain only database operations and be safe to retry.
 
 ```ruby
 pool.with do |conn|
