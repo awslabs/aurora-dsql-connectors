@@ -82,6 +82,77 @@ RSpec.describe AuroraDsql::Pg::Pool do
     end
   end
 
+  describe "OCC retry" do
+    it "retries on OCC error and succeeds on next attempt" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+      allow(pool).to receive(:sleep)
+
+      call_count = 0
+      result = pool.with do |conn|
+        call_count += 1
+        raise StandardError.new("OC000: transaction conflict") if call_count == 1
+        "success"
+      end
+
+      expect(result).to eq("success")
+      expect(call_count).to eq(2)
+    end
+
+    it "raises after max retries exceeded" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+      allow(pool).to receive(:sleep)
+
+      expect {
+        pool.with do |_conn|
+          raise StandardError.new("OC000: transaction conflict")
+        end
+      }.to raise_error(AuroraDsql::Pg::Error, /Max retries.*exceeded.*OC000: transaction conflict/)
+    end
+
+    it "does not retry non-OCC errors" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+
+      expect {
+        pool.with do |_conn|
+          raise StandardError.new("connection refused")
+        end
+      }.to raise_error(StandardError, "connection refused")
+    end
+
+    it "skips retry when retry_occ: false" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+
+      call_count = 0
+      expect {
+        pool.with(retry_occ: false) do |_conn|
+          call_count += 1
+          raise StandardError.new("OC000: transaction conflict")
+        end
+      }.to raise_error(StandardError, "OC000: transaction conflict")
+      expect(call_count).to eq(1)
+    end
+
+    it "logs OCC retries at warn level" do
+      logger = double("logger")
+      allow(logger).to receive(:warn)
+
+      pool = described_class.create(
+        host: "cluster.dsql.us-east-1.on.aws",
+        logger: logger
+      )
+      allow(pool).to receive(:sleep)
+
+      call_count = 0
+      pool.with do |_conn|
+        call_count += 1
+        raise StandardError.new("OC000: transaction conflict") if call_count == 1
+        "success"
+      end
+
+      expect(logger).to have_received(:warn).with(/OCC conflict detected.*attempt 1/)
+    end
+  end
+
   describe "#clear_token_cache" do
     it "delegates to token cache" do
       pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")

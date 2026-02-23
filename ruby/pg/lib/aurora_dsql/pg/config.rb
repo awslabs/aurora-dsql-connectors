@@ -19,7 +19,7 @@ module AuroraDsql
       attr_accessor :host, :region, :user, :database, :port,
                     :profile, :token_duration, :credentials_provider,
                     :max_lifetime, :pool_size,
-                    :application_name
+                    :application_name, :logger
 
       def initialize(**options)
         @host = options[:host]
@@ -33,6 +33,7 @@ module AuroraDsql
         @max_lifetime = options[:max_lifetime]
         @pool_size = options[:pool_size]
         @application_name = options[:application_name]
+        @logger = options[:logger]
       end
 
       # Parse a connection string into a Config.
@@ -97,7 +98,8 @@ module AuroraDsql
           credentials_provider: @credentials_provider,
           max_lifetime: @max_lifetime || DEFAULTS[:max_lifetime],
           pool_size: @pool_size || DEFAULTS[:pool_size],
-          application_name: @application_name
+          application_name: @application_name,
+          logger: @logger
         ).freeze
       end
 
@@ -117,7 +119,7 @@ module AuroraDsql
       :host, :region, :user, :database, :port,
       :profile, :token_duration, :credentials_provider,
       :max_lifetime, :pool_size,
-      :application_name,
+      :application_name, :logger,
       keyword_init: true
     ) do
       # Convert to pg connection parameters hash.

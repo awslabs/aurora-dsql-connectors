@@ -13,7 +13,7 @@ A Ruby connector for Amazon Aurora DSQL that wraps the [pg](https://github.com/g
 - Region auto-detection from endpoint hostname
 - Support for AWS profiles and custom credentials providers
 - SSL always enabled with `verify-full` mode and direct TLS negotiation (libpq 17+)
-- OCC retry utilities for handling optimistic concurrency conflicts
+- Automatic OCC retry with exponential backoff on `pool.with`
 
 ## Prerequisites
 
@@ -58,10 +58,17 @@ pool = AuroraDsql::Pg.create_pool(
   host: "your-cluster.dsql.us-east-1.on.aws"
 )
 
-# Execute queries
+# Read
 pool.with do |conn|
   result = conn.exec("SELECT 'Hello, DSQL!'")
   puts result[0]["?column?"]
+end
+
+# Write — OCC retry is automatic
+pool.with do |conn|
+  conn.transaction do
+    conn.exec_params("INSERT INTO users (id, name) VALUES (gen_random_uuid(), $1)", ["Alice"])
+  end
 end
 
 pool.shutdown
@@ -82,6 +89,7 @@ pool.shutdown
 | `pool_size` | `Integer` | `5` | Connection pool size |
 | `max_lifetime` | `Integer` | `3300` (55 min) | Max connection lifetime in seconds |
 | `application_name` | `String` | `nil` | ORM prefix for application_name |
+| `logger` | `Logger` | `nil` | Logger for OCC retry warnings |
 
 ## Connection String Format
 
@@ -103,13 +111,42 @@ The `Connection` wrapper delegates common methods (`exec`, `exec_params`, `query
 
 ## OCC Retry
 
-Aurora DSQL uses optimistic concurrency control. Handle conflicts with retry:
+Aurora DSQL uses optimistic concurrency control (OCC). When two transactions modify the same data, the first to commit wins and the second receives an OCC error.
+
+`pool.with` automatically retries on OCC errors (up to 3 retries with exponential backoff and jitter). No special code is needed:
 
 ```ruby
-AuroraDsql::Pg::OCCRetry.with_retry(pool) do |conn|
-  conn.exec_params("UPDATE accounts SET balance = balance - $1 WHERE id = $2", [100, from_id])
-  conn.exec_params("UPDATE accounts SET balance = balance + $1 WHERE id = $2", [100, to_id])
+pool.with do |conn|
+  conn.transaction do
+    conn.exec_params("UPDATE accounts SET balance = balance - $1 WHERE id = $2", [100, from_id])
+    conn.exec_params("UPDATE accounts SET balance = balance + $1 WHERE id = $2", [100, to_id])
+  end
 end
+```
+
+To disable automatic retry for a specific call:
+
+```ruby
+pool.with(retry_occ: false) do |conn|
+  conn.exec("SELECT 1")
+end
+```
+
+For custom retry configuration (different max retries, backoff, etc.), use the `OCCRetry` module directly:
+
+```ruby
+AuroraDsql::Pg::OCCRetry.with_retry(pool, max_retries: 10) do |conn|
+  conn.exec_params("UPDATE ...", [...])
+end
+```
+
+To see OCC retries in your logs, pass a `logger` when creating the pool:
+
+```ruby
+pool = AuroraDsql::Pg.create_pool(
+  host: "your-cluster.dsql.us-east-1.on.aws",
+  logger: Logger.new(STDOUT)
+)
 ```
 
 ## Examples
@@ -150,7 +187,7 @@ bundle exec rake integration # Run integration tests (requires CLUSTER_ENDPOINT)
 When using this connector with Aurora DSQL, follow these practices:
 
 1. **UUID Primary Keys**: Always use `UUID DEFAULT gen_random_uuid()` - DSQL doesn't support sequences or SERIAL
-2. **OCC Handling**: DSQL uses optimistic concurrency control. Handle error codes `OC000` (data conflict) and `OC001` (schema conflict) with retry logic
+2. **OCC Handling**: DSQL uses optimistic concurrency control. `pool.with` retries OCC errors automatically; for single connections, use `OCCRetry` explicitly
 3. **No Foreign Keys**: DSQL doesn't support foreign key constraints - enforce relationships in your application
 4. **Async Indexes**: Use `CREATE INDEX ASYNC` for index creation
 5. **Transaction Limits**: Transactions are limited to 3,000 rows, 10 MiB, and 5 minutes

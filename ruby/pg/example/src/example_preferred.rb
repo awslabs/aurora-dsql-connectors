@@ -19,6 +19,15 @@ def example
   pool.with { |conn| conn.exec("SELECT 1") }
   puts "Connected to Aurora DSQL"
 
+  # Transactional write — OCC retry is automatic via pool.with
+  pool.with do |conn|
+    conn.transaction do
+      conn.exec("CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)")
+      conn.exec_params("INSERT INTO example_items (name) VALUES ($1)", ["test-item"])
+    end
+  end
+  puts "Transactional write completed (OCC retry handled automatically)"
+
   # Run concurrent queries using the connection pool
   threads = NUM_CONCURRENT_QUERIES.times.map do |i|
     Thread.new do

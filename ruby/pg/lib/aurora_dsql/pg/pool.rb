@@ -47,28 +47,40 @@ module AuroraDsql
 
       # Check out a connection and yield it to the block.
       # Enforces max_lifetime by replacing stale connections on checkout.
+      # Automatically retries on OCC (Optimistic Concurrency Control) errors
+      # with exponential backoff unless retry_occ: false is passed.
       #
+      # @param retry_occ [Boolean] whether to retry on OCC errors (default: true)
       # @yield [PG::Connection] the database connection
-      def with(&block)
-        result = nil
-        stale_retries = 0
+      def with(retry_occ: true, &block)
+        return checkout_and_execute(&block) unless retry_occ
 
-        loop do
-          @pool.with do |wrapped|
-            if stale?(wrapped)
-              stale_retries += 1
-              if stale_retries > MAX_STALE_RETRIES
-                raise AuroraDsql::Pg::Error,
-                      "unable to acquire a non-stale connection after #{MAX_STALE_RETRIES} attempts"
-              end
-              wrapped.conn.close rescue nil
-              @pool.discard_current_connection
-            else
-              result = block.call(wrapped.conn)
-              return result
+        cfg = OCCRetry::DEFAULT_CONFIG
+        wait = cfg[:initial_wait]
+        last_error = nil
+
+        (0..cfg[:max_retries]).each do |attempt|
+          begin
+            return checkout_and_execute(&block)
+          rescue StandardError => e
+            raise unless OCCRetry.occ_error?(e)
+
+            last_error = e
+
+            if attempt < cfg[:max_retries]
+              jittered_wait = wait + rand * wait / 4
+              @config.logger&.warn(
+                "[AuroraDsql::Pg] OCC conflict detected, retrying " \
+                "(attempt #{attempt + 1}/#{cfg[:max_retries]}, wait #{jittered_wait.round(2)}s)"
+              )
+              sleep(jittered_wait)
+              wait = [wait * cfg[:multiplier], cfg[:max_wait]].min
             end
           end
         end
+
+        raise AuroraDsql::Pg::Error,
+              "Max retries (#{cfg[:max_retries]}) exceeded, last error: #{last_error&.message}"
       end
 
       # Clear all cached authentication tokens.
@@ -82,6 +94,27 @@ module AuroraDsql
       end
 
       private
+
+      # Check out a connection, handling stale connection replacement.
+      def checkout_and_execute(&block)
+        stale_retries = 0
+
+        loop do
+          @pool.with do |wrapped|
+            if stale?(wrapped)
+              stale_retries += 1
+              if stale_retries > MAX_STALE_RETRIES
+                raise AuroraDsql::Pg::Error,
+                      "unable to acquire a non-stale connection after #{MAX_STALE_RETRIES} attempts"
+              end
+              wrapped.conn.close rescue nil
+              @pool.discard_current_connection
+            else
+              return block.call(wrapped.conn)
+            end
+          end
+        end
+      end
 
       def stale?(wrapped)
         Time.now - wrapped.created_at > @config.max_lifetime

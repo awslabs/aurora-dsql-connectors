@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 require "rspec"
+require "logger"
 require_relative "../../lib/aurora_dsql_pg"
 require_relative "../../lib/aurora_dsql/pg/util"
 require_relative "../../lib/aurora_dsql/pg/config"
@@ -107,6 +108,24 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(resolved.token_duration).to eq(300)
       expect(resolved.pool_size).to eq(10)
       expect(resolved.application_name).to eq("rails")
+    end
+
+    it "passes logger through to resolved config" do
+      logger = Logger.new(nil)
+      config = described_class.new(
+        host: "mycluster.dsql.us-east-1.on.aws",
+        logger: logger
+      )
+      resolved = config.resolve
+
+      expect(resolved.logger).to eq(logger)
+    end
+
+    it "defaults logger to nil" do
+      config = described_class.new(host: "mycluster.dsql.us-east-1.on.aws")
+      resolved = config.resolve
+
+      expect(resolved.logger).to be_nil
     end
 
     it "returns a frozen ResolvedConfig" do

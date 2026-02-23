@@ -58,7 +58,9 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
     end
 
     it "executes block successfully without retry" do
-      allow(mock_pool).to receive(:with).and_yield(mock_conn)
+      allow(mock_pool).to receive(:with) do |**_kwargs, &block|
+        block.call(mock_conn)
+      end
 
       result = nil
       described_class.with_retry(mock_pool) do |conn|
@@ -68,9 +70,18 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
       expect(result).to eq("success")
     end
 
+    it "passes retry_occ: false to pool.with" do
+      allow(mock_pool).to receive(:with) do |**kwargs, &block|
+        expect(kwargs[:retry_occ]).to eq(false)
+        block.call(mock_conn)
+      end
+
+      described_class.with_retry(mock_pool) { |_| }
+    end
+
     it "retries on OCC error" do
       call_count = 0
-      allow(mock_pool).to receive(:with) do |&block|
+      allow(mock_pool).to receive(:with) do |**_kwargs, &block|
         call_count += 1
         if call_count == 1
           raise StandardError.new("OC000: conflict")
@@ -88,7 +99,7 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
     end
 
     it "raises after max retries exceeded with last error included" do
-      allow(mock_pool).to receive(:with) do
+      allow(mock_pool).to receive(:with) do |**_kwargs|
         raise StandardError.new("OC000: conflict")
       end
 
@@ -100,7 +111,7 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
     end
 
     it "raises immediately for non-OCC error" do
-      allow(mock_pool).to receive(:with) do
+      allow(mock_pool).to receive(:with) do |**_kwargs|
         raise StandardError.new("connection refused")
       end
 
@@ -115,7 +126,9 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
     let(:mock_conn) { double("conn") }
 
     it "executes SQL with retry" do
-      allow(mock_pool).to receive(:with).and_yield(mock_conn)
+      allow(mock_pool).to receive(:with) do |**_kwargs, &block|
+        block.call(mock_conn)
+      end
       allow(mock_conn).to receive(:transaction).and_yield
       allow(mock_conn).to receive(:exec).with("CREATE TABLE test (id UUID)")
 

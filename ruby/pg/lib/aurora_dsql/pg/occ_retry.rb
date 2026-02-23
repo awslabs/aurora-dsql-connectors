@@ -60,7 +60,7 @@ module AuroraDsql
 
         (0..cfg[:max_retries]).each do |attempt|
           begin
-            pool.with do |conn|
+            pool.with(retry_occ: false) do |conn|
               result = conn.transaction { block.call(conn) }
               return result
             end
