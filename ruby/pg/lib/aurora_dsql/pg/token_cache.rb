@@ -4,13 +4,7 @@
 module AuroraDsql
   module Pg
     # Thread-safe cache for IAM authentication tokens.
-    #
-    # Caches tokens by (host, region, user, duration) and refreshes them
-    # proactively when they reach 80% of their lifetime.
-    #
-    # Ruby's Mutex is exclusive-only (no RWMutex like Go), so double-checked
-    # locking adds overhead without concurrency benefit. Single synchronize block
-    # is the correct simplification here.
+    # Refreshes proactively at 80% of token lifetime.
     class TokenCache
       # Refresh at 80% of token lifetime (20% buffer before expiry).
       REFRESH_BUFFER_PERCENTAGE = 0.2
@@ -19,9 +13,6 @@ module AuroraDsql
       CachedToken = Struct.new(:token, :generated_at, :expires_at, keyword_init: true)
 
       # Create a new token cache.
-      #
-      # @param credentials_provider [Aws::Credentials, nil] pre-resolved credentials
-      # @param profile [String, nil] AWS profile name
       def initialize(credentials_provider: nil, profile: nil)
         @credentials = credentials_provider || Token.resolve_credentials(profile)
         @cache = {}
@@ -29,12 +20,6 @@ module AuroraDsql
       end
 
       # Get a token, using cache if available and not expiring soon.
-      #
-      # @param host [String] the DSQL endpoint
-      # @param region [String] the AWS region
-      # @param user [String] the database user
-      # @param duration [Integer] token lifetime in seconds
-      # @return [String] the IAM token
       def get_token(host:, region:, user:, duration:)
         key = CacheKey.new(host: host, region: region, user: user, duration: duration)
 

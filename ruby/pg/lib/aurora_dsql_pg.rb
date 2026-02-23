@@ -15,19 +15,11 @@ module AuroraDsql
     class Error < StandardError; end
 
     # Create a single connection to Aurora DSQL.
-    #
-    # @param config [String, Config, nil] connection string or Config object
-    # @param options [Hash] configuration options
-    # @return [Connection]
     def self.connect(config = nil, **options)
       Connection.connect(config, **options)
     end
 
     # Create a connection pool for Aurora DSQL.
-    #
-    # @param config [String, Config, nil] connection string or Config object
-    # @param options [Hash] configuration options
-    # @return [Pool]
     def self.create_pool(config = nil, **options)
       Pool.create(config, **options)
     end

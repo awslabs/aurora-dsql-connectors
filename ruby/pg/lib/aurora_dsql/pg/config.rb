@@ -37,9 +37,6 @@ module AuroraDsql
       end
 
       # Parse a connection string into a Config.
-      #
-      # @param conn_string [String] postgres:// or postgresql:// URL
-      # @return [Config]
       def self.parse(conn_string)
         uri = URI.parse(conn_string)
 
@@ -62,9 +59,6 @@ module AuroraDsql
       end
 
       # Resolve and validate config, returning an immutable ResolvedConfig.
-      #
-      # @return [ResolvedConfig] frozen resolved configuration
-      # @raise [Error] if validation fails
       def resolve
         validate!
 
@@ -123,9 +117,6 @@ module AuroraDsql
       keyword_init: true
     ) do
       # Convert to pg connection parameters hash.
-      #
-      # @param password [String] the IAM token
-      # @return [Hash] parameters for PG.connect
       def to_pg_params(password:)
         params = {
           host: host,
@@ -137,7 +128,7 @@ module AuroraDsql
           application_name: AuroraDsql::Pg.build_application_name(application_name)
         }
 
-        # Use direct SSL negotiation if libpq supports it (17+)
+        # Direct SSL negotiation (libpq 17+)
         params[:sslnegotiation] = "direct" if PG.library_version >= 170_000
 
         params

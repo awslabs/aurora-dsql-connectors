@@ -7,11 +7,6 @@ module AuroraDsql
     APPLICATION_NAME = "aurora-dsql-ruby-pg/#{VERSION}"
 
     # Build application_name with optional ORM prefix.
-    # If orm_prefix is provided, returns "prefix:aurora-dsql-ruby-pg/VERSION"
-    # Otherwise returns the base APPLICATION_NAME.
-    #
-    # @param orm_prefix [String, nil] optional ORM name (e.g., "rails", "sequel")
-    # @return [String] the formatted application_name
     def self.build_application_name(orm_prefix = nil)
       return APPLICATION_NAME if orm_prefix.nil? || orm_prefix.to_s.strip.empty?
 

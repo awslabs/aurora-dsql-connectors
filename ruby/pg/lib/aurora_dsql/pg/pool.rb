@@ -12,10 +12,6 @@ module AuroraDsql
       PooledConnection = Struct.new(:conn, :created_at, keyword_init: true)
 
       # Create a new connection pool.
-      #
-      # @param config [String, Config, nil] connection string or Config object
-      # @param options [Hash] configuration options
-      # @return [Pool]
       def self.create(config = nil, **options)
         cfg = case config
               when String then Config.parse(config)
@@ -41,17 +37,12 @@ module AuroraDsql
         ) { create_connection }
       end
 
-      # Maximum number of stale connections to discard before giving up.
-      # Prevents infinite loops if create_connection keeps failing.
+      # Maximum stale connection discards before giving up.
       MAX_STALE_RETRIES = 10
 
       # Check out a connection and yield it to the block.
-      # Enforces max_lifetime by replacing stale connections on checkout.
-      # Automatically retries on OCC (Optimistic Concurrency Control) errors
-      # with exponential backoff unless retry_occ: false is passed.
-      #
-      # @param retry_occ [Boolean] whether to retry on OCC errors (default: true)
-      # @yield [PG::Connection] the database connection
+      # Enforces max_lifetime and retries on OCC errors with exponential
+      # backoff unless retry_occ: false is passed.
       def with(retry_occ: true, &block)
         return checkout_and_execute(&block) unless retry_occ
 

@@ -19,23 +19,22 @@ def example
   pool.with { |conn| conn.exec("SELECT 1") }
   puts "Connected to Aurora DSQL"
 
-  # DDL in its own transaction — never mix DDL and DML in DSQL
+  # Create table
   pool.with do |conn|
     conn.transaction do
       conn.exec("CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)")
     end
   end
-  puts "Schema setup completed"
 
-  # DML in a separate transaction — OCC retry is automatic via pool.with
+  # Insert data (OCC retry is automatic)
   pool.with do |conn|
     conn.transaction do
       conn.exec_params("INSERT INTO example_items (name) VALUES ($1)", ["test-item"])
     end
   end
-  puts "Transactional write completed (OCC retry handled automatically)"
+  puts "Transactional write completed"
 
-  # Run concurrent queries using the connection pool
+  # Run concurrent queries
   threads = NUM_CONCURRENT_QUERIES.times.map do |i|
     Thread.new do
       pool.with do |conn|

@@ -5,8 +5,7 @@ require 'pg'
 require 'aws-sdk-dsql'
 
 def create_connection(cluster_user, cluster_endpoint, region)
-  # Generate a fresh password token for each connection, to ensure the token is not expired
-  # when the connection is established
+  # Generate a fresh token for each connection
   credentials = Aws::CredentialProviderChain.new.resolve
   token_generator = Aws::DSQL::AuthTokenGenerator.new({
           :credentials => credentials
@@ -34,7 +33,7 @@ def create_connection(cluster_user, cluster_endpoint, region)
     sslmode: 'verify-full'
   }
 
-  # Use the more efficient connection method if it's supported.
+  # Direct SSL negotiation (libpq 17+)
   if PG::library_version >= 170000
     conn_params[:sslnegotiation] = "direct"
   end
@@ -43,38 +42,37 @@ def create_connection(cluster_user, cluster_endpoint, region)
 end
 
 def example(conn)
+  # Create table
+  conn.transaction do
+    conn.exec('CREATE TABLE IF NOT EXISTS owner (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(30) NOT NULL,
+      city VARCHAR(80) NOT NULL,
+      telephone VARCHAR(20)
+    )')
+  end
 
-  # Create the owner table
-  conn.exec('CREATE TABLE IF NOT EXISTS owner (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(30) NOT NULL,
-    city VARCHAR(80) NOT NULL,
-    telephone VARCHAR(20)
-  )')
-
-  # Insert an owner
-  conn.exec_params('INSERT INTO owner(name, city, telephone) VALUES($1, $2, $3)',
-    ['John Doe', 'Anytown', '555-555-0055'])
+  # Insert data
+  conn.transaction do
+    conn.exec_params('INSERT INTO owner(name, city, telephone) VALUES($1, $2, $3)',
+      ['John Doe', 'Anytown', '555-555-0055'])
+  end
 
   # Read the result back
   result = conn.exec("SELECT city FROM owner where name='John Doe'")
 
-  # Raise error if we are unable to read
   raise "must have fetched a row" unless result.ntuples == 1
   raise "must have fetched right city" unless result[0]["city"] == 'Anytown'
 
-  # Delete data we just inserted
+  # Clean up
   conn.exec("DELETE FROM owner where name='John Doe'")
-
 end
 
 def main()
-  # Use environment variables.
   cluster_endpoint = ENV["CLUSTER_ENDPOINT"]
   region = ENV["REGION"]
   cluster_user = ENV["CLUSTER_USER"]
 
-  # Raise errors if any of the variables are not set.
   raise "CLUSTER_ENDPOINT environment variable is not set" unless cluster_endpoint
   raise "REGION environment variable is not set" unless region
   raise "CLUSTER_USER environment variable is not set" unless cluster_user

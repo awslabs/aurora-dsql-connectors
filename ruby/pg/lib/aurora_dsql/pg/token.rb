@@ -10,15 +10,6 @@ module AuroraDsql
     # IAM token generation for Aurora DSQL.
     class Token
       # Generate an IAM authentication token.
-      #
-      # @param host [String] the DSQL endpoint
-      # @param region [String] the AWS region
-      # @param user [String] the database user
-      # @param credentials [Aws::Credentials, nil] AWS credentials (uses default chain if nil)
-      # @param profile [String, nil] AWS profile name
-      # @param expires_in [Integer] token lifetime in seconds (default: 15 minutes)
-      # @return [String] the IAM token
-      # @raise [AuroraDsql::Pg::Error] if token generation fails
       def self.generate(host:, region:, user:, credentials: nil, profile: nil, expires_in: 15 * 60)
         credentials ||= resolve_credentials(profile)
 
@@ -37,9 +28,6 @@ module AuroraDsql
       end
 
       # Resolve AWS credentials from profile or default chain.
-      #
-      # @param profile [String, nil] AWS profile name
-      # @return [Aws::Credentials] resolved credentials
       def self.resolve_credentials(profile = nil)
         if profile && !profile.empty?
           Aws::SharedCredentials.new(profile_name: profile)

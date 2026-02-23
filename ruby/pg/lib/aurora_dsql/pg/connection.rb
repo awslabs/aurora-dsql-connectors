@@ -10,10 +10,6 @@ module AuroraDsql
       attr_reader :pg_conn, :config
 
       # Create a new connection to Aurora DSQL.
-      #
-      # @param config [String, Config, nil] connection string or Config object
-      # @param options [Hash] configuration options if config is nil
-      # @return [Connection]
       def self.connect(config = nil, **options)
         cfg = case config
               when String then Config.parse(config)
@@ -43,9 +39,6 @@ module AuroraDsql
       end
 
       # Delegate common pg methods
-      def exec(...)
-        @pg_conn.exec(...)
-      end
 
       def exec_params(...)
         @pg_conn.exec_params(...)
@@ -69,8 +62,7 @@ module AuroraDsql
 
       private
 
-      # Delegate any other method calls to the underlying PG::Connection.
-      # This allows access to methods like prepare, exec_prepared, copy_data, etc.
+      # Delegate remaining methods to PG::Connection.
       def method_missing(method, ...)
         if @pg_conn.respond_to?(method)
           @pg_conn.send(method, ...)

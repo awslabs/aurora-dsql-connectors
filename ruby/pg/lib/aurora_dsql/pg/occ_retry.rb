@@ -6,10 +6,6 @@ require "pg"
 module AuroraDsql
   module Pg
     # OCC (Optimistic Concurrency Control) retry utilities for Aurora DSQL.
-    #
-    # Aurora DSQL uses OCC where conflicts are detected at commit time.
-    # When two transactions modify the same data, the first to commit wins
-    # and the second receives an OCC error.
     module OCCRetry
       # OCC error code for mutation conflicts.
       ERROR_CODE_MUTATION = "OC000"
@@ -28,11 +24,8 @@ module AuroraDsql
         multiplier: 2.0
       }.freeze
 
-      # Check if an error is an OCC conflict error.
-      # Checks SQLSTATE first (most reliable), then falls back to message matching.
-      #
-      # @param error [Exception, nil] the error to check
-      # @return [Boolean] true if it's an OCC error
+      # Check if an error is an OCC conflict.
+      # Checks SQLSTATE first, then falls back to message matching.
       def self.occ_error?(error)
         return false if error.nil?
 
@@ -48,11 +41,6 @@ module AuroraDsql
       end
 
       # Execute a transactional block with automatic retry on OCC conflicts.
-      #
-      # @param pool [Pool] the connection pool
-      # @param config [Hash] retry configuration options
-      # @yield [PG::Connection] yields connection within a transaction
-      # @raise [StandardError] if max retries exceeded or non-OCC error
       def self.with_retry(pool, config = {}, &block)
         cfg = DEFAULT_CONFIG.merge(config)
         wait = cfg[:initial_wait]
@@ -81,10 +69,6 @@ module AuroraDsql
       end
 
       # Execute a SQL statement with automatic retry on OCC conflicts.
-      #
-      # @param pool [Pool] the connection pool
-      # @param sql [String] the SQL statement
-      # @param max_retries [Integer] maximum retry attempts
       def self.exec_with_retry(pool, sql, max_retries: 3)
         with_retry(pool, max_retries: max_retries) { |conn| conn.exec(sql) }
       end
