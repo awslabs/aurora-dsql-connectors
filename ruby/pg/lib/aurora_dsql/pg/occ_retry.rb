@@ -40,32 +40,43 @@ module AuroraDsql
         msg.include?(ERROR_CODE_MUTATION) || msg.include?(ERROR_CODE_SCHEMA)
       end
 
-      # Execute a transactional block with automatic retry on OCC conflicts.
-      def self.with_retry(pool, config = {}, &block)
-        cfg = DEFAULT_CONFIG.merge(config)
-        wait = cfg[:initial_wait]
+      # Retry a block on OCC conflicts with exponential backoff and jitter.
+      # Used by both Pool#with and OCCRetry.with_retry.
+      def self.retry_on_occ(config = DEFAULT_CONFIG, logger: nil)
+        wait = config[:initial_wait]
         last_error = nil
 
-        (0..cfg[:max_retries]).each do |attempt|
+        (0..config[:max_retries]).each do |attempt|
           begin
-            pool.with(retry_occ: false) do |conn|
-              result = conn.transaction { block.call(conn) }
-              return result
-            end
+            return yield
           rescue StandardError => e
             raise unless occ_error?(e)
 
             last_error = e
 
-            # Sleep before retry (unless this was the last attempt)
-            if attempt < cfg[:max_retries]
-              sleep(wait + rand * wait / 4)
-              wait = [wait * cfg[:multiplier], cfg[:max_wait]].min
+            if attempt < config[:max_retries]
+              jittered_wait = wait + rand * wait / 4
+              logger&.warn(
+                "[AuroraDsql::Pg] OCC conflict detected, retrying " \
+                "(attempt #{attempt + 1}/#{config[:max_retries]}, wait #{jittered_wait.round(2)}s)"
+              )
+              sleep(jittered_wait)
+              wait = [wait * config[:multiplier], config[:max_wait]].min
             end
           end
         end
 
-        raise AuroraDsql::Pg::Error, "Max retries (#{cfg[:max_retries]}) exceeded, last error: #{last_error&.message}"
+        raise AuroraDsql::Pg::Error,
+              "Max retries (#{config[:max_retries]}) exceeded, last error: #{last_error&.message}"
+      end
+
+      # Execute a transactional block with automatic retry on OCC conflicts.
+      def self.with_retry(pool, config = {}, &block)
+        retry_on_occ(DEFAULT_CONFIG.merge(config)) do
+          pool.with(retry_occ: false) do |conn|
+            conn.transaction { block.call(conn) }
+          end
+        end
       end
 
       # Execute a SQL statement with automatic retry on OCC conflicts.

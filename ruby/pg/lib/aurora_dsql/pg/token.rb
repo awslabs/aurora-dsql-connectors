@@ -5,10 +5,9 @@ require "aws-sdk-dsql"
 
 module AuroraDsql
   module Pg
-    ADMIN_USER = "admin"
-
     # IAM token generation for Aurora DSQL.
     class Token
+      ADMIN_USER = "admin"
       # Generate an IAM authentication token.
       def self.generate(host:, region:, user:, credentials: nil, profile: nil, expires_in: 15 * 60)
         credentials ||= resolve_credentials(profile)

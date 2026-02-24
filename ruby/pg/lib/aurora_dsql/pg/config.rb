@@ -37,8 +37,14 @@ module AuroraDsql
       end
 
       # Parse a connection string into a Config.
+      VALID_SCHEMES = %w[postgres postgresql].freeze
+
       def self.parse(conn_string)
         uri = URI.parse(conn_string)
+
+        unless VALID_SCHEMES.include?(uri.scheme)
+          raise Error, "unsupported URI scheme '#{uri.scheme}', expected 'postgres' or 'postgresql'"
+        end
 
         config = new(
           host: uri.host,
@@ -56,6 +62,16 @@ module AuroraDsql
         end
 
         config
+      end
+
+      # Build a Config from various input types.
+      def self.from(config = nil, **options)
+        case config
+        when String then parse(config)
+        when Config then config
+        when nil then new(**options)
+        else new(**options.merge(config.to_h))
+        end
       end
 
       # Resolve and validate config, returning an immutable ResolvedConfig.
@@ -102,8 +118,9 @@ module AuroraDsql
       def validate!
         raise Error, "host is required" if @host.nil? || @host.empty?
 
-        if @port && (@port < 1 || @port > 65_535)
-          raise Error, "port must be between 1 and 65535, got #{@port}"
+        if @port
+          raise Error, "port must be an integer, got #{@port.class}" unless @port.is_a?(Integer)
+          raise Error, "port must be between 1 and 65535, got #{@port}" if @port < 1 || @port > 65_535
         end
       end
     end

@@ -85,7 +85,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
   describe "OCC retry" do
     it "retries on OCC error and succeeds on next attempt" do
       pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
-      allow(pool).to receive(:sleep)
+      allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)
 
       call_count = 0
       result = pool.with do |conn|
@@ -100,7 +100,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
 
     it "raises after max retries exceeded" do
       pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
-      allow(pool).to receive(:sleep)
+      allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)
 
       expect {
         pool.with do |_conn|
@@ -140,7 +140,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
         host: "cluster.dsql.us-east-1.on.aws",
         logger: logger
       )
-      allow(pool).to receive(:sleep)
+      allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)
 
       call_count = 0
       pool.with do |_conn|

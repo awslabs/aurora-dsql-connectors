@@ -78,6 +78,15 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /port must be between/)
     end
 
+    it "raises error for non-integer port" do
+      config = described_class.new(
+        host: "mycluster.dsql.us-east-1.on.aws",
+        port: "5432"
+      )
+
+      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /port must be an integer/)
+    end
+
     it "allows explicit region override" do
       config = described_class.new(
         host: "mycluster.dsql.us-east-1.on.aws",
@@ -174,6 +183,12 @@ RSpec.describe AuroraDsql::Pg::Config do
       config = described_class.parse("postgresql://admin@mycluster.dsql.us-east-1.on.aws/postgres")
 
       expect(config.host).to eq("mycluster.dsql.us-east-1.on.aws")
+    end
+
+    it "rejects unsupported URI schemes" do
+      expect {
+        described_class.parse("http://admin@mycluster.dsql.us-east-1.on.aws/postgres")
+      }.to raise_error(AuroraDsql::Pg::Error, /unsupported URI scheme 'http'/)
     end
   end
 end

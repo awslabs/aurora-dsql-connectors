@@ -13,15 +13,7 @@ module AuroraDsql
 
       # Create a new connection pool.
       def self.create(config = nil, **options)
-        cfg = case config
-              when String then Config.parse(config)
-              when Config then config
-              when nil then Config.new(**options)
-              else Config.new(**options.merge(config.to_h))
-              end
-
-        resolved = cfg.resolve
-        new(resolved)
+        new(Config.from(config, **options).resolve)
       end
 
       def initialize(resolved_config)
@@ -46,32 +38,7 @@ module AuroraDsql
       def with(retry_occ: true, &block)
         return checkout_and_execute(&block) unless retry_occ
 
-        cfg = OCCRetry::DEFAULT_CONFIG
-        wait = cfg[:initial_wait]
-        last_error = nil
-
-        (0..cfg[:max_retries]).each do |attempt|
-          begin
-            return checkout_and_execute(&block)
-          rescue StandardError => e
-            raise unless OCCRetry.occ_error?(e)
-
-            last_error = e
-
-            if attempt < cfg[:max_retries]
-              jittered_wait = wait + rand * wait / 4
-              @config.logger&.warn(
-                "[AuroraDsql::Pg] OCC conflict detected, retrying " \
-                "(attempt #{attempt + 1}/#{cfg[:max_retries]}, wait #{jittered_wait.round(2)}s)"
-              )
-              sleep(jittered_wait)
-              wait = [wait * cfg[:multiplier], cfg[:max_wait]].min
-            end
-          end
-        end
-
-        raise AuroraDsql::Pg::Error,
-              "Max retries (#{cfg[:max_retries]}) exceeded, last error: #{last_error&.message}"
+        OCCRetry.retry_on_occ(logger: @config.logger) { checkout_and_execute(&block) }
       end
 
       # Clear all cached authentication tokens.
@@ -98,6 +65,10 @@ module AuroraDsql
                 raise AuroraDsql::Pg::Error,
                       "unable to acquire a non-stale connection after #{MAX_STALE_RETRIES} attempts"
               end
+              @config.logger&.warn(
+                "[AuroraDsql::Pg] Discarding stale connection " \
+                "(age #{(Time.now - wrapped.created_at).round}s, max_lifetime #{@config.max_lifetime}s)"
+              )
               wrapped.conn.close rescue nil
               @pool.discard_current_connection
             else

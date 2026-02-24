@@ -49,11 +49,6 @@ RSpec.describe AuroraDsql::Pg::Connection do
   end
 
   describe "explicit delegated methods" do
-    it "delegates exec to pg_conn" do
-      expect(mock_pg_conn).to receive(:exec).with("SELECT 1")
-      subject.exec("SELECT 1")
-    end
-
     it "delegates exec_params to pg_conn" do
       expect(mock_pg_conn).to receive(:exec_params).with("SELECT $1", [1])
       subject.exec_params("SELECT $1", [1])
@@ -81,6 +76,11 @@ RSpec.describe AuroraDsql::Pg::Connection do
   end
 
   describe "method_missing delegation" do
+    it "delegates exec to pg_conn" do
+      expect(mock_pg_conn).to receive(:exec).with("SELECT 1")
+      subject.exec("SELECT 1")
+    end
+
     it "delegates unknown methods to pg_conn if it responds" do
       expect(mock_pg_conn).to receive(:prepare).with("stmt", "SELECT 1")
       subject.send(:prepare, "stmt", "SELECT 1")

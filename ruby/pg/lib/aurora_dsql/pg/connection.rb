@@ -11,14 +11,7 @@ module AuroraDsql
 
       # Create a new connection to Aurora DSQL.
       def self.connect(config = nil, **options)
-        cfg = case config
-              when String then Config.parse(config)
-              when Config then config
-              when nil then Config.new(**options)
-              else Config.new(**options.merge(config.to_h))
-              end
-
-        resolved = cfg.resolve
+        resolved = Config.from(config, **options).resolve
 
         token = Token.generate(
           host: resolved.host,
