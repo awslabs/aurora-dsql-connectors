@@ -66,8 +66,13 @@ module AuroraDsql
           end
         end
 
-        raise AuroraDsql::Pg::Error,
-              "Max retries (#{config[:max_retries]}) exceeded, last error: #{last_error&.message}"
+        # Re-raise inside rescue so Ruby sets .cause to the original OCC error.
+        begin
+          raise last_error
+        rescue StandardError
+          raise AuroraDsql::Pg::Error,
+                "Max retries (#{config[:max_retries]}) exceeded, last error: #{last_error&.message}"
+        end
       end
 
       # Execute a transactional block with automatic retry on OCC conflicts.
@@ -79,9 +84,13 @@ module AuroraDsql
         end
       end
 
-      # Execute a SQL statement with automatic retry on OCC conflicts.
+      # Execute a single SQL statement with automatic retry on OCC conflicts.
+      # Unlike with_retry, this does NOT wrap in an explicit transaction,
+      # making it suitable for both DDL (CREATE TABLE, etc.) and single DML statements.
       def self.exec_with_retry(pool, sql, max_retries: 3)
-        with_retry(pool, max_retries: max_retries) { |conn| conn.exec(sql) }
+        retry_on_occ(DEFAULT_CONFIG.merge(max_retries: max_retries)) do
+          pool.with(retry_occ: false) { |conn| conn.exec(sql) }
+        end
       end
     end
   end

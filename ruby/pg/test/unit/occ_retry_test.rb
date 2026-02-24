@@ -110,6 +110,22 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
       }.to raise_error(AuroraDsql::Pg::Error, /Max retries.*exceeded.*OC000: conflict/)
     end
 
+    it "preserves the original OCC error as the exception cause" do
+      allow(mock_pool).to receive(:with) do |**_kwargs|
+        raise StandardError.new("OC000: conflict")
+      end
+
+      allow(described_class).to receive(:sleep)
+
+      begin
+        described_class.with_retry(mock_pool, max_retries: 1) { |_| }
+        fail "expected AuroraDsql::Pg::Error to be raised"
+      rescue AuroraDsql::Pg::Error => e
+        expect(e.cause).to be_a(StandardError)
+        expect(e.cause.message).to eq("OC000: conflict")
+      end
+    end
+
     it "raises immediately for non-OCC error" do
       allow(mock_pool).to receive(:with) do |**_kwargs|
         raise StandardError.new("connection refused")
@@ -129,7 +145,6 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
       allow(mock_pool).to receive(:with) do |**_kwargs, &block|
         block.call(mock_conn)
       end
-      allow(mock_conn).to receive(:transaction).and_yield
       allow(mock_conn).to receive(:exec).with("CREATE TABLE test (id UUID)")
 
       described_class.exec_with_retry(mock_pool, "CREATE TABLE test (id UUID)")
@@ -137,16 +152,27 @@ RSpec.describe AuroraDsql::Pg::OCCRetry do
       expect(mock_conn).to have_received(:exec).with("CREATE TABLE test (id UUID)")
     end
 
-    it "wraps SQL execution in a transaction" do
+    it "does not wrap SQL in a transaction (suitable for DDL and single DML)" do
+      transaction_called = false
       allow(mock_pool).to receive(:with) do |**_kwargs, &block|
         block.call(mock_conn)
       end
-      allow(mock_conn).to receive(:transaction).and_yield
-      allow(mock_conn).to receive(:exec).with("INSERT INTO t (id) VALUES (1)")
+      allow(mock_conn).to receive(:transaction) { transaction_called = true }
+      allow(mock_conn).to receive(:exec).with("CREATE TABLE test (id UUID)")
 
-      described_class.exec_with_retry(mock_pool, "INSERT INTO t (id) VALUES (1)")
+      described_class.exec_with_retry(mock_pool, "CREATE TABLE test (id UUID)")
 
-      expect(mock_conn).to have_received(:transaction)
+      expect(transaction_called).to be false
+    end
+
+    it "passes retry_occ: false to pool.with" do
+      allow(mock_pool).to receive(:with) do |**kwargs, &block|
+        expect(kwargs[:retry_occ]).to eq(false)
+        block.call(mock_conn)
+      end
+      allow(mock_conn).to receive(:exec)
+
+      described_class.exec_with_retry(mock_pool, "SELECT 1")
     end
   end
 end

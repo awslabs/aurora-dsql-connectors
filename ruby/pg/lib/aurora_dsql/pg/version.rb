@@ -8,9 +8,10 @@ module AuroraDsql
 
     # Build application_name with optional ORM prefix.
     def self.build_application_name(orm_prefix = nil)
-      return APPLICATION_NAME if orm_prefix.nil? || orm_prefix.to_s.strip.empty?
+      prefix = orm_prefix.to_s.strip
+      return APPLICATION_NAME if prefix.empty?
 
-      "#{orm_prefix.to_s.strip}:#{APPLICATION_NAME}"
+      "#{prefix}:#{APPLICATION_NAME}"
     end
   end
 end

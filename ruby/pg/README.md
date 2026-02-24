@@ -58,13 +58,13 @@ pool = AuroraDsql::Pg.create_pool(
   host: "your-cluster.dsql.us-east-1.on.aws"
 )
 
-# Read
-pool.with do |conn|
+# Read — no OCC retry needed for reads
+pool.with(retry_occ: false) do |conn|
   result = conn.exec("SELECT 'Hello, DSQL!'")
   puts result[0]["?column?"]
 end
 
-# Write — OCC retry is automatic
+# Write — OCC retry is automatic, but you must wrap writes in a transaction
 pool.with do |conn|
   conn.transaction do
     conn.exec_params("INSERT INTO users (id, name) VALUES (gen_random_uuid(), $1)", ["Alice"])
@@ -115,7 +115,7 @@ Aurora DSQL uses optimistic concurrency control (OCC). When two transactions mod
 
 `pool.with` automatically retries on OCC errors (up to 3 retries with exponential backoff and jitter). No special code is needed.
 
-> **Note:** On OCC conflict the entire block is re-executed, so it should contain only database operations and be safe to retry.
+> **Important:** `pool.with` does NOT automatically wrap your block in a transaction. You must call `conn.transaction` yourself for write operations. On OCC conflict the entire block is re-executed, so it should contain only database operations and be safe to retry.
 
 ```ruby
 pool.with do |conn|
@@ -126,7 +126,7 @@ pool.with do |conn|
 end
 ```
 
-To disable automatic retry for a specific call:
+To disable automatic retry (e.g., for read-only queries):
 
 ```ruby
 pool.with(retry_occ: false) do |conn|
@@ -134,12 +134,18 @@ pool.with(retry_occ: false) do |conn|
 end
 ```
 
-For custom retry configuration (different max retries, backoff, etc.), use the `OCCRetry` module directly:
+For custom retry configuration (different max retries, backoff, etc.), use the `OCCRetry` module directly. Unlike `pool.with`, `OCCRetry.with_retry` automatically wraps the block in a transaction:
 
 ```ruby
 AuroraDsql::Pg::OCCRetry.with_retry(pool, max_retries: 10) do |conn|
   conn.exec_params("UPDATE ...", [...])
 end
+```
+
+For single SQL statements (DDL or DML), `exec_with_retry` provides a simple convenience without transaction wrapping:
+
+```ruby
+AuroraDsql::Pg::OCCRetry.exec_with_retry(pool, "CREATE TABLE users (id UUID PRIMARY KEY)")
 ```
 
 To see OCC retries in your logs, pass a `logger` when creating the pool:
