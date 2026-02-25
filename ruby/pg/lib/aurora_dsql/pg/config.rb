@@ -20,7 +20,7 @@ module AuroraDsql
       attr_accessor :host, :region, :user, :database, :port,
                     :profile, :token_duration, :credentials_provider,
                     :max_lifetime, :pool_size, :checkout_timeout,
-                    :application_name, :logger
+                    :application_name, :logger, :occ_max_retries
 
       def initialize(**options)
         @host = options[:host]
@@ -36,6 +36,7 @@ module AuroraDsql
         @checkout_timeout = options[:checkout_timeout]
         @application_name = options[:application_name]
         @logger = options[:logger]
+        @occ_max_retries = options[:occ_max_retries]
       end
 
       # Parse a connection string into a Config.
@@ -102,7 +103,8 @@ module AuroraDsql
           pool_size: @pool_size || DEFAULTS[:pool_size],
           checkout_timeout: @checkout_timeout || DEFAULTS[:checkout_timeout],
           application_name: @application_name,
-          logger: @logger
+          logger: @logger,
+          occ_max_retries: @occ_max_retries
         ).freeze
       end
 
@@ -134,6 +136,12 @@ module AuroraDsql
           raise Error, "port must be an integer, got #{@port.class}" unless @port.is_a?(Integer)
           raise Error, "port must be between 1 and 65535, got #{@port}" if @port < 1 || @port > 65_535
         end
+
+        if @occ_max_retries
+          unless @occ_max_retries.is_a?(Integer) && @occ_max_retries > 0
+            raise Error, "occ_max_retries must be a positive integer, got #{@occ_max_retries.inspect}"
+          end
+        end
       end
     end
 
@@ -142,7 +150,7 @@ module AuroraDsql
       :host, :region, :user, :database, :port,
       :profile, :token_duration, :credentials_provider,
       :max_lifetime, :pool_size, :checkout_timeout,
-      :application_name, :logger,
+      :application_name, :logger, :occ_max_retries,
       keyword_init: true
     ) do
       # Convert to pg connection parameters hash.

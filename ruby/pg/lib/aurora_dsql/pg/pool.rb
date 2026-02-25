@@ -33,12 +33,20 @@ module AuroraDsql
       MAX_STALE_RETRIES = 10
 
       # Check out a connection and yield it to the block.
-      # Enforces max_lifetime and retries on OCC errors with exponential
-      # backoff unless retry_occ: false is passed.
-      def with(retry_occ: true, &block)
+      # Enforces max_lifetime. Retries on OCC errors only when occ_max_retries
+      # is set in the pool config. Pass retry_occ: false to skip retry on
+      # individual calls.
+      def with(retry_occ: @config.occ_max_retries, &block)
         return checkout_and_execute(&block) unless retry_occ
 
-        OCCRetry.retry_on_occ(logger: @config.logger) { checkout_and_execute(&block) }
+        unless retry_occ.is_a?(Integer) && retry_occ > 0
+          raise ArgumentError,
+                "retry_occ must be false/nil or a positive integer, got #{retry_occ.inspect}. " \
+                "Configure occ_max_retries on the pool instead of passing retry_occ: true"
+        end
+
+        occ_config = OCCRetry::DEFAULT_CONFIG.merge(max_retries: retry_occ)
+        OCCRetry.retry_on_occ(occ_config, logger: @config.logger) { checkout_and_execute(&block) }
       end
 
       # Clear all cached authentication tokens.

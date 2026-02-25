@@ -89,6 +89,42 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /port must be an integer/)
     end
 
+    it "raises error for non-integer occ_max_retries" do
+      config = described_class.new(
+        host: "mycluster.dsql.us-east-1.on.aws",
+        occ_max_retries: "three"
+      )
+
+      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /occ_max_retries must be a positive integer/)
+    end
+
+    it "raises error for zero occ_max_retries" do
+      config = described_class.new(
+        host: "mycluster.dsql.us-east-1.on.aws",
+        occ_max_retries: 0
+      )
+
+      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /occ_max_retries must be a positive integer/)
+    end
+
+    it "raises error for negative occ_max_retries" do
+      config = described_class.new(
+        host: "mycluster.dsql.us-east-1.on.aws",
+        occ_max_retries: -1
+      )
+
+      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /occ_max_retries must be a positive integer/)
+    end
+
+    it "raises error for boolean occ_max_retries" do
+      config = described_class.new(
+        host: "mycluster.dsql.us-east-1.on.aws",
+        occ_max_retries: true
+      )
+
+      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /occ_max_retries must be a positive integer/)
+    end
+
     it "allows explicit region override" do
       config = described_class.new(
         host: "mycluster.dsql.us-east-1.on.aws",
@@ -109,7 +145,8 @@ RSpec.describe AuroraDsql::Pg::Config do
         token_duration: 300,
         pool_size: 10,
         checkout_timeout: 10,
-        application_name: "rails"
+        application_name: "rails",
+        occ_max_retries: 5
       )
       resolved = config.resolve
 
@@ -121,6 +158,14 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(resolved.pool_size).to eq(10)
       expect(resolved.checkout_timeout).to eq(10)
       expect(resolved.application_name).to eq("rails")
+      expect(resolved.occ_max_retries).to eq(5)
+    end
+
+    it "defaults occ_max_retries to nil" do
+      config = described_class.new(host: "mycluster.dsql.us-east-1.on.aws")
+      resolved = config.resolve
+
+      expect(resolved.occ_max_retries).to be_nil
     end
 
     it "passes logger through to resolved config" do

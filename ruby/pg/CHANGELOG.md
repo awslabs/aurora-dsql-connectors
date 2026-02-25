@@ -1,3 +1,10 @@
+## Unreleased
+
+### Breaking Changes
+- OCC retry on `pool.with` is now opt-in. Set `occ_max_retries` in the pool
+  config to enable automatic retry. Previously retry was enabled by default
+  with a hardcoded limit of 3.
+
 <a id="ruby/pg/v1.0.0"></a>
 # [Aurora DSQL Connector for Ruby pg v1.0.0 (ruby/pg/v1.0.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/ruby/pg/v1.0.0)
 

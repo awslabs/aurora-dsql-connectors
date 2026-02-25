@@ -15,6 +15,7 @@ RSpec.describe "OCC retry integration", order: :defined do
       user: ENV.fetch("CLUSTER_USER", "admin"),
       region: ENV.fetch("REGION", nil),
       pool_size: 5,
+      occ_max_retries: 3,
       logger: Logger.new($stdout)
     )
 
