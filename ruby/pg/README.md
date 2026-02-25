@@ -87,6 +87,7 @@ pool.shutdown
 | `token_duration` | `Integer` | `900` (15 min) | Token validity in seconds |
 | `credentials_provider` | `Aws::Credentials` | `nil` | Custom credentials |
 | `pool_size` | `Integer` | `5` | Connection pool size |
+| `checkout_timeout` | `Integer` | `5` | Seconds to wait for a pool connection |
 | `max_lifetime` | `Integer` | `3300` (55 min) | Max connection lifetime in seconds |
 | `application_name` | `String` | `nil` | ORM prefix for application_name |
 | `logger` | `Logger` | `nil` | Logger for OCC retry warnings |

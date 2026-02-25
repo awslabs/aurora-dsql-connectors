@@ -13,12 +13,13 @@ module AuroraDsql
         port: 5432,
         max_lifetime: 55 * 60,      # 55 minutes in seconds
         token_duration: 15 * 60,    # 15 minutes in seconds
-        pool_size: 5
+        pool_size: 5,
+        checkout_timeout: 5         # seconds to wait for a pool connection
       }.freeze
 
       attr_accessor :host, :region, :user, :database, :port,
                     :profile, :token_duration, :credentials_provider,
-                    :max_lifetime, :pool_size,
+                    :max_lifetime, :pool_size, :checkout_timeout,
                     :application_name, :logger
 
       def initialize(**options)
@@ -32,6 +33,7 @@ module AuroraDsql
         @credentials_provider = options[:credentials_provider]
         @max_lifetime = options[:max_lifetime]
         @pool_size = options[:pool_size]
+        @checkout_timeout = options[:checkout_timeout]
         @application_name = options[:application_name]
         @logger = options[:logger]
       end
@@ -65,12 +67,19 @@ module AuroraDsql
       end
 
       # Build a Config from various input types.
+      # Accepts a connection String, a Config instance, nil (keyword args only),
+      # or any object that responds to #to_h (e.g. a Hash).
       def self.from(config = nil, **options)
         case config
         when String then parse(config)
         when Config then config
         when nil then new(**options)
-        else new(**options.merge(config.to_h))
+        else
+          unless config.respond_to?(:to_h)
+            raise ArgumentError,
+                  "config must be a String, Config, Hash, or respond to #to_h, got #{config.class}"
+          end
+          new(**options.merge(config.to_h))
         end
       end
 
@@ -78,24 +87,7 @@ module AuroraDsql
       def resolve
         validate!
 
-        resolved_host = @host
-        resolved_region = @region
-
-        # Handle cluster ID vs full hostname
-        if Util.cluster_id?(@host)
-          resolved_region ||= Util.region_from_env
-          raise Error, "region is required when host is a cluster ID" unless resolved_region
-
-          resolved_host = Util.build_hostname(@host, resolved_region)
-        else
-          resolved_region ||= begin
-            Util.parse_region(@host)
-          rescue ArgumentError
-            nil
-          end
-          resolved_region ||= Util.region_from_env
-          raise Error, "region is required: could not parse from hostname and not set" unless resolved_region
-        end
+        resolved_host, resolved_region = resolve_host_and_region(@host, @region)
 
         ResolvedConfig.new(
           host: resolved_host,
@@ -108,12 +100,32 @@ module AuroraDsql
           credentials_provider: @credentials_provider,
           max_lifetime: @max_lifetime || DEFAULTS[:max_lifetime],
           pool_size: @pool_size || DEFAULTS[:pool_size],
+          checkout_timeout: @checkout_timeout || DEFAULTS[:checkout_timeout],
           application_name: @application_name,
           logger: @logger
         ).freeze
       end
 
       private
+
+      def resolve_host_and_region(host, region)
+        if Util.cluster_id?(host)
+          region ||= Util.region_from_env
+          raise Error, "region is required when host is a cluster ID" unless region
+
+          [Util.build_hostname(host, region), region]
+        else
+          region ||= begin
+            Util.parse_region(host)
+          rescue ArgumentError
+            nil
+          end
+          region ||= Util.region_from_env
+          raise Error, "region is required: could not parse from hostname and not set" unless region
+
+          [host, region]
+        end
+      end
 
       def validate!
         raise Error, "host is required" if @host.nil? || @host.empty?
@@ -129,7 +141,7 @@ module AuroraDsql
     ResolvedConfig = Struct.new(
       :host, :region, :user, :database, :port,
       :profile, :token_duration, :credentials_provider,
-      :max_lifetime, :pool_size,
+      :max_lifetime, :pool_size, :checkout_timeout,
       :application_name, :logger,
       keyword_init: true
     ) do

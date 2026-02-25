@@ -25,7 +25,7 @@ module AuroraDsql
 
         @pool = ConnectionPool.new(
           size: resolved_config.pool_size,
-          timeout: 5
+          timeout: resolved_config.checkout_timeout
         ) { create_connection }
       end
 
@@ -54,6 +54,8 @@ module AuroraDsql
       private
 
       # Check out a connection, handling stale connection replacement.
+      # Loops because each @pool.with checkout may return a stale connection
+      # that must be discarded before retrying with a fresh one.
       def checkout_and_execute(&block)
         stale_retries = 0
 
@@ -69,8 +71,8 @@ module AuroraDsql
                 "[AuroraDsql::Pg] Discarding stale connection " \
                 "(age #{(Time.now - wrapped.created_at).round}s, max_lifetime #{@config.max_lifetime}s)"
               )
-              wrapped.conn.close rescue nil
               @pool.discard_current_connection
+              wrapped.conn.close rescue nil
             else
               return block.call(wrapped.conn)
             end

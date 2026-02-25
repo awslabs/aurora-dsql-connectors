@@ -16,6 +16,7 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(AuroraDsql::Pg::Config::DEFAULTS[:max_lifetime]).to eq(55 * 60)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:token_duration]).to eq(15 * 60)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:pool_size]).to eq(5)
+      expect(AuroraDsql::Pg::Config::DEFAULTS[:checkout_timeout]).to eq(5)
     end
   end
 
@@ -30,6 +31,7 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(resolved.database).to eq("postgres")
       expect(resolved.port).to eq(5432)
       expect(resolved.token_duration).to eq(15 * 60)
+      expect(resolved.checkout_timeout).to eq(5)
     end
 
     it "expands cluster ID to full hostname" do
@@ -106,6 +108,7 @@ RSpec.describe AuroraDsql::Pg::Config do
         profile: "myprofile",
         token_duration: 300,
         pool_size: 10,
+        checkout_timeout: 10,
         application_name: "rails"
       )
       resolved = config.resolve
@@ -116,6 +119,7 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(resolved.profile).to eq("myprofile")
       expect(resolved.token_duration).to eq(300)
       expect(resolved.pool_size).to eq(10)
+      expect(resolved.checkout_timeout).to eq(10)
       expect(resolved.application_name).to eq("rails")
     end
 
@@ -189,6 +193,14 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect {
         described_class.parse("http://admin@mycluster.dsql.us-east-1.on.aws/postgres")
       }.to raise_error(AuroraDsql::Pg::Error, /unsupported URI scheme 'http'/)
+    end
+  end
+
+  describe ".from" do
+    it "raises ArgumentError for unsupported config types" do
+      expect {
+        described_class.from(42)
+      }.to raise_error(ArgumentError, /config must be a String, Config, Hash, or respond to #to_h/)
     end
   end
 end

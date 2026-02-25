@@ -13,6 +13,16 @@ defaults:
     working-directory: ruby/pg
 
 jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      target-versions: ${{ steps.versions.outputs.matrix }}
+    steps:
+      - id: versions
+        working-directory: .
+        run: echo 'matrix=["3.1", "3.2", "3.3"]' >> "$GITHUB_OUTPUT"
+
   create-cluster:
     uses: ./.github/workflows/dsql-cluster-create.yml
     with:
@@ -23,10 +33,15 @@ jobs:
       id-token: write # required by aws-actions/configure-aws-credentials
 
   build:
-    needs: create-cluster
+    needs: [setup, create-cluster]
     runs-on: ubuntu-latest
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        ruby-version: ${{ fromJson(needs.setup.outputs.target-versions) }}
 
     steps:
       - uses: actions/checkout@v6
@@ -34,7 +49,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3"
+          ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
           working-directory: ruby/pg
 
