@@ -83,8 +83,21 @@ RSpec.describe AuroraDsql::Pg::Pool do
   end
 
   describe "OCC retry" do
-    it "retries on OCC error and succeeds on next attempt" do
+    it "does not retry by default when occ_max_retries is not set" do
       pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+
+      call_count = 0
+      expect {
+        pool.with do |_conn|
+          call_count += 1
+          raise StandardError.new("OC000: transaction conflict")
+        end
+      }.to raise_error(StandardError, "OC000: transaction conflict")
+      expect(call_count).to eq(1)
+    end
+
+    it "retries on OCC error and succeeds on next attempt" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 3)
       allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)
 
       call_count = 0
@@ -99,7 +112,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
     end
 
     it "raises after max retries exceeded" do
-      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 3)
       allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)
 
       expect {
@@ -110,7 +123,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
     end
 
     it "does not retry non-OCC errors" do
-      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 3)
 
       expect {
         pool.with do |_conn|
@@ -120,7 +133,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
     end
 
     it "skips retry when retry_occ: false" do
-      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 3)
 
       call_count = 0
       expect {
@@ -132,12 +145,48 @@ RSpec.describe AuroraDsql::Pg::Pool do
       expect(call_count).to eq(1)
     end
 
+    it "raises ArgumentError when retry_occ: true is passed explicitly" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 3)
+
+      expect {
+        pool.with(retry_occ: true) { |_conn| }
+      }.to raise_error(ArgumentError, /retry_occ must be false\/nil or a positive integer/)
+    end
+
+    it "skips retry when retry_occ: nil is passed explicitly" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 3)
+
+      call_count = 0
+      expect {
+        pool.with(retry_occ: nil) do |_conn|
+          call_count += 1
+          raise StandardError.new("OC000: transaction conflict")
+        end
+      }.to raise_error(StandardError, "OC000: transaction conflict")
+      expect(call_count).to eq(1)
+    end
+
+    it "respects the configured occ_max_retries count" do
+      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws", occ_max_retries: 1)
+      allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)
+
+      call_count = 0
+      expect {
+        pool.with do |_conn|
+          call_count += 1
+          raise StandardError.new("OC000: transaction conflict")
+        end
+      }.to raise_error(AuroraDsql::Pg::Error, /Max retries.*exceeded/)
+      expect(call_count).to eq(2) # initial + 1 retry
+    end
+
     it "logs OCC retries at warn level" do
       logger = double("logger")
       allow(logger).to receive(:warn)
 
       pool = described_class.create(
         host: "cluster.dsql.us-east-1.on.aws",
+        occ_max_retries: 3,
         logger: logger
       )
       allow(AuroraDsql::Pg::OCCRetry).to receive(:sleep)

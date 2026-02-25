@@ -12,7 +12,8 @@ def example
 
   pool = AuroraDsql::Pg.create_pool(
     host: cluster_endpoint,
-    pool_size: 10
+    pool_size: 10,
+    occ_max_retries: 3
   )
 
   # Verify connection
@@ -26,7 +27,7 @@ def example
     end
   end
 
-  # Insert data (OCC retry is automatic)
+  # Insert data (OCC retry enabled via occ_max_retries config)
   pool.with do |conn|
     conn.transaction do
       conn.exec_params("INSERT INTO example_items (name) VALUES ($1)", ["test-item"])
