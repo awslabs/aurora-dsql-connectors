@@ -122,9 +122,9 @@ let rows = sqlx::query("SELECT * FROM users")
 
 ### Token Caching
 
-IAM tokens are automatically cached and reused across queries. Each token is valid for 15 minutes and is proactively refreshed 5 minutes before expiration.
+IAM tokens are automatically cached and proactively refreshed. Each token is valid for 15 minutes and is refreshed at the 12-minute mark (80% of lifetime), providing a 3-minute buffer before expiration.
 
-**Observing token caching:**
+**Observing token generation:**
 
 ```bash
 cargo run --example basic
@@ -139,7 +139,7 @@ Test 1: Simple SELECT
 ...
 ```
 
-Notice: Token is generated **once** at the start, then reused for all subsequent queries.
+The token is generated once at startup and automatically refreshed as needed throughout the application lifecycle.
 
 **Manual cache management:**
 

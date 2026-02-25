@@ -1,5 +1,10 @@
 use aurora_dsql_sqlx_connector::{DsqlPool, Result};
 
+/// Basic example demonstrating Aurora DSQL connector usage.
+///
+/// This example uses hardcoded SQL for simplicity. For production applications,
+/// use parameterized queries via the underlying SQLx pool (accessible through Deref)
+/// to ensure security and prevent SQL injection.
 #[tokio::main]
 async fn main() -> Result<()> {
     let conn_str = std::env::var("DSQL_CONNECTION_STRING")

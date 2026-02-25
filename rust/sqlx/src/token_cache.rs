@@ -4,7 +4,7 @@ use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 
 const TOKEN_DURATION_SECS: u64 = 900; // 15 minutes
-const REFRESH_BEFORE_EXPIRY_SECS: u64 = 300; // 5 minutes (refresh at 10 min mark)
+const REFRESH_BEFORE_EXPIRY_SECS: u64 = 180; // 3 minutes (refresh at 12 min mark, 80% of lifetime)
 
 #[derive(Clone)]
 struct CachedToken {
@@ -56,7 +56,8 @@ impl TokenCache {
             }
         }
 
-        let token = token::generate_token(&self.host, &self.region, self.profile.as_deref()).await?;
+        let token =
+            token::generate_token(&self.host, &self.region, self.profile.as_deref()).await?;
         let expires_at = SystemTime::now() + Duration::from_secs(TOKEN_DURATION_SECS);
 
         *cache = Some(CachedToken {

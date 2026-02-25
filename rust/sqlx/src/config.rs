@@ -29,7 +29,7 @@ impl DsqlConfig {
 
         let host = url
             .host_str()
-            .ok_or_else(|| DsqlError::Error("Host is required".into()))?
+            .ok_or_else(|| DsqlError::ConfigError("Host is required".into()))?
             .to_string();
 
         let port = url.port().unwrap_or(DEFAULT_PORT);
@@ -91,11 +91,11 @@ impl DsqlConfig {
 
     async fn load_aws_config(&self) -> aws_config::SdkConfig {
         let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
-        
+
         if let Some(ref profile) = self.profile {
             loader = loader.profile_name(profile);
         }
-        
+
         loader.load().await
     }
 
@@ -110,6 +110,7 @@ impl DsqlConfig {
             .port(self.port)
             .username(&self.user)
             .database(&self.database)
+            .ssl_mode(sqlx::postgres::PgSslMode::Require)
     }
 }
 
@@ -122,7 +123,12 @@ fn parse_region_from_hostname(host: &str) -> Result<String> {
 
     let parts: Vec<&str> = host.split('.').collect();
     if parts.len() >= 3 && parts[1].starts_with("dsql") {
-        return Ok(parts[2].to_string());
+        let region = parts[2].to_string();
+
+        // Validate region format: e.g., us-east-1, eu-west-2
+        if region.split('-').count() == 3 {
+            return Ok(region);
+        }
     }
 
     Err(DsqlError::Error(format!(

@@ -32,13 +32,9 @@ pub fn is_occ_error(err: &sqlx::Error) -> bool {
 }
 
 pub fn calculate_backoff(config: &OCCRetryConfig, attempt: u32) -> Duration {
-    use rand::RngExt;
-
     let base = config.base_delay_ms as f64;
     let delay = (base * 2_f64.powi(attempt as i32)).min(config.max_delay_ms as f64);
-
-    let mut rng = rand::rng();
-    let jitter = delay * rng.random::<f64>() * config.jitter_factor;
+    let jitter = delay * rand::random::<f64>() * config.jitter_factor;
 
     Duration::from_millis((delay + jitter) as u64)
 }

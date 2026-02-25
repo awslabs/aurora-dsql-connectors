@@ -22,6 +22,13 @@ impl DsqlPool {
     }
 
     pub async fn from_config(config: DsqlConfig) -> Result<Self> {
+        Self::from_config_with_pool_size(config, 5).await
+    }
+
+    pub async fn from_config_with_pool_size(
+        config: DsqlConfig,
+        max_connections: u32,
+    ) -> Result<Self> {
         let region = config.resolve_region().await?;
         let token_cache = Arc::new(TokenCache::new(
             config.host.clone(),
@@ -40,11 +47,11 @@ impl DsqlPool {
             .ssl_mode(sqlx::postgres::PgSslMode::Require);
 
         let pool = PgPoolOptions::new()
-            .max_connections(1)
+            .max_connections(max_connections)
             .acquire_timeout(std::time::Duration::from_secs(30))
             .connect_with(pg_options)
             .await
-            .map_err(|e| DsqlError::Error(format!("Failed to create pool: {}", e)))?;
+            .map_err(|e| DsqlError::ConnectionError(format!("Failed to create pool: {}", e)))?;
 
         Ok(Self {
             pool,
@@ -70,7 +77,7 @@ impl DsqlPool {
                     tokio::time::sleep(delay).await;
                     attempt += 1;
                 }
-                Err(e) => return Err(DsqlError::Error(e.to_string())),
+                Err(e) => return Err(DsqlError::DatabaseError(e.to_string())),
             }
         }
     }
