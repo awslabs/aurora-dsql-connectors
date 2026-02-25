@@ -15,6 +15,9 @@ _version.py
 build/
 .gradle/
 
+# Rust
+target/
+
 # IDE
 .idea/
 *.iml

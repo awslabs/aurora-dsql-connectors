@@ -1,0 +1,23 @@
+[package]
+name = "aurora-dsql-sqlx-connector"
+version = "0.1.0"
+edition = "2021"
+authors = ["AWS"]
+license = "Apache-2.0"
+description = "SQLx connector for Amazon Aurora DSQL with IAM authentication"
+repository = "https://github.com/awslabs/aurora-dsql-connectors"
+keywords = ["aws", "aurora", "dsql", "sqlx", "postgres"]
+categories = ["database"]
+
+[dependencies]
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
+aws-config = { version = "1.5", features = ["credentials-login"] }
+aws-sdk-dsql = "1.0"
+tokio = { version = "1", features = ["full"] }
+thiserror = "2.0"
+url = "2.5"
+rand = "0.10.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+hydra = "0.1"
