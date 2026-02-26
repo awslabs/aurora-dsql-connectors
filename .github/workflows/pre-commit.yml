@@ -15,4 +15,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --directory python/connector
+      - name: Install git-secrets and register AWS patterns
+        run: |
+          git clone https://github.com/awslabs/git-secrets.git /tmp/git-secrets
+          cd /tmp/git-secrets && sudo make install
+          git secrets --register-aws
       - uses: pre-commit/action@v3.0.1
