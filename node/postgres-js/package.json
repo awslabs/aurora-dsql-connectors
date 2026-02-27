@@ -83,5 +83,8 @@
     "ts-jest": "^29.4.5",
     "tsdown": "^0.20.2",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "fast-xml-parser": "^5.4.1"
   }
 }

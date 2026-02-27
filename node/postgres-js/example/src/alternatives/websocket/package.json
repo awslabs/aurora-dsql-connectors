@@ -43,6 +43,7 @@
     "webpack-dev-server": "^5.2.1"
   },
   "overrides": {
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "fast-xml-parser": "^5.4.1"
   }
 }
