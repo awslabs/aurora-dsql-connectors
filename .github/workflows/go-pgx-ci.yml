@@ -44,6 +44,17 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
 
+      - name: Check go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || (echo "::error::go.mod/go.sum not tidy; run 'go mod tidy'" && exit 1)
+
+      - name: Check go mod tidy (example)
+        working-directory: go/pgx/example
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum || (echo "::error::example go.mod/go.sum not tidy; run 'go mod tidy'" && exit 1)
+
       - name: Run connector unit tests
         run: go test -v ./dsql/...
 
