@@ -24,8 +24,26 @@ updates:
     directory: "/node/node-postgres"
     schedule:
       interval: "weekly"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+  - package-ecosystem: "npm"
+    directory: "/node/node-postgres/example"
+    schedule:
+      interval: "weekly"
   - package-ecosystem: "npm"
     directory: "/node/postgres-js"
+    schedule:
+      interval: "weekly"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+  - package-ecosystem: "npm"
+    directory: "/node/postgres-js/example"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/node/postgres-js/example/src/alternatives/websocket"
     schedule:
       interval: "weekly"
 
@@ -50,6 +68,18 @@ updates:
     directory: "/go/pgx"
     schedule:
       interval: "weekly"
+    groups:
+      aws-sdk:
+        patterns:
+          - "github.com/aws/*"
+  - package-ecosystem: "gomod"
+    directory: "/go/pgx/example"
+    schedule:
+      interval: "weekly"
+    groups:
+      aws-sdk:
+        patterns:
+          - "github.com/aws/*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
