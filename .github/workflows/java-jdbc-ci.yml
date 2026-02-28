@@ -43,7 +43,7 @@ jobs:
         run: ./gradlew build -x test
 
       - name: Upload integration test jar
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-jar
           path: java/jdbc/integration-tests/build/libs/*-all.jar
