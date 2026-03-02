@@ -22,7 +22,7 @@ plugins {
     id("jacoco")
     id("com.diffplug.spotless") version "8.2.1"
     id("com.github.spotbugs") version "6.4.+"
-    id("org.jreleaser") version "1.21.0"
+    id("org.jreleaser") version "1.23.0"
 }
 
 group = "software.amazon.dsql"
