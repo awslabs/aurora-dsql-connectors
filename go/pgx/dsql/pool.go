@@ -16,8 +16,7 @@ import (
 // Pool wraps pgxpool.Pool with Aurora DSQL IAM authentication.
 type Pool struct {
 	*pgxpool.Pool
-	config     *resolvedConfig
-	tokenCache *TokenCache
+	config *resolvedConfig
 }
 
 // NewPool creates a new connection pool to Aurora DSQL.
@@ -57,8 +56,6 @@ func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig) (*Pool, 
 		return nil, fmt.Errorf("failed to resolve credentials provider: %w", err)
 	}
 
-	tokenCache := NewTokenCache(credentialsProvider)
-
 	poolConfig, err := pgxpool.ParseConfig("")
 	if err != nil {
 		return nil, fmt.Errorf("unable to create pool config: %w", err)
@@ -66,7 +63,7 @@ func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig) (*Pool, 
 
 	resolved.configureConnConfig(poolConfig.ConnConfig)
 	poolConfig.BeforeConnect = func(ctx context.Context, cfg *pgx.ConnConfig) error {
-		token, err := tokenCache.GetToken(ctx, resolved.Host, resolved.Region, resolved.User, resolved.TokenDuration)
+		token, err := GenerateToken(ctx, resolved.Host, resolved.Region, resolved.User, credentialsProvider, resolved.TokenDuration)
 		if err != nil {
 			return err
 		}
@@ -97,16 +94,7 @@ func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig) (*Pool, 
 	}
 
 	return &Pool{
-		Pool:       pool,
-		config:     resolved,
-		tokenCache: tokenCache,
+		Pool:   pool,
+		config: resolved,
 	}, nil
-}
-
-// ClearTokenCache clears all cached authentication tokens.
-// This can be useful when credentials have been rotated.
-func (p *Pool) ClearTokenCache() {
-	if p.tokenCache != nil {
-		p.tokenCache.Clear()
-	}
 }

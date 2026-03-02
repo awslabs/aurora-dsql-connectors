@@ -6,7 +6,7 @@ A Ruby connector for Amazon Aurora DSQL that wraps the [pg](https://github.com/g
 
 ## Features
 
-- Automatic IAM token generation with smart caching (refreshes at 80% of token lifetime)
+- Automatic IAM token generation
 - Connection pooling via `connection_pool` gem with max_lifetime enforcement
 - Single connection support for simpler use cases
 - Flexible host configuration (full endpoint or cluster ID)

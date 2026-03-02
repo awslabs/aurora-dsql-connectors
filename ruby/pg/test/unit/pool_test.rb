@@ -7,12 +7,9 @@ require_relative "../../lib/aurora_dsql/pg/pool"
 
 RSpec.describe AuroraDsql::Pg::Pool do
   let(:mock_pg_conn) { double("pg_conn", close: nil) }
-  let(:mock_token_cache) { double("token_cache") }
 
   before do
-    allow(AuroraDsql::Pg::TokenCache).to receive(:new).and_return(mock_token_cache)
-    allow(mock_token_cache).to receive(:get_token).and_return("test-token")
-    allow(mock_token_cache).to receive(:clear)
+    allow(AuroraDsql::Pg::Token).to receive(:generate).and_return("test-token")
 
     # Mock PG.connect
     stub_const("PG", Class.new do
@@ -76,7 +73,7 @@ RSpec.describe AuroraDsql::Pg::Pool do
       allow(Time).to receive(:now).and_return(Time.now + 15)
 
       # Next checkout should get a fresh connection
-      expect(mock_token_cache).to receive(:get_token).and_return("fresh-token")
+      expect(AuroraDsql::Pg::Token).to receive(:generate).and_return("fresh-token")
 
       pool.with { |conn| expect(conn).not_to be_nil }
     end
@@ -215,15 +212,6 @@ RSpec.describe AuroraDsql::Pg::Pool do
       expect {
         pool.with { |_conn| }
       }.to raise_error(AuroraDsql::Pg::Error, /unable to acquire a non-stale connection/)
-    end
-  end
-
-  describe "#clear_token_cache" do
-    it "delegates to token cache" do
-      pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")
-
-      expect(mock_token_cache).to receive(:clear)
-      pool.clear_token_cache
     end
   end
 

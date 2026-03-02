@@ -26,12 +26,15 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dsql.DsqlUtilities;
+import software.amazon.awssdk.services.dsql.model.GenerateAuthTokenRequest;
 
 /**
  * JDBC {@link Driver} implementation that intercepts connection requests and injects IAM
@@ -239,14 +242,31 @@ public class DSQLConnector implements java.sql.Driver {
             final Duration tokenDurationInSecond =
                     tokenDuration == 0 ? null : Duration.ofSeconds(tokenDuration);
 
-            // Get authentication token using static TokenManager
-            final String authToken =
-                    TokenManager.getToken(
-                            host,
-                            regionObj,
-                            user,
-                            getCredentialsProvider(props),
-                            tokenDurationInSecond);
+            // Generate IAM authentication token
+            final String authToken;
+            try {
+                final AwsCredentialsProvider credentialsProvider = getCredentialsProvider(props);
+                final DsqlUtilities utilities =
+                        DsqlUtilities.builder()
+                                .region(regionObj)
+                                .credentialsProvider(credentialsProvider)
+                                .build();
+
+                final Consumer<GenerateAuthTokenRequest.Builder> requester =
+                        builder -> {
+                            builder.hostname(host).region(regionObj);
+                            if (tokenDurationInSecond != null) {
+                                builder.expiresIn(tokenDurationInSecond);
+                            }
+                        };
+
+                authToken =
+                        "admin".equals(user)
+                                ? utilities.generateDbConnectAdminAuthToken(requester)
+                                : utilities.generateDbConnectAuthToken(requester);
+            } catch (Exception e) {
+                throw new SQLException("Token generation failed: " + e.getMessage(), e);
+            }
             props.setProperty("password", authToken);
 
             // Apply SSL defaults if not already specified (secure by default)

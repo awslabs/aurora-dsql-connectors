@@ -27,9 +27,8 @@
  * layer on top of the PostgreSQL JDBC driver, providing seamless integration with AWS credential
  * providers.
  *
- * <p>Key features include automatic IAM token generation, intelligent token caching with refresh
- * logic, support for multiple AWS credential providers, and full compatibility with JDBC connection
- * pooling libraries such as HikariCP.
+ * <p>Key features include automatic IAM token generation, support for multiple AWS credential
+ * providers, and full compatibility with JDBC connection pooling libraries such as HikariCP.
  *
  * <h2>Basic Usage</h2>
  *
@@ -62,10 +61,9 @@
  *
  * <h3>Thread Safety</h3>
  *
- * <p>The connector is designed for concurrent use. Thread-safe caching mechanisms are used to
- * ensure multiple threads can safely request tokens simultaneously. Connection establishment
- * through {@link software.amazon.dsql.jdbc.DSQLConnector} is thread-safe and can be called
- * concurrently from multiple threads.
+ * <p>The connector is designed for concurrent use. Connection establishment through {@link
+ * software.amazon.dsql.jdbc.DSQLConnector} is thread-safe and can be called concurrently from
+ * multiple threads.
  *
  * <h2>Configuration Properties</h2>
  *
