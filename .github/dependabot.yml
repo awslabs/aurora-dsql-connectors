@@ -20,14 +20,27 @@ updates:
       interval: "weekly"
 
   # Node.js connectors
+  # Use 'directories' (plural) so the connector and its examples are
+  # updated in the same PR, keeping lockfiles consistent.
   - package-ecosystem: "npm"
-    directory: "/node/node-postgres"
+    directories:
+      - "/node/node-postgres"
+      - "/node/node-postgres/example"
     schedule:
       interval: "weekly"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
   - package-ecosystem: "npm"
-    directory: "/node/postgres-js"
+    directories:
+      - "/node/postgres-js"
+      - "/node/postgres-js/example"
+      - "/node/postgres-js/example/src/alternatives/websocket"
     schedule:
       interval: "weekly"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
 
   # Java connector
   - package-ecosystem: "gradle"
@@ -46,10 +59,18 @@ updates:
         versions: [">=6.0.0"]
 
   # Go connector
+  # Use 'directories' (plural) so the connector and its example are
+  # updated in the same PR, keeping go.mod files consistent.
   - package-ecosystem: "gomod"
-    directory: "/go/pgx"
+    directories:
+      - "/go/pgx"
+      - "/go/pgx/example"
     schedule:
       interval: "weekly"
+    groups:
+      aws-sdk:
+        patterns:
+          - "github.com/aws/*"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"

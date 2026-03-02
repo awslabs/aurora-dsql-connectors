@@ -18,6 +18,7 @@ jobs:
       python-connector: ${{ steps.detect.outputs.python-connector }}
       node-postgres: ${{ steps.detect.outputs.node-postgres }}
       postgres-js: ${{ steps.detect.outputs.postgres-js }}
+      ruby-pg: ${{ steps.detect.outputs.ruby-pg }}
     steps:
       - uses: actions/github-script@v8
         id: detect
@@ -29,6 +30,7 @@ jobs:
               'python-connector': ['python/connector/', '.github/workflows/python-connector-ci.yml'],
               'node-postgres': ['node/node-postgres/', '.github/workflows/node-postgres-ci.yml'],
               'postgres-js': ['node/postgres-js/', '.github/workflows/postgres-js-ci.yml'],
+              'ruby-pg': ['ruby/pg/', '.github/workflows/ruby-pg-ci.yml'],
             };
             const runAllPaths = [
               '.github/workflows/ci-gate.yml',
@@ -114,6 +116,14 @@ jobs:
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
 
+  ruby-pg:
+    needs: changes
+    if: needs.changes.outputs.ruby-pg == 'true'
+    uses: ./.github/workflows/ruby-pg-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
   gate:
     name: gate
     runs-on: ubuntu-latest
@@ -124,6 +134,7 @@ jobs:
       - python-connector
       - node-postgres
       - postgres-js
+      - ruby-pg
     if: always()
     steps:
       - uses: actions/github-script@v8
