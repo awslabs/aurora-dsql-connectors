@@ -4,6 +4,9 @@
 - OCC retry on `pool.with` is now opt-in. Set `occ_max_retries` in the pool
   config to enable automatic retry. Previously retry was enabled by default
   with a hardcoded limit of 3.
+- Removed token caching from connection pool. Token generation is a local
+  SigV4 presigning operation with no network overhead, so caching is
+  unnecessary. The `clear_token_cache` method has been removed from `Pool`.
 
 <a id="ruby/pg/v1.0.0"></a>
 # [Aurora DSQL Connector for Ruby pg v1.0.0 (ruby/pg/v1.0.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/ruby/pg/v1.0.0)
@@ -11,7 +14,7 @@
 Initial release of Aurora DSQL Ruby pg Connector
 
 ### Features
-- Automatic IAM token generation with smart caching (refreshes at 80% of token lifetime)
+- Automatic IAM token generation
 - Connection pooling via `connection_pool` gem with max_lifetime enforcement
 - Single connection support for simpler use cases
 - Automatic OCC retry with exponential backoff on `pool.with`

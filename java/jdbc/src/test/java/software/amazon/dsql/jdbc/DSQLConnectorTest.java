@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.mockStatic;
@@ -32,7 +32,6 @@ import java.net.URISyntaxException;
 import java.sql.Connection;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
@@ -47,6 +46,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dsql.DsqlUtilities;
 
 @ExtendWith(MockitoExtension.class)
 class DSQLConnectorTest {
@@ -55,7 +55,7 @@ class DSQLConnectorTest {
     private MockedStatic<PropertyUtils> propertyUtilsMock;
     private MockedStatic<AuroraDsqlCredentialsManager> credentialsManagerMock;
     private MockedStatic<ProfileCredentialsProvider> profileCredentialsProviderMock;
-    private MockedStatic<TokenManager> tokenManagerMockedStatic;
+    private MockedStatic<DsqlUtilities> dsqlUtilitiesMock;
 
     private boolean wasRegisteredBefore; // Track initial state
 
@@ -70,18 +70,25 @@ class DSQLConnectorTest {
         propertyUtilsMock = mockStatic(PropertyUtils.class);
         credentialsManagerMock = mockStatic(AuroraDsqlCredentialsManager.class);
         profileCredentialsProviderMock = mockStatic(ProfileCredentialsProvider.class);
-        tokenManagerMockedStatic = mockStatic(TokenManager.class);
-
-        // Default stubbing for TokenManager
-        tokenManagerMockedStatic
+        // Mock DsqlUtilities builder pattern for token generation
+        dsqlUtilitiesMock = mockStatic(DsqlUtilities.class);
+        DsqlUtilities.Builder mockBuilder = mock(DsqlUtilities.Builder.class);
+        DsqlUtilities mockUtilities = mock(DsqlUtilities.class);
+        dsqlUtilitiesMock.when(DsqlUtilities::builder).thenReturn(mockBuilder);
+        lenient().when(mockBuilder.region(any(Region.class))).thenReturn(mockBuilder);
+        lenient()
+                .when(mockBuilder.credentialsProvider(any(AwsCredentialsProvider.class)))
+                .thenReturn(mockBuilder);
+        lenient().when(mockBuilder.build()).thenReturn(mockUtilities);
+        lenient()
                 .when(
-                        () ->
-                                TokenManager.getToken(
-                                        anyString(),
-                                        any(Region.class),
-                                        anyString(),
-                                        any(AwsCredentialsProvider.class),
-                                        any()))
+                        mockUtilities.generateDbConnectAdminAuthToken(
+                                any(java.util.function.Consumer.class)))
+                .thenReturn("mock-token");
+        lenient()
+                .when(
+                        mockUtilities.generateDbConnectAuthToken(
+                                any(java.util.function.Consumer.class)))
                 .thenReturn("mock-token");
     }
 
@@ -91,7 +98,7 @@ class DSQLConnectorTest {
         propertyUtilsMock.close();
         credentialsManagerMock.close();
         profileCredentialsProviderMock.close();
-        tokenManagerMockedStatic.close();
+        dsqlUtilitiesMock.close();
 
         // Restore the initial registration state
         try {
@@ -283,17 +290,6 @@ class DSQLConnectorTest {
         profileCredentialsProviderMock
                 .when(() -> ProfileCredentialsProvider.create("test-profile"))
                 .thenReturn(profileProvider);
-
-        tokenManagerMockedStatic
-                .when(
-                        () ->
-                                TokenManager.getToken(
-                                        anyString(),
-                                        any(Region.class),
-                                        anyString(),
-                                        any(AwsCredentialsProvider.class),
-                                        any(Duration.class)))
-                .thenReturn("mock-token");
 
         // Mock ConnWrapper to prevent actual network connection
         Connection mockConnection = mock(Connection.class);

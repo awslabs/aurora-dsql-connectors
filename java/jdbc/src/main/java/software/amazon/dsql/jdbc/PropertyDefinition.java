@@ -115,7 +115,9 @@ public final class PropertyDefinition {
      */
     public static final AuroraDsqlProperty TOKEN_DURATION =
             new AuroraDsqlProperty(
-                    "token-duration-secs", null, "The duration in seconds for cached tokens");
+                    "token-duration-secs",
+                    null,
+                    "The duration in seconds for authentication tokens");
 
     /**
      * Specifies the database name within the Aurora DSQL cluster.

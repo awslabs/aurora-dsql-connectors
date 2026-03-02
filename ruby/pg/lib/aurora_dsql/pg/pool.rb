@@ -6,7 +6,7 @@ require "connection_pool"
 
 module AuroraDsql
   module Pg
-    # Connection pool for Aurora DSQL with token caching and max_lifetime enforcement.
+    # Connection pool for Aurora DSQL with max_lifetime enforcement.
     class Pool
       # Wrapper to track connection creation time for max_lifetime enforcement.
       PooledConnection = Struct.new(:conn, :created_at, keyword_init: true)
@@ -18,10 +18,6 @@ module AuroraDsql
 
       def initialize(resolved_config)
         @config = resolved_config
-        @token_cache = TokenCache.new(
-          credentials_provider: resolved_config.credentials_provider,
-          profile: resolved_config.profile
-        )
 
         @pool = ConnectionPool.new(
           size: resolved_config.pool_size,
@@ -47,11 +43,6 @@ module AuroraDsql
 
         occ_config = OCCRetry::DEFAULT_CONFIG.merge(max_retries: retry_occ)
         OCCRetry.retry_on_occ(occ_config, logger: @config.logger) { checkout_and_execute(&block) }
-      end
-
-      # Clear all cached authentication tokens.
-      def clear_token_cache
-        @token_cache.clear
       end
 
       # Shutdown the pool, closing all connections.
@@ -93,11 +84,13 @@ module AuroraDsql
       end
 
       def create_connection
-        token = @token_cache.get_token(
+        token = Token.generate(
           host: @config.host,
           region: @config.region,
           user: @config.user,
-          duration: @config.token_duration
+          credentials: @config.credentials_provider,
+          profile: @config.profile,
+          expires_in: @config.token_duration
         )
         conn = ::PG.connect(@config.to_pg_params(password: token))
         PooledConnection.new(conn: conn, created_at: Time.now)

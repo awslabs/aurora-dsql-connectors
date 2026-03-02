@@ -6,8 +6,8 @@ A Go connector for Amazon Aurora DSQL that wraps [pgx](https://github.com/jackc/
 
 ## Features
 
-- Automatic IAM token generation with smart caching (refreshes at 80% of token lifetime)
-- Connection pooling via `pgxpool` with token caching for efficient connection creation
+- Automatic IAM token generation
+- Connection pooling via `pgxpool`
 - Single connection support for simpler use cases
 - Flexible host configuration (full endpoint or cluster ID)
 - Region auto-detection from endpoint hostname
@@ -205,12 +205,12 @@ pool, err := dsql.NewPool(ctx, dsql.Config{
 })
 ```
 
-## Token Generation and Caching
+## Token Generation
 
-The connector automatically generates and caches IAM authentication tokens for optimal performance:
+The connector automatically generates IAM authentication tokens:
 
-- **Connection pools**: Tokens are cached and reused across connections. The `BeforeConnect` hook retrieves tokens from the cache, generating new ones only when the cached token has used 80% of its lifetime (similar to the Java connector's approach). This ensures tokens remain valid while minimizing credential calls.
-- **Single connections**: A token is generated at connection time using pre-resolved credentials.
+- **Connection pools**: The `BeforeConnect` hook generates a fresh token for each new connection. Token generation is a local SigV4 presigning operation (no network calls), so this adds negligible overhead.
+- **Single connections**: A fresh token is generated at connection time.
 - **Credentials resolution**: AWS credentials are resolved once when the pool/connection is created and reused for all token generations, avoiding repeated credential chain resolution.
 
 For the `admin` user, the connector generates admin tokens using `GenerateDBConnectAdminAuthToken`. For other users, it generates standard tokens using `GenerateDbConnectAuthToken`.
