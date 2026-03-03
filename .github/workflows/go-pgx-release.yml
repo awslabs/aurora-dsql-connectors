@@ -1,0 +1,30 @@
+name: Release Go pgx Connector
+
+permissions: {}
+
+on:
+  push:
+    tags:
+      - "go/pgx/v*"
+
+jobs:
+  wait-for-ci:
+    name: Wait for CI to pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lewagon/wait-on-check-action@v1.5.0
+        with:
+          ref: ${{ github.sha }}
+          running-workflow-name: "Wait for CI to pass"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+
+  update-changelog:
+    needs: wait-for-ci
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/update-changelog.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
