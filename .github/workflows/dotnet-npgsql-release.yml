@@ -1,0 +1,58 @@
+name: Publish .NET Npgsql Connector to NuGet
+
+permissions: {}
+
+on:
+  push:
+    tags:
+      - "dotnet/npgsql/v*"
+
+defaults:
+  run:
+    working-directory: dotnet/npgsql/src/Amazon.AuroraDsql.Npgsql
+
+jobs:
+  wait-for-ci:
+    name: Wait for CI to pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lewagon/wait-on-check-action@v1.5.0
+        with:
+          ref: ${{ github.sha }}
+          running-workflow-name: "Wait for CI to pass"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+
+  publish:
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    environment: .NET
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#dotnet/npgsql/v}"
+          echo "Publishing version $VERSION"
+          sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" Amazon.AuroraDsql.Npgsql.csproj
+
+      - name: Pack
+        run: dotnet pack -c Release -o ./nupkg
+
+      - name: Publish to NuGet
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NU_GET_API_KEY }} --source https://api.nuget.org/v3/index.json
+
+  update-changelog:
+    needs: publish
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/update-changelog.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
