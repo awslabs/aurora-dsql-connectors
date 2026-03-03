@@ -44,12 +44,3 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_KEY }}
 
-  update-changelog:
-    needs: publish
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: ./.github/workflows/update-changelog.yml
-    with:
-      tag: ${{ github.ref_name }}
-    secrets: inherit
