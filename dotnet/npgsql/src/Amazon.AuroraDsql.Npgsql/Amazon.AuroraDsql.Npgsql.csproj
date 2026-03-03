@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <PackageId>Amazon.AuroraDsql.Npgsql</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>Amazon Web Services</Authors>
+    <Description>Aurora DSQL connector for Npgsql</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/awslabs/aurora-dsql-connectors</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/awslabs/aurora-dsql-connectors/tree/main/dotnet/npgsql</PackageProjectUrl>
+    <PackageTags>aws;aurora;dsql;postgres;npgsql</PackageTags>
+  </PropertyGroup>
+
+</Project>
