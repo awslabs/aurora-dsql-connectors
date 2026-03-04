@@ -49,29 +49,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 id uuid NOT NULL DEFAULT gen_random_uuid(),
                 name varchar(30) NOT NULL,
                 city varchar(80) NOT NULL,
-                telephone varchar(20) DEFAULT NULL,
                 PRIMARY KEY (id))",
         )
         .await?;
 
         let mut tx = conn.begin().await?;
-        sqlx::query("INSERT INTO owner(name, city, telephone) VALUES($1, $2, $3)")
+        sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
             .bind("John Doe")
             .bind("Anytown")
-            .bind("555-555-1999")
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
 
-        let row = sqlx::query("SELECT name, city, telephone FROM owner WHERE name = $1")
+        let row = sqlx::query("SELECT name, city FROM owner WHERE name = $1")
             .bind("John Doe")
             .fetch_one(&mut *conn)
             .await?;
 
         let name: &str = row.get("name");
         let city: &str = row.get("city");
-        let telephone: &str = row.get("telephone");
-        println!("Inserted: name={}, city={}, telephone={}", name, city, telephone);
+        println!("Inserted: name={}, city={}", name, city);
 
         // Clean up
         sqlx::query("DELETE FROM owner WHERE name = $1")

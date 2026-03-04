@@ -8,7 +8,7 @@ use url::Url;
 const DEFAULT_USER: &str = "admin";
 const DEFAULT_DATABASE: &str = "postgres";
 const DEFAULT_PORT: u16 = 5432;
-const DEFAULT_MAX_CONNECTIONS: u32 = 10;
+const DEFAULT_MAX_CONNECTIONS: u32 = 5;
 const DEFAULT_MAX_LIFETIME_SECS: u64 = 3300;
 const DEFAULT_IDLE_TIMEOUT_SECS: u64 = 600;
 
@@ -94,25 +94,29 @@ impl DsqlConfig {
                 "region" => region = Some(value.to_string()),
                 "profile" => profile = Some(value.to_string()),
                 "tokenDurationSecs" => {
-                    token_duration_secs = value.parse().ok();
+                    token_duration_secs = Some(value.parse().map_err(|_| {
+                        DsqlError::ConfigError(format!("invalid tokenDurationSecs: '{}'", value))
+                    })?);
                 }
                 "maxConnections" => {
-                    if let Ok(v) = value.parse() {
-                        max_connections = v;
-                    }
+                    max_connections = value.parse().map_err(|_| {
+                        DsqlError::ConfigError(format!("invalid maxConnections: '{}'", value))
+                    })?;
                 }
                 "maxLifetimeSecs" => {
-                    if let Ok(v) = value.parse() {
-                        max_lifetime_secs = v;
-                    }
+                    max_lifetime_secs = value.parse().map_err(|_| {
+                        DsqlError::ConfigError(format!("invalid maxLifetimeSecs: '{}'", value))
+                    })?;
                 }
                 "idleTimeoutSecs" => {
-                    if let Ok(v) = value.parse() {
-                        idle_timeout_secs = v;
-                    }
+                    idle_timeout_secs = value.parse().map_err(|_| {
+                        DsqlError::ConfigError(format!("invalid idleTimeoutSecs: '{}'", value))
+                    })?;
                 }
                 "occMaxRetries" => {
-                    occ_max_retries = value.parse().ok();
+                    occ_max_retries = Some(value.parse().map_err(|_| {
+                        DsqlError::ConfigError(format!("invalid occMaxRetries: '{}'", value))
+                    })?);
                 }
                 "applicationName" => {
                     application_name = Some(value.to_string());

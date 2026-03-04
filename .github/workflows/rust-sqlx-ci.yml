@@ -87,4 +87,3 @@ jobs:
       IAM_ROLE: ${{ secrets.IAM_ROLE }}
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
-      

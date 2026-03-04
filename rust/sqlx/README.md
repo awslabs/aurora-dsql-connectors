@@ -62,7 +62,7 @@ aurora-dsql-sqlx-connector = { version = "0.1", features = ["pool"] }
 | `profile` | `Option<String>` | `None` | AWS profile name for credentials |
 | `token_duration_secs` | `Option<u64>` | `None` (SDK default: 900) | Token validity duration in seconds |
 | `application_name` | `Option<String>` | `"aurora-dsql-rust-sqlx/{version}"` | Application name sent to Postgres |
-| `max_connections` | `u32` | `10` | Maximum pool connections (pool feature only) |
+| `max_connections` | `u32` | `5` | Maximum pool connections (pool feature only) |
 | `max_lifetime_secs` | `u64` | `3300` (55 min) | Maximum connection lifetime (pool feature only) |
 | `idle_timeout_secs` | `u64` | `600` (10 min) | Maximum idle time before connection is closed (pool feature only) |
 | `occ_max_retries` | `Option<u32>` | `None` (disabled) | OCC retry count for pool convenience methods (pool feature only) |

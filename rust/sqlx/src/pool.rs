@@ -155,14 +155,6 @@ impl DsqlPool {
         .await
     }
 
-    /// Shut down the pool. Existing connections are closed as they are
-    /// returned. No new connections will be handed out after this call.
-    pub fn close(&self) {
-        // bb8 does not expose a dedicated shutdown method. Connections are
-        // closed when they exceed max_lifetime or idle_timeout. Dropping
-        // the DsqlPool will release all resources.
-    }
-
     async fn retry_on_occ<F, Fut, T>(&self, f: F) -> Result<T>
     where
         F: Fn() -> Fut,

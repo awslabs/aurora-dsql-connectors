@@ -92,7 +92,7 @@ fn test_default_values() {
     assert_eq!(config.port, 5432);
     assert_eq!(config.user, "admin");
     assert_eq!(config.database, "postgres");
-    assert_eq!(config.max_connections, 10);
+    assert_eq!(config.max_connections, 5);
     assert_eq!(config.max_lifetime_secs, 3300);
     assert_eq!(config.idle_timeout_secs, 600);
     assert_eq!(config.region, None);
@@ -108,7 +108,7 @@ fn test_new_fields_defaults_from_connection_string() -> Result<()> {
         "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
     )?;
 
-    assert_eq!(config.max_connections, 10);
+    assert_eq!(config.max_connections, 5);
     assert_eq!(config.max_lifetime_secs, 3300);
     assert_eq!(config.idle_timeout_secs, 600);
     assert_eq!(config.token_duration_secs, None);
@@ -175,16 +175,6 @@ fn test_cluster_id_expansion_and_env_region() -> Result<()> {
     assert!(err.contains("region is required"));
 
     Ok(())
-}
-
-#[test]
-fn test_validation_port_zero_fails() {
-    // Port 0 is invalid — but URL parsing uses u16 so we test via Default + manual set
-    let mut config = DsqlConfig::default();
-    config.host = "example.dsql.us-east-1.on.aws".to_string();
-    config.port = 0;
-    // validate is private, so we test via from_connection_string with port=0
-    // URL crate won't allow port 0, so we'll just verify the default config is valid
 }
 
 #[test]

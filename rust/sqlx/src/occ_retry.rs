@@ -70,6 +70,12 @@ where
     F: Fn() -> Fut,
     Fut: std::future::Future<Output = Result<T>>,
 {
+    if config.max_attempts == 0 {
+        return Err(DsqlError::ConfigError(
+            "max_attempts must be a positive integer".into(),
+        ));
+    }
+
     let mut last_err: Option<DsqlError> = None;
     for attempt in 0..config.max_attempts {
         match f().await {

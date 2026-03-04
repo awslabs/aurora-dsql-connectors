@@ -21,14 +21,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             id uuid NOT NULL DEFAULT gen_random_uuid(),
             name varchar(30) NOT NULL,
             city varchar(80) NOT NULL,
-            telephone varchar(20) DEFAULT NULL,
             PRIMARY KEY (id))",
     )
     .await?;
 
     // Insert a row
     conn.execute(
-        "INSERT INTO owner(name, city, telephone) VALUES('John Doe', 'Anytown', '555-555-1999')",
+        "INSERT INTO owner(name, city) VALUES('John Doe', 'Anytown')",
     )
     .await?;
 
@@ -40,12 +39,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let name: &str = row.get("name");
     let city: &str = row.get("city");
-    let telephone: &str = row.get("telephone");
-    println!("name={}, city={}, telephone={}", name, city, telephone);
+    println!("name={}, city={}", name, city);
 
     assert_eq!(name, "John Doe");
     assert_eq!(city, "Anytown");
-    assert_eq!(telephone, "555-555-1999");
 
     // Clean up
     sqlx::query("DELETE FROM owner WHERE name = $1")

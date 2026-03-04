@@ -1,13 +1,14 @@
 [package]
 name = "aurora-dsql-sqlx-connector"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
-authors = ["AWS"]
+description = "Aurora DSQL connector for SQLx"
+authors = ["Amazon Web Services"]
 license = "Apache-2.0"
-description = "SQLx connector for Amazon Aurora DSQL with IAM authentication"
 repository = "https://github.com/awslabs/aurora-dsql-connectors"
-keywords = ["aws", "aurora", "dsql", "sqlx", "postgres"]
-categories = ["database"]
+homepage = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/rust/sqlx"
+keywords = ["aws", "aurora", "dsql", "postgres", "sqlx"]
+categories = ["database", "authentication"]
 
 [features]
 default = []
