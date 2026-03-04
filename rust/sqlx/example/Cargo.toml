@@ -1,0 +1,18 @@
+[package]
+name = "aurora-dsql-sqlx-example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "example_preferred"
+path = "src/example_preferred.rs"
+
+[[bin]]
+name = "no_pool"
+path = "src/alternatives/no_pool.rs"
+
+[dependencies]
+aurora-dsql-sqlx-connector = { path = "..", features = ["pool"] }
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }

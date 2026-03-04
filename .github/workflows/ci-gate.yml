@@ -19,6 +19,7 @@ jobs:
       node-postgres: ${{ steps.detect.outputs.node-postgres }}
       postgres-js: ${{ steps.detect.outputs.postgres-js }}
       ruby-pg: ${{ steps.detect.outputs.ruby-pg }}
+      rust-sqlx: ${{ steps.detect.outputs.rust-sqlx }}
     steps:
       - uses: actions/github-script@v8
         id: detect
@@ -31,6 +32,7 @@ jobs:
               'node-postgres': ['node/node-postgres/', '.github/workflows/node-postgres-ci.yml'],
               'postgres-js': ['node/postgres-js/', '.github/workflows/postgres-js-ci.yml'],
               'ruby-pg': ['ruby/pg/', '.github/workflows/ruby-pg-ci.yml'],
+              'rust-sqlx': ['rust/sqlx/', '.github/workflows/rust-sqlx-ci.yml'],
             };
             const runAllPaths = [
               '.github/workflows/ci-gate.yml',
@@ -124,6 +126,14 @@ jobs:
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
 
+  rust-sqlx:
+    needs: changes
+    if: needs.changes.outputs.rust-sqlx == 'true'
+    uses: ./.github/workflows/rust-sqlx-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
   gate:
     name: gate
     runs-on: ubuntu-latest
@@ -135,6 +145,7 @@ jobs:
       - node-postgres
       - postgres-js
       - ruby-pg
+      - rust-sqlx
     if: always()
     steps:
       - uses: actions/github-script@v8

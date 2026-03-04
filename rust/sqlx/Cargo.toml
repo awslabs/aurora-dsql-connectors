@@ -9,8 +9,13 @@ repository = "https://github.com/awslabs/aurora-dsql-connectors"
 keywords = ["aws", "aurora", "dsql", "sqlx", "postgres"]
 categories = ["database"]
 
+[features]
+default = []
+pool = ["dep:bb8"]
+
 [dependencies]
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
+bb8 = { version = "0.9", optional = true }
 aws-config = { version = "1.5", features = ["credentials-login"] }
 aws-sdk-dsql = "1.0"
 tokio = { version = "1", features = ["full"] }
@@ -20,4 +25,3 @@ rand = "0.10.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
-hydra = "0.1"

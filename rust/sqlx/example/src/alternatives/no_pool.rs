@@ -1,0 +1,58 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+use aurora_dsql_sqlx_connector::DsqlConnection;
+use sqlx::{Executor, Row};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cluster_endpoint =
+        std::env::var("CLUSTER_ENDPOINT").expect("CLUSTER_ENDPOINT environment variable is not set");
+    let cluster_user =
+        std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
+
+    let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
+
+    let mut conn = DsqlConnection::connect_with(&conn_str).await?;
+
+    // Create table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS owner(
+            id uuid NOT NULL DEFAULT gen_random_uuid(),
+            name varchar(30) NOT NULL,
+            city varchar(80) NOT NULL,
+            telephone varchar(20) DEFAULT NULL,
+            PRIMARY KEY (id))",
+    )
+    .await?;
+
+    // Insert a row
+    conn.execute(
+        "INSERT INTO owner(name, city, telephone) VALUES('John Doe', 'Anytown', '555-555-1999')",
+    )
+    .await?;
+
+    // Query it back
+    let row = sqlx::query("SELECT * FROM owner WHERE name = $1")
+        .bind("John Doe")
+        .fetch_one(&mut *conn)
+        .await?;
+
+    let name: &str = row.get("name");
+    let city: &str = row.get("city");
+    let telephone: &str = row.get("telephone");
+    println!("name={}, city={}, telephone={}", name, city, telephone);
+
+    assert_eq!(name, "John Doe");
+    assert_eq!(city, "Anytown");
+    assert_eq!(telephone, "555-555-1999");
+
+    // Clean up
+    sqlx::query("DELETE FROM owner WHERE name = $1")
+        .bind("John Doe")
+        .execute(&mut *conn)
+        .await?;
+
+    println!("Connection exercised successfully");
+    Ok(())
+}

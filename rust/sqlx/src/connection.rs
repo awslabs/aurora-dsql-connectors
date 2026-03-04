@@ -1,3 +1,6 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{DsqlConfig, DsqlError, Result};
 use sqlx::{Connection, PgConnection};
 use std::ops::{Deref, DerefMut};
@@ -16,6 +19,7 @@ use std::ops::{Deref, DerefMut};
 /// - Automatic token refresh
 /// - Connection pooling
 /// - Better performance for concurrent operations
+#[derive(Debug)]
 pub struct DsqlConnection {
     inner: PgConnection,
 }
@@ -23,10 +27,7 @@ pub struct DsqlConnection {
 impl DsqlConnection {
     pub async fn connect(config: &DsqlConfig) -> Result<Self> {
         let token = config.generate_token().await?;
-        let opts = config
-            .to_pg_connect_options()
-            .password(&token)
-            .ssl_mode(sqlx::postgres::PgSslMode::Require);
+        let opts = config.to_pg_connect_options(&token);
 
         let conn = PgConnection::connect_with(&opts)
             .await

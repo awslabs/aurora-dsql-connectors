@@ -1,10 +1,16 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 use crate::{DsqlError, Result};
-use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use url::Url;
 
 const DEFAULT_USER: &str = "admin";
 const DEFAULT_DATABASE: &str = "postgres";
 const DEFAULT_PORT: u16 = 5432;
+const DEFAULT_MAX_CONNECTIONS: u32 = 10;
+const DEFAULT_MAX_LIFETIME_SECS: u64 = 3300;
+const DEFAULT_IDLE_TIMEOUT_SECS: u64 = 600;
 
 #[derive(Debug, Clone)]
 pub struct DsqlConfig {
@@ -14,6 +20,31 @@ pub struct DsqlConfig {
     pub database: String,
     pub region: Option<String>,
     pub profile: Option<String>,
+    pub token_duration_secs: Option<u64>,
+    pub max_connections: u32,
+    pub max_lifetime_secs: u64,
+    pub idle_timeout_secs: u64,
+    pub occ_max_retries: Option<u32>,
+    pub application_name: Option<String>,
+}
+
+impl Default for DsqlConfig {
+    fn default() -> Self {
+        Self {
+            host: String::new(),
+            port: DEFAULT_PORT,
+            user: DEFAULT_USER.to_string(),
+            database: DEFAULT_DATABASE.to_string(),
+            region: None,
+            profile: None,
+            token_duration_secs: None,
+            max_connections: DEFAULT_MAX_CONNECTIONS,
+            max_lifetime_secs: DEFAULT_MAX_LIFETIME_SECS,
+            idle_timeout_secs: DEFAULT_IDLE_TIMEOUT_SECS,
+            occ_max_retries: None,
+            application_name: None,
+        }
+    }
 }
 
 impl DsqlConfig {
@@ -21,10 +52,13 @@ impl DsqlConfig {
         let url = Url::parse(conn_str)
             .map_err(|e| DsqlError::Error(format!("Invalid connection string: {}", e)))?;
 
-        if url.scheme() != "dsql" {
-            return Err(DsqlError::Error(
-                "Connection string must start with 'dsql://'".into(),
-            ));
+        match url.scheme() {
+            "postgres" | "postgresql" => {}
+            _ => {
+                return Err(DsqlError::Error(
+                    "Unsupported URL scheme. Use 'postgres://' or 'postgresql://'".into(),
+                ));
+            }
         }
 
         let host = url
@@ -46,35 +80,114 @@ impl DsqlConfig {
             database.to_string()
         };
 
-        let region = url
-            .query_pairs()
-            .find(|(k, _)| k == "region")
-            .map(|(_, v)| v.to_string());
+        let mut region = None;
+        let mut profile = None;
+        let mut token_duration_secs = None;
+        let mut max_connections = DEFAULT_MAX_CONNECTIONS;
+        let mut max_lifetime_secs = DEFAULT_MAX_LIFETIME_SECS;
+        let mut idle_timeout_secs = DEFAULT_IDLE_TIMEOUT_SECS;
+        let mut occ_max_retries = None;
+        let mut application_name = None;
 
-        let profile = url
-            .query_pairs()
-            .find(|(k, _)| k == "profile")
-            .map(|(_, v)| v.to_string());
+        for (key, value) in url.query_pairs() {
+            match key.as_ref() {
+                "region" => region = Some(value.to_string()),
+                "profile" => profile = Some(value.to_string()),
+                "tokenDurationSecs" => {
+                    token_duration_secs = value.parse().ok();
+                }
+                "maxConnections" => {
+                    if let Ok(v) = value.parse() {
+                        max_connections = v;
+                    }
+                }
+                "maxLifetimeSecs" => {
+                    if let Ok(v) = value.parse() {
+                        max_lifetime_secs = v;
+                    }
+                }
+                "idleTimeoutSecs" => {
+                    if let Ok(v) = value.parse() {
+                        idle_timeout_secs = v;
+                    }
+                }
+                "occMaxRetries" => {
+                    occ_max_retries = value.parse().ok();
+                }
+                "applicationName" => {
+                    application_name = Some(value.to_string());
+                }
+                _ => {}
+            }
+        }
 
-        Ok(DsqlConfig {
+        // Cluster ID expansion: if host is a bare cluster ID, expand to full hostname
+        let host = if crate::util::is_cluster_id(&host) {
+            let resolved_region = region
+                .as_deref()
+                .map(String::from)
+                .or_else(crate::util::region_from_env)
+                .ok_or_else(|| {
+                    DsqlError::ConfigError(
+                        "region is required when host is a cluster ID".into(),
+                    )
+                })?;
+            if region.is_none() {
+                region = Some(resolved_region.clone());
+            }
+            crate::util::build_hostname(&host, &resolved_region)
+        } else {
+            host
+        };
+
+        let config = DsqlConfig {
             host,
             port,
             user,
             database,
             region,
             profile,
-        })
+            token_duration_secs,
+            max_connections,
+            max_lifetime_secs,
+            idle_timeout_secs,
+            occ_max_retries,
+            application_name,
+        };
+
+        config.validate()?;
+        Ok(config)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.host.is_empty() {
+            return Err(DsqlError::ConfigError("Host is required".into()));
+        }
+        if self.port == 0 {
+            return Err(DsqlError::ConfigError(format!(
+                "port must be between 1 and 65535, got {}",
+                self.port
+            )));
+        }
+        if let Some(retries) = self.occ_max_retries {
+            if retries == 0 {
+                return Err(DsqlError::ConfigError(
+                    "occ_max_retries must be a positive integer".into(),
+                ));
+            }
+        }
+        Ok(())
     }
 
     pub async fn resolve_region(&self) -> Result<String> {
-        // 1. Explicit region from connection string
-        if let Some(ref region) = self.region {
-            return Ok(region.clone());
+        // 1. Parse from hostname
+        if let Some(region) = crate::util::parse_region(&self.host) {
+            return Ok(region);
         }
 
-        // 2. Parse from hostname
-        if let Ok(region) = parse_region_from_hostname(&self.host) {
-            return Ok(region);
+        // 2. Explicit region from connection string
+        if let Some(ref region) = self.region {
+            return Ok(region.clone());
         }
 
         // 3. AWS SDK default region
@@ -89,7 +202,7 @@ impl DsqlConfig {
         ))
     }
 
-    async fn load_aws_config(&self) -> aws_config::SdkConfig {
+    pub async fn load_aws_config(&self) -> aws_config::SdkConfig {
         let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
 
         if let Some(ref profile) = self.profile {
@@ -101,38 +214,23 @@ impl DsqlConfig {
 
     pub async fn generate_token(&self) -> Result<String> {
         let region = self.resolve_region().await?;
-        crate::token::generate_token(&self.host, &region, self.profile.as_deref()).await
+        crate::token::generate_token(&self.host, &region, &self.user, self.profile.as_deref(), self.token_duration_secs)
+            .await
     }
 
-    pub fn to_pg_connect_options(&self) -> PgConnectOptions {
+    pub fn to_pg_connect_options(&self, token: &str) -> PgConnectOptions {
+        let app_name = self
+            .application_name
+            .clone()
+            .unwrap_or_else(|| crate::util::build_application_name(None));
+
         PgConnectOptions::new()
             .host(&self.host)
             .port(self.port)
             .username(&self.user)
+            .password(token)
             .database(&self.database)
-            .ssl_mode(sqlx::postgres::PgSslMode::Require)
+            .ssl_mode(PgSslMode::VerifyFull)
+            .application_name(&app_name)
     }
-}
-
-fn parse_region_from_hostname(host: &str) -> Result<String> {
-    if host.is_empty() {
-        return Err(DsqlError::Error(
-            "Hostname is required to parse region".into(),
-        ));
-    }
-
-    let parts: Vec<&str> = host.split('.').collect();
-    if parts.len() >= 3 && parts[1].starts_with("dsql") {
-        let region = parts[2].to_string();
-
-        // Validate region format: e.g., us-east-1, eu-west-2
-        if region.split('-').count() == 3 {
-            return Ok(region);
-        }
-    }
-
-    Err(DsqlError::Error(format!(
-        "Unable to parse region from hostname: '{}'",
-        host
-    )))
 }

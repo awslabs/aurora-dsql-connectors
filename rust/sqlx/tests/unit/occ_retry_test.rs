@@ -1,4 +1,10 @@
-use aurora_dsql_sqlx_connector::occ_retry::{calculate_backoff, is_occ_error, OCCRetryConfig};
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+use aurora_dsql_sqlx_connector::occ_retry::{
+    calculate_backoff, is_occ_dsql_error, is_occ_error, OCCRetryConfig,
+};
+use aurora_dsql_sqlx_connector::DsqlError;
 use std::time::Duration;
 
 #[test]
@@ -60,6 +66,39 @@ fn test_backoff_max_delay() {
 
     let delay = calculate_backoff(&config, 10);
     assert!(delay <= Duration::from_millis(6250)); // max_delay + 25% jitter
+}
+
+#[test]
+fn test_is_occ_dsql_error_oc000() {
+    let err = DsqlError::DatabaseError("ERROR: OC000 mutation conflict".into());
+    assert!(is_occ_dsql_error(&err));
+}
+
+#[test]
+fn test_is_occ_dsql_error_non_occ() {
+    let err = DsqlError::DatabaseError("unique violation".into());
+    assert!(!is_occ_dsql_error(&err));
+}
+
+#[test]
+fn test_is_occ_dsql_error_non_database() {
+    let err = DsqlError::ConnectionError("connection refused".into());
+    assert!(!is_occ_dsql_error(&err));
+}
+
+#[test]
+fn test_occ_retry_exhausted_preserves_cause() {
+    let cause = DsqlError::DatabaseError("OC000 conflict".into());
+    let err = DsqlError::OCCRetryExhausted {
+        attempts: 3,
+        message: cause.to_string(),
+        source: Box::new(DsqlError::DatabaseError("OC000 conflict".into())),
+    };
+    assert!(err.to_string().contains("3 attempts"));
+    assert!(err.to_string().contains("OC000"));
+    // Verify source is accessible via std::error::Error
+    let std_err: &dyn std::error::Error = &err;
+    assert!(std_err.source().is_some());
 }
 
 struct MockDbError {

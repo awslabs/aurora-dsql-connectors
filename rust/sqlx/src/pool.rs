@@ -1,17 +1,58 @@
-use crate::{
-    config::DsqlConfig,
-    occ_retry::{self, OCCRetryConfig},
-    token_cache::TokenCache,
-    DsqlError, Result,
-};
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::PgPool;
-use std::ops::Deref;
-use std::sync::Arc;
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+use std::time::Duration;
+
+use crate::occ_retry::{self, OCCRetryConfig};
+use crate::token;
+use crate::{DsqlConfig, DsqlError, Result};
+use sqlx::{Connection, Executor, PgConnection};
+
+// -- Connection Manager --
+
+pub struct DsqlConnectionManager {
+    config: DsqlConfig,
+    region: String,
+    sdk_config: aws_config::SdkConfig,
+}
+
+impl bb8::ManageConnection for DsqlConnectionManager {
+    type Connection = PgConnection;
+    type Error = DsqlError;
+
+    async fn connect(&self) -> std::result::Result<PgConnection, DsqlError> {
+        let token = token::generate_token_with_config(
+            &self.config.host,
+            &self.region,
+            &self.config.user,
+            &self.sdk_config,
+            self.config.token_duration_secs,
+        )
+        .await?;
+
+        let opts = self.config.to_pg_connect_options(&token);
+
+        PgConnection::connect_with(&opts)
+            .await
+            .map_err(|e| DsqlError::ConnectionError(e.to_string()))
+    }
+
+    async fn is_valid(&self, conn: &mut PgConnection) -> std::result::Result<(), DsqlError> {
+        conn.ping()
+            .await
+            .map_err(|e| DsqlError::ConnectionError(e.to_string()))
+    }
+
+    fn has_broken(&self, _conn: &mut PgConnection) -> bool {
+        false
+    }
+}
+
+// -- Pool --
 
 pub struct DsqlPool {
-    pool: PgPool,
-    token_cache: Arc<TokenCache>,
+    pool: bb8::Pool<DsqlConnectionManager>,
+    occ_max_retries: Option<u32>,
     retry_config: OCCRetryConfig,
 }
 
@@ -22,96 +63,120 @@ impl DsqlPool {
     }
 
     pub async fn from_config(config: DsqlConfig) -> Result<Self> {
-        Self::from_config_with_pool_size(config, 5).await
-    }
-
-    pub async fn from_config_with_pool_size(
-        config: DsqlConfig,
-        max_connections: u32,
-    ) -> Result<Self> {
         let region = config.resolve_region().await?;
-        let token_cache = Arc::new(TokenCache::new(
-            config.host.clone(),
+        let sdk_config = config.load_aws_config().await;
+        let occ_max_retries = config.occ_max_retries;
+
+        let manager = DsqlConnectionManager {
+            config: config.clone(),
             region,
-            config.profile.clone(),
-        ));
+            sdk_config,
+        };
 
-        let token = token_cache.get_token().await?;
-
-        let pg_options = PgConnectOptions::new()
-            .host(&config.host)
-            .port(config.port)
-            .username(&config.user)
-            .password(&token)
-            .database(&config.database)
-            .ssl_mode(sqlx::postgres::PgSslMode::Require);
-
-        let pool = PgPoolOptions::new()
-            .max_connections(max_connections)
-            .acquire_timeout(std::time::Duration::from_secs(30))
-            .connect_with(pg_options)
+        let pool = bb8::Pool::builder()
+            .max_size(config.max_connections)
+            .max_lifetime(Some(Duration::from_secs(config.max_lifetime_secs)))
+            .idle_timeout(Some(Duration::from_secs(config.idle_timeout_secs)))
+            .build(manager)
             .await
-            .map_err(|e| DsqlError::ConnectionError(format!("Failed to create pool: {}", e)))?;
+            .map_err(|e| DsqlError::PoolError(e.to_string()))?;
 
         Ok(Self {
             pool,
-            token_cache,
+            occ_max_retries,
             retry_config: OCCRetryConfig::default(),
         })
     }
 
-    async fn retry_on_occ<F, Fut, T>(&self, mut f: F) -> Result<T>
-    where
-        F: FnMut() -> Fut,
-        Fut: std::future::Future<Output = std::result::Result<T, sqlx::Error>>,
-    {
-        let mut attempt = 0;
-        loop {
-            match f().await {
-                Ok(result) => return Ok(result),
-                Err(e)
-                    if occ_retry::is_occ_error(&e)
-                        && attempt < self.retry_config.max_attempts - 1 =>
-                {
-                    let delay = occ_retry::calculate_backoff(&self.retry_config, attempt);
-                    tokio::time::sleep(delay).await;
-                    attempt += 1;
-                }
-                Err(e) => return Err(DsqlError::DatabaseError(e.to_string())),
-            }
-        }
-    }
-
-    pub async fn execute(&self, query: &str) -> Result<sqlx::postgres::PgQueryResult> {
-        self.retry_on_occ(|| async { sqlx::query(query).execute(&self.pool).await })
+    pub async fn get(
+        &self,
+    ) -> std::result::Result<
+        bb8::PooledConnection<'_, DsqlConnectionManager>,
+        DsqlError,
+    > {
+        self.pool
+            .get()
             .await
+            .map_err(|e| DsqlError::PoolError(e.to_string()))
     }
 
-    pub async fn fetch_one<T>(&self, query: &str) -> Result<T>
+    pub async fn execute(&self, sql: &str) -> Result<u64> {
+        self.retry_on_occ(|| async {
+            let mut conn = self.get().await?;
+            conn.execute(sql)
+                .await
+                .map(|r| r.rows_affected())
+                .map_err(|e| DsqlError::DatabaseError(e.to_string()))
+        })
+        .await
+    }
+
+    pub async fn fetch_one(
+        &self,
+        sql: &str,
+    ) -> Result<sqlx::postgres::PgRow> {
+        self.retry_on_occ(|| async {
+            let mut conn = self.get().await?;
+            conn.fetch_one(sql)
+                .await
+                .map_err(|e| DsqlError::DatabaseError(e.to_string()))
+        })
+        .await
+    }
+
+    pub async fn fetch_all(
+        &self,
+        sql: &str,
+    ) -> Result<Vec<sqlx::postgres::PgRow>> {
+        self.retry_on_occ(|| async {
+            let mut conn = self.get().await?;
+            conn.fetch_all(sql)
+                .await
+                .map_err(|e| DsqlError::DatabaseError(e.to_string()))
+        })
+        .await
+    }
+
+    /// Execute a single SQL statement with an explicit OCC retry count.
+    /// Useful for DDL or one-off statements that need retry independently
+    /// of the pool's `occ_max_retries` setting.
+    pub async fn exec_with_retry(&self, sql: &str, max_retries: u32) -> Result<u64> {
+        let config = OCCRetryConfig {
+            max_attempts: max_retries,
+            ..self.retry_config.clone()
+        };
+        occ_retry::retry_on_occ(&config, || async {
+            let mut conn = self.get().await?;
+            conn.execute(sql)
+                .await
+                .map(|r| r.rows_affected())
+                .map_err(|e| DsqlError::DatabaseError(e.to_string()))
+        })
+        .await
+    }
+
+    /// Shut down the pool. Existing connections are closed as they are
+    /// returned. No new connections will be handed out after this call.
+    pub fn close(&self) {
+        // bb8 does not expose a dedicated shutdown method. Connections are
+        // closed when they exceed max_lifetime or idle_timeout. Dropping
+        // the DsqlPool will release all resources.
+    }
+
+    async fn retry_on_occ<F, Fut, T>(&self, f: F) -> Result<T>
     where
-        T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
+        F: Fn() -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
     {
-        self.retry_on_occ(|| async { sqlx::query_as(query).fetch_one(&self.pool).await })
-            .await
-    }
+        let max_retries = match self.occ_max_retries {
+            Some(n) => n,
+            None => return f().await,
+        };
 
-    pub async fn fetch_all<T>(&self, query: &str) -> Result<Vec<T>>
-    where
-        T: for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow> + Send + Unpin,
-    {
-        self.retry_on_occ(|| async { sqlx::query_as(query).fetch_all(&self.pool).await })
-            .await
-    }
-
-    pub async fn clear_token_cache(&self) {
-        self.token_cache.clear().await;
-    }
-}
-
-impl Deref for DsqlPool {
-    type Target = PgPool;
-
-    fn deref(&self) -> &Self::Target {
-        &self.pool
+        let config = OCCRetryConfig {
+            max_attempts: max_retries,
+            ..self.retry_config.clone()
+        };
+        occ_retry::retry_on_occ(&config, f).await
     }
 }
