@@ -1,5 +1,6 @@
 [package]
 name = "aurora-dsql-sqlx-connector"
+<<<<<<< rust-connector-with-sqlx
 version = "0.1.0"
 edition = "2021"
 authors = ["AWS"]
@@ -25,3 +26,14 @@ rand = "0.10.0"
 
 [dev-dependencies]
 tokio-test = "0.4"
+=======
+version = "0.0.1"
+edition = "2021"
+description = "Aurora DSQL connector for SQLx"
+authors = ["Amazon Web Services"]
+license = "Apache-2.0"
+repository = "https://github.com/awslabs/aurora-dsql-connectors"
+homepage = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/rust/sqlx"
+keywords = ["aws", "aurora", "dsql", "postgres", "sqlx"]
+categories = ["database", "authentication"]
+>>>>>>> main

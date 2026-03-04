@@ -20,9 +20,9 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("jacoco")
-    id("com.diffplug.spotless") version "8.2.1"
+    id("com.diffplug.spotless") version "8.3.0"
     id("com.github.spotbugs") version "6.4.+"
-    id("org.jreleaser") version "1.21.0"
+    id("org.jreleaser") version "1.23.0"
 }
 
 group = "software.amazon.dsql"
@@ -38,7 +38,7 @@ val mockitoAgent = configurations.create("mockitoAgent")
 
 dependencies {
     // AWS SDK for Aurora DSQL
-    implementation("software.amazon.awssdk:dsql:2.42.1")
+    implementation("software.amazon.awssdk:dsql:2.42.5")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector
     implementation("org.postgresql:postgresql:42.7.10")
@@ -50,11 +50,11 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.3")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.14.3")
     testImplementation("org.junit.jupiter:junit-jupiter:5.14.3")
-    testImplementation("software.amazon.awssdk:regions:2.42.1")
+    testImplementation("software.amazon.awssdk:regions:2.42.5")
 
     // Agent recommended for Java 21+ inline mocking.
-    testImplementation("org.mockito:mockito-junit-jupiter:5.21.0")
-    mockitoAgent("org.mockito:mockito-core:5.21.0") { isTransitive = false }
+    testImplementation("org.mockito:mockito-junit-jupiter:5.22.0")
+    mockitoAgent("org.mockito:mockito-core:5.22.0") { isTransitive = false }
 
     // Runtime dependencies for tests
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

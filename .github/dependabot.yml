@@ -72,6 +72,14 @@ updates:
         patterns:
           - "github.com/aws/*"
 
+  # Ruby connector
+  - package-ecosystem: "bundler"
+    directories:
+      - "/ruby/pg"
+      - "/ruby/pg/example"
+    schedule:
+      interval: "weekly"
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
