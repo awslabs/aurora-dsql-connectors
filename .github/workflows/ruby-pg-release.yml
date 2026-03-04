@@ -1,0 +1,61 @@
+name: Publish Ruby pg Connector to RubyGems
+
+permissions: {}
+
+on:
+  push:
+    tags:
+      - "ruby/pg/v*"
+
+defaults:
+  run:
+    working-directory: ruby/pg
+
+jobs:
+  wait-for-ci:
+    name: Wait for CI to pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lewagon/wait-on-check-action@v1.5.0
+        with:
+          ref: ${{ github.sha }}
+          running-workflow-name: "Wait for CI to pass"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+
+  publish:
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    environment: ruby
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          working-directory: ruby/pg
+
+      - name: Set version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#ruby/pg/v}"
+          echo "Publishing version $VERSION"
+          sed -i "s/VERSION = .*/VERSION = \"$VERSION\"/" lib/aurora_dsql/pg/version.rb
+
+      - name: Build gem
+        run: gem build aurora-dsql-ruby-pg.gemspec
+
+      - name: Publish to RubyGems
+        run: gem push aurora-dsql-ruby-pg-*.gem
+        env:
+          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
+
+  update-changelog:
+    needs: publish
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/update-changelog.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
