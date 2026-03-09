@@ -1,29 +1,24 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{DsqlConnection, Result};
+use aurora_dsql_sqlx_connector::{dsql_connect, Result};
 use sqlx::Row;
 
-fn build_conn_str() -> Option<String> {
-    let endpoint = std::env::var("CLUSTER_ENDPOINT").ok()?;
+fn build_conn_str() -> String {
+    let endpoint = std::env::var("CLUSTER_ENDPOINT").expect("CLUSTER_ENDPOINT must be set");
     let user = std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
-    Some(format!("postgres://{}@{}/postgres", user, endpoint))
+    format!("postgres://{}@{}/postgres", user, endpoint)
 }
 
 #[tokio::test]
+#[ignore = "requires a live DSQL cluster"]
 async fn test_dsql_connection() -> Result<()> {
-    let conn_str = match build_conn_str() {
-        Some(v) => v,
-        None => {
-            eprintln!("CLUSTER_ENDPOINT not set, skipping integration test");
-            return Ok(());
-        }
-    };
+    let conn_str = build_conn_str();
 
-    let mut conn = DsqlConnection::connect_with(&conn_str).await?;
+    let mut conn = dsql_connect(&conn_str).await?;
 
     let row = sqlx::query("SELECT 1 as value")
-        .fetch_one(&mut *conn)
+        .fetch_one(&mut conn)
         .await
         .unwrap();
     let value: i32 = row.get("value");

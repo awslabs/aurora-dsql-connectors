@@ -1,57 +1,69 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{DsqlConfig, DsqlError, Result};
-use sqlx::{Connection, PgConnection};
-use std::ops::{Deref, DerefMut};
+use crate::{DsqlConfig, Result};
+use sqlx::PgConnection;
 
-/// A single Aurora DSQL connection with IAM authentication.
+/// Connect to Aurora DSQL from a connection string, returning a native `PgConnection`.
 ///
-/// This connection type generates a fresh IAM token on connect. IAM tokens are valid
-/// for 15 minutes.
+/// Generates a fresh IAM token at connect time. IAM tokens are valid for 15 minutes.
 ///
-/// **Recommended for**:
-/// - Short-lived operations (< 15 minutes)
-/// - One-off queries or scripts
-/// - Testing and development
-///
-/// **For production workloads**, use `DsqlPool` which provides:
-/// - Automatic token refresh
-/// - Connection pooling
-/// - Better performance for concurrent operations
-#[derive(Debug)]
-pub struct DsqlConnection {
-    inner: PgConnection,
+/// For production workloads, use `DsqlPool` which provides automatic token refresh
+/// and connection pooling.
+pub async fn dsql_connect(url: &str) -> Result<PgConnection> {
+    let config = DsqlConfig::from_connection_string(url).await?;
+    config.connect().await
 }
 
-impl DsqlConnection {
-    pub async fn connect(config: &DsqlConfig) -> Result<Self> {
-        let token = config.generate_token().await?;
-        let opts = config.to_pg_connect_options(&token);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::DsqlError;
 
-        let conn = PgConnection::connect_with(&opts)
-            .await
-            .map_err(|e| DsqlError::ConnectionError(e.to_string()))?;
-
-        Ok(Self { inner: conn })
+    #[tokio::test]
+    async fn test_dsql_connect_invalid_url() {
+        let result = dsql_connect("not-a-url").await;
+        assert!(result.is_err(), "Should fail with invalid URL");
     }
 
-    pub async fn connect_with(url: &str) -> Result<Self> {
-        let config = DsqlConfig::from_connection_string(url)?;
-        Self::connect(&config).await
+    #[tokio::test]
+    async fn test_dsql_connect_invalid_scheme() {
+        let result = dsql_connect("mysql://admin@example.dsql.us-east-1.on.aws/postgres").await;
+        assert!(result.is_err(), "Should fail with non-postgres scheme");
     }
-}
 
-impl Deref for DsqlConnection {
-    type Target = PgConnection;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+    #[tokio::test]
+    async fn test_dsql_connect_empty_string() {
+        let result = dsql_connect("").await;
+        assert!(result.is_err(), "Should fail with empty connection string");
     }
-}
 
-impl DerefMut for DsqlConnection {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+    #[tokio::test]
+    async fn test_dsql_connect_unreachable_host() {
+        let result = dsql_connect("postgres://admin@example.dsql.us-east-1.on.aws/postgres").await;
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            DsqlError::TokenError(_) | DsqlError::ConnectionError(_) => {}
+            other => panic!("Expected TokenError or ConnectionError, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_connect_from_config() {
+        let config = DsqlConfig::from_connection_string(
+            "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
+        )
+        .await
+        .unwrap();
+
+        let result = config.connect().await;
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            DsqlError::TokenError(_) | DsqlError::ConnectionError(_) => {}
+            other => panic!("Expected TokenError or ConnectionError, got: {:?}", other),
+        }
     }
 }

@@ -4,24 +4,20 @@
 use std::process::Command;
 
 #[test]
-fn test_no_pool_example() {
-    if std::env::var("CLUSTER_ENDPOINT").is_err() {
-        eprintln!("CLUSTER_ENDPOINT not set, skipping example test");
-        return;
-    }
-
+#[ignore = "requires a live DSQL cluster"]
+fn test_no_connection_pool_example() {
     let output = Command::new("cargo")
-        .args(["run", "--bin", "no_pool"])
+        .args(["run", "--bin", "example_no_connection_pool"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .output()
-        .expect("Failed to run no_pool");
+        .expect("Failed to run example_no_connection_pool");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
         output.status.success(),
-        "no_pool example failed.\nstdout: {}\nstderr: {}",
+        "example_no_connection_pool failed.\nstdout: {}\nstderr: {}",
         stdout,
         stderr
     );

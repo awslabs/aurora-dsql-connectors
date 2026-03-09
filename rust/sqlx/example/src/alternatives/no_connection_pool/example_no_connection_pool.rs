@@ -1,11 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::DsqlConnection;
+use aurora_dsql_sqlx_connector::dsql_connect;
 use sqlx::{Executor, Row};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     let cluster_endpoint =
         std::env::var("CLUSTER_ENDPOINT").expect("CLUSTER_ENDPOINT environment variable is not set");
     let cluster_user =
@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
 
-    let mut conn = DsqlConnection::connect_with(&conn_str).await?;
+    let mut conn = dsql_connect(&conn_str).await?;
 
     // Create table
     conn.execute(
@@ -34,7 +34,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Query it back
     let row = sqlx::query("SELECT * FROM owner WHERE name = $1")
         .bind("John Doe")
-        .fetch_one(&mut *conn)
+        .fetch_one(&mut conn)
         .await?;
 
     let name: &str = row.get("name");
@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Clean up
     sqlx::query("DELETE FROM owner WHERE name = $1")
         .bind("John Doe")
-        .execute(&mut *conn)
+        .execute(&mut conn)
         .await?;
 
     println!("Connection exercised successfully");

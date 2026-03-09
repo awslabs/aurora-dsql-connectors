@@ -65,22 +65,22 @@ aurora-dsql-sqlx-connector = { version = "0.1", features = ["pool"] }
 | `max_connections` | `u32` | `5` | Maximum pool connections (pool feature only) |
 | `max_lifetime_secs` | `u64` | `3300` (55 min) | Maximum connection lifetime (pool feature only) |
 | `idle_timeout_secs` | `u64` | `600` (10 min) | Maximum idle time before connection is closed (pool feature only) |
-| `occ_max_retries` | `Option<u32>` | `None` (disabled) | OCC retry count for pool convenience methods (pool feature only) |
+| `pg_connect_options` | `Option<PgConnectOptions>` | `None` | Base SQLx connection options for driver-level customization |
 
 ## Quick Start
 
 ```rust
-use aurora_dsql_sqlx_connector::DsqlConnection;
+use aurora_dsql_sqlx_connector::dsql_connect;
 use sqlx::Row;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut conn = DsqlConnection::connect_with(
+    let mut conn = dsql_connect(
         "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
     ).await?;
 
     let row = sqlx::query("SELECT 'Hello, DSQL!' as greeting")
-        .fetch_one(&mut *conn)
+        .fetch_one(&mut conn)
         .await?;
 
     let greeting: &str = row.get("greeting");
@@ -106,7 +106,6 @@ Both `postgres://` and `postgresql://` schemes are supported.
 - `maxConnections` — Maximum pool connections
 - `maxLifetimeSecs` — Maximum connection lifetime in seconds
 - `idleTimeoutSecs` — Maximum idle time in seconds
-- `occMaxRetries` — OCC retry count for pool convenience methods
 - `applicationName` — Application name sent to Postgres
 
 **Region Resolution Priority:**
@@ -135,18 +134,17 @@ postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?maxConnections=20&maxLif
 For simple scripts or when connection pooling is not needed:
 
 ```rust
-use aurora_dsql_sqlx_connector::DsqlConnection;
+use aurora_dsql_sqlx_connector::dsql_connect;
 use sqlx::Row;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut conn = DsqlConnection::connect_with(
+    let mut conn = dsql_connect(
         "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
     ).await?;
 
-    // Use sqlx methods directly (DsqlConnection derefs to PgConnection)
     let row = sqlx::query("SELECT 1 as value")
-        .fetch_one(&mut *conn)
+        .fetch_one(&mut conn)
         .await?;
     let value: i32 = row.get("value");
 
@@ -155,7 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-Each `DsqlConnection::connect()` call generates a fresh IAM token. For operations longer than 15 minutes, create a new connection.
+Each call to `dsql_connect` or `DsqlConfig::connect` generates a fresh IAM token. For operations longer than 15 minutes, create a new connection.
 
 ## Pool Usage
 
@@ -198,19 +196,24 @@ let config = DsqlConfig::from_connection_string(
 let pool = DsqlPool::from_config(config).await?;
 ```
 
-### Pool Convenience Methods with OCC Retry
+### Custom PgConnectOptions
 
-When `occ_max_retries` is set, the pool convenience methods automatically retry on OCC errors:
+For driver-level customization, provide a base `PgConnectOptions`. DSQL-required settings (host, port, user, password, database, SSL mode, application name) are always applied on top:
 
 ```rust
-let pool = DsqlPool::new(
-    "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres?occMaxRetries=3"
-).await?;
+use aurora_dsql_sqlx_connector::{DsqlConfigBuilder, Host};
+use sqlx::postgres::PgConnectOptions;
 
-// These methods retry automatically on OCC errors
-let rows_affected = pool.execute("DELETE FROM stale_data").await?;
-let row = pool.fetch_one("SELECT count(*) as cnt FROM users").await?;
-let rows = pool.fetch_all("SELECT * FROM users").await?;
+let base = PgConnectOptions::new()
+    .statement_cache_capacity(500)
+    .options([("search_path", "myschema")]);
+
+let config = DsqlConfigBuilder::default()
+    .host(Host::new("your-cluster.dsql.us-east-1.on.aws"))
+    .pg_connect_options(Some(base))
+    .build()?;
+
+let mut conn = config.connect().await?;
 ```
 
 ## OCC Retry
@@ -218,31 +221,21 @@ let rows = pool.fetch_all("SELECT * FROM users").await?;
 Aurora DSQL uses optimistic concurrency control. The connector provides helpers to detect and handle OCC errors:
 
 ```rust
-use aurora_dsql_sqlx_connector::occ_retry::{is_occ_error, calculate_backoff, OCCRetryConfig};
-use aurora_dsql_sqlx_connector::DsqlConnection;
+use aurora_dsql_sqlx_connector::{retry_on_occ, OCCRetryConfig, DsqlError};
 
 let config = OCCRetryConfig::default(); // max_attempts: 3, exponential backoff
 
-for attempt in 1..=config.max_attempts {
-    let mut conn = DsqlConnection::connect_with(
+retry_on_occ(&config, || async {
+    let mut conn = dsql_connect(
         "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres"
     ).await?;
-    match sqlx::query("UPDATE accounts SET balance = balance - 100 WHERE id = $1")
+    sqlx::query("UPDATE accounts SET balance = balance - 100 WHERE id = $1")
         .bind(account_id)
-        .execute(&mut *conn)
+        .execute(&mut conn)
         .await
-    {
-        Ok(_) => break,
-        Err(e) if is_occ_error(&e) => {
-            if attempt < config.max_attempts {
-                tokio::time::sleep(calculate_backoff(&config, attempt)).await;
-                continue;
-            }
-            return Err(e.into());
-        }
-        Err(e) => return Err(e.into()),
-    }
-}
+        .map_err(DsqlError::DatabaseError)?;
+    Ok(())
+}).await?;
 ```
 
 **OCC Error Detection:**
@@ -301,7 +294,7 @@ The `example/` directory contains runnable examples with a standalone Cargo proj
 | Example | Description |
 |---------|-------------|
 | [example_preferred](example/src/example_preferred.rs) | Recommended: Connection pool with concurrent queries |
-| [no_pool](example/src/alternatives/no_pool.rs) | Single connection without pooling |
+| [example_no_connection_pool](example/src/alternatives/no_connection_pool/example_no_connection_pool.rs) | Single connection without pooling |
 
 ### Running Examples
 
@@ -313,7 +306,7 @@ cd example
 cargo run --bin example_preferred
 
 # Run the no-pool example
-cargo run --bin no_pool
+cargo run --bin example_no_connection_pool
 ```
 
 ## DSQL Best Practices

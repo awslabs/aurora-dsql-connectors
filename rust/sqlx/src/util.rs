@@ -1,27 +1,138 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-/// Parse the AWS region from a DSQL hostname.
-/// Matches pattern: *.dsql{suffix?}.{region}.on.aws
-/// e.g. "cluster123.dsql.us-east-1.on.aws" → Some("us-east-1")
-pub fn parse_region(host: &str) -> Option<String> {
-    // Must end with .on.aws
-    let stem = host.strip_suffix(".on.aws")?;
-    let parts: Vec<&str> = stem.split('.').collect();
-    // Need at least: {cluster}.dsql{suffix?}.{region}
-    if parts.len() >= 3 {
-        // Find the dsql segment
-        if let Some(dsql_idx) = parts.iter().position(|p| p.starts_with("dsql")) {
-            // Region is the segment after the dsql segment
-            if dsql_idx + 1 < parts.len() {
-                let region = parts[dsql_idx + 1];
-                if !region.is_empty() {
-                    return Some(region.to_string());
-                }
-            }
+use regex::Regex;
+use std::fmt;
+use std::sync::LazyLock;
+
+// Strong types for common domain values to prevent accidental misuse.
+
+/// AWS region identifier (e.g. "us-east-1").
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Region(String);
+
+impl Region {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for Region {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for Region {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Database hostname (e.g. "cluster123.dsql.us-east-1.on.aws").
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Host(String);
+
+impl Host {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl fmt::Display for Host {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for Host {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Database user (e.g. "admin").
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct User(String);
+
+impl User {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    pub fn is_admin(&self) -> bool {
+        self.0 == "admin"
+    }
+}
+
+impl fmt::Display for User {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for User {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+/// DSQL cluster ID (26 lowercase alphanumeric characters).
+/// Validated on construction via `ClusterId::new`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClusterId(String);
+
+impl ClusterId {
+    /// Returns `None` if the input is not a valid cluster ID.
+    pub fn new(value: &str) -> Option<Self> {
+        if is_cluster_id(value) {
+            Some(Self(value.to_string()))
+        } else {
+            None
         }
     }
-    None
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for ClusterId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for ClusterId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Parse the AWS region from a DSQL hostname.
+/// Matches pattern: {cluster}.dsql{suffix?}.{region}.on.aws
+/// e.g. "cluster123.dsql.us-east-1.on.aws" → Some(Region("us-east-1"))
+pub fn parse_region(host: &Host) -> Option<Region> {
+    static RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[^.]+\.dsql[^.]*\.([a-z0-9-]+)\.on\.aws$").unwrap());
+    RE.captures(host.as_str())
+        .and_then(|caps| caps.get(1).map(|m| Region::new(m.as_str())))
 }
 
 /// Check if a string looks like a bare DSQL cluster ID
@@ -30,21 +141,22 @@ pub fn is_cluster_id(input: &str) -> bool {
     !input.is_empty()
         && !input.contains('.')
         && input.len() == 26
-        && input.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
+        && input
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
 }
 
 /// Build a full DSQL hostname from a cluster ID and region.
 /// e.g. ("abc123...", "us-east-1") → "abc123....dsql.us-east-1.on.aws"
-pub fn build_hostname(cluster_id: &str, region: &str) -> String {
-    format!("{}.dsql.{}.on.aws", cluster_id, region)
+pub fn build_hostname(cluster_id: &ClusterId, region: &Region) -> Host {
+    Host::new(format!("{}.dsql.{}.on.aws", cluster_id, region))
 }
 
-/// Get AWS region from environment variables.
-/// Checks `AWS_REGION` first, then `AWS_DEFAULT_REGION`.
-pub fn region_from_env() -> Option<String> {
-    std::env::var("AWS_REGION")
-        .or_else(|_| std::env::var("AWS_DEFAULT_REGION"))
-        .ok()
+/// Resolve the default AWS region using the SDK provider chain.
+pub async fn resolve_default_region() -> Option<Region> {
+    use aws_config::meta::region::RegionProviderChain;
+    let provider = RegionProviderChain::default_provider();
+    provider.region().await.map(|r| Region::new(r.to_string()))
 }
 
 /// Build the application_name string for the Postgres startup packet.
@@ -53,5 +165,109 @@ pub fn build_application_name(prefix: Option<&str>) -> String {
     match prefix.map(str::trim) {
         Some(p) if !p.is_empty() => format!("{}:aurora-dsql-rust-sqlx/{}", p, version),
         _ => format!("aurora-dsql-rust-sqlx/{}", version),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_region_standard_hostname() {
+        let region = parse_region(&Host::new("abc123.dsql.us-east-1.on.aws"));
+        assert_eq!(region, Some(Region::new("us-east-1")));
+    }
+
+    #[test]
+    fn test_parse_region_other_regions() {
+        assert_eq!(
+            parse_region(&Host::new("abc123.dsql.us-west-2.on.aws")),
+            Some(Region::new("us-west-2"))
+        );
+        assert_eq!(
+            parse_region(&Host::new("abc123.dsql.eu-west-1.on.aws")),
+            Some(Region::new("eu-west-1"))
+        );
+        assert_eq!(
+            parse_region(&Host::new("abc123.dsql.ap-southeast-1.on.aws")),
+            Some(Region::new("ap-southeast-1"))
+        );
+    }
+
+    #[test]
+    fn test_parse_region_invalid_hostname() {
+        assert_eq!(parse_region(&Host::new("localhost")), None);
+        assert_eq!(parse_region(&Host::new("example.com")), None);
+        assert_eq!(parse_region(&Host::new("")), None);
+    }
+
+    #[test]
+    fn test_is_cluster_id_valid() {
+        assert!(is_cluster_id("abcdefghijklmnopqrstuvwxyz"));
+        assert!(is_cluster_id("a1b2c3d4e5f6g7h8i9j0klmnop"));
+    }
+
+    #[test]
+    fn test_is_cluster_id_invalid() {
+        assert!(!is_cluster_id(""));
+        assert!(!is_cluster_id("too-short"));
+        assert!(!is_cluster_id("abc.def.us-east-1.on.aws"));
+        assert!(!is_cluster_id("ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+        assert!(!is_cluster_id("abcdefghijklmnopqrstuvwxy")); // 25 chars
+        assert!(!is_cluster_id("abcdefghijklmnopqrstuvwxyza")); // 27 chars
+    }
+
+    #[test]
+    fn test_build_hostname() {
+        let cluster = ClusterId::new("abcdefghijklmnopqrstuvwxyz").unwrap();
+        let region = Region::new("us-east-1");
+        assert_eq!(
+            build_hostname(&cluster, &region),
+            Host::new("abcdefghijklmnopqrstuvwxyz.dsql.us-east-1.on.aws")
+        );
+    }
+
+    #[test]
+    fn test_build_application_name_no_prefix() {
+        let name = build_application_name(None);
+        assert!(name.starts_with("aurora-dsql-rust-sqlx/"));
+    }
+
+    #[test]
+    fn test_build_application_name_with_prefix() {
+        let name = build_application_name(Some("myapp"));
+        assert!(name.starts_with("myapp:aurora-dsql-rust-sqlx/"));
+    }
+
+    #[test]
+    fn test_build_application_name_empty_prefix() {
+        let name = build_application_name(Some(""));
+        assert!(name.starts_with("aurora-dsql-rust-sqlx/"));
+    }
+
+    #[tokio::test]
+    async fn test_resolve_default_region() {
+        // Combined into one test to avoid env var races with parallel tests.
+
+        // AWS_REGION takes priority
+        std::env::set_var("AWS_REGION", "us-west-2");
+        std::env::remove_var("AWS_DEFAULT_REGION");
+        assert_eq!(
+            resolve_default_region().await,
+            Some(Region::new("us-west-2"))
+        );
+
+        // Falls back to AWS_DEFAULT_REGION
+        std::env::remove_var("AWS_REGION");
+        std::env::set_var("AWS_DEFAULT_REGION", "eu-central-1");
+        assert_eq!(
+            resolve_default_region().await,
+            Some(Region::new("eu-central-1"))
+        );
+
+        // Returns None when neither is set
+        std::env::remove_var("AWS_REGION");
+        std::env::remove_var("AWS_DEFAULT_REGION");
+        assert_eq!(resolve_default_region().await, None);
     }
 }

@@ -4,12 +4,8 @@
 use std::process::Command;
 
 #[test]
+#[ignore = "requires a live DSQL cluster"]
 fn test_example_preferred() {
-    if std::env::var("CLUSTER_ENDPOINT").is_err() {
-        eprintln!("CLUSTER_ENDPOINT not set, skipping example test");
-        return;
-    }
-
     let output = Command::new("cargo")
         .args(["run", "--bin", "example_preferred"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))

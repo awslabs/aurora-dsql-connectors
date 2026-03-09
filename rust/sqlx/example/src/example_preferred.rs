@@ -5,17 +5,8 @@ use aurora_dsql_sqlx_connector::DsqlPool;
 use sqlx::{Connection, Executor, Row};
 use std::sync::Arc;
 
-async fn worker_task(pool: Arc<DsqlPool>, worker_id: i32) -> Result<i32, Box<dyn std::error::Error + Send + Sync>> {
-    let mut conn = pool.get().await?;
-    let row = sqlx::query("SELECT $1::int as value")
-        .bind(worker_id)
-        .fetch_one(&mut *conn)
-        .await?;
-    Ok(row.get("value"))
-}
-
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> anyhow::Result<()> {
     let cluster_endpoint =
         std::env::var("CLUSTER_ENDPOINT").expect("CLUSTER_ENDPOINT environment variable is not set");
     let cluster_user =
@@ -23,22 +14,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
 
-    let pool = Arc::new(DsqlPool::new(&conn_str).await?);
+    let pool = DsqlPool::new(&conn_str).await?;
 
     // -- Concurrent read queries --
-    let num_workers = 5;
+    let pool = Arc::new(pool);
     let mut handles = Vec::new();
-    for i in 0..num_workers {
-        let pool = Arc::clone(&pool);
-        handles.push(tokio::spawn(async move { worker_task(pool, i).await }));
+    for i in 0..5 {
+        let pool = pool.clone();
+        handles.push(tokio::spawn(async move {
+            let mut conn = pool.get().await?;
+            let row = sqlx::query("SELECT $1::int as value")
+                .bind(i)
+                .fetch_one(&mut *conn)
+                .await?;
+            Ok::<i32, anyhow::Error>(row.get("value"))
+        }));
     }
 
     for handle in handles {
-        let result = handle.await.expect("Worker task panicked")?;
+        let result = handle.await??;
         println!("Worker result: {}", result);
     }
 
     println!("Concurrent pool operations completed successfully");
+
+    let pool = Arc::try_unwrap(pool).unwrap_or_else(|_| panic!("pool still has multiple owners"));
 
     // -- Transactional write --
     {

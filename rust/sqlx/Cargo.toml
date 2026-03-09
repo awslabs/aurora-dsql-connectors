@@ -11,18 +11,22 @@ keywords = ["aws", "aurora", "dsql", "postgres", "sqlx"]
 categories = ["database", "authentication"]
 
 [features]
-default = []
-pool = ["dep:bb8"]
+default = ["occ"]
+occ = ["dep:rand", "tokio/time"]
+pool = ["dep:bb8", "occ"]
 
 [dependencies]
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
 bb8 = { version = "0.9", optional = true }
 aws-config = { version = "1.5", features = ["credentials-login"] }
 aws-sdk-dsql = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["sync"] }
 thiserror = "2.0"
 url = "2.5"
-rand = "0.10.0"
+rand = { version = "0.10.0", optional = true }
+regex = "1"
+derive_builder = "0.20"
 
 [dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
 tokio-test = "0.4"
