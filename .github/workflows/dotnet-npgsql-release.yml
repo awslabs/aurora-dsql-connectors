@@ -47,10 +47,11 @@ jobs:
 
       - name: Get NuGet API Key
         run: |
-          NUGET_API_KEY=$(aws secretsmanager get-secret-value \
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
             --secret-id "production/build/AuroraDsql-nuget-api-key" \
             --query 'SecretString' \
             --output text)
+          NUGET_API_KEY=$(echo "$SECRET_JSON" | jq -r '.Key')
           echo "::add-mask::$NUGET_API_KEY"
           echo "NUGET_API_KEY=$NUGET_API_KEY" >> "$GITHUB_ENV"
 
