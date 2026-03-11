@@ -70,6 +70,13 @@ public class DsqlDataSourceTests
     }
 
     [Fact]
+    public void BuildConnectionString_NoResetOnClose()
+    {
+        var csb = DsqlDataSource.BuildConnectionStringBuilder(MakeConfig());
+        Assert.True(csb.NoResetOnClose);
+    }
+
+    [Fact]
     public void BuildConnectionString_HostAndPort()
     {
         var csb = DsqlDataSource.BuildConnectionStringBuilder(MakeConfig());

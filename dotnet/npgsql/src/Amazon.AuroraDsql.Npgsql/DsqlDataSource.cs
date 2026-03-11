@@ -88,6 +88,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
             ConnectionLifetime = config.ConnectionLifetime,
             ConnectionIdleLifetime = config.ConnectionIdleLifetime,
             Enlist = false, // DSQL does not support PREPARE TRANSACTION
+            NoResetOnClose = true, // DSQL does not support DISCARD ALL
         };
     }
 

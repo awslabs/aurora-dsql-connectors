@@ -47,7 +47,12 @@ internal static class Token
             throw new DsqlException($"AWS profile '{config.Profile}' not found or has no credentials.");
         }
 
-        // SDK default credential chain (synchronous)
+        // SDK default credential chain (synchronous).
+        // FallbackCredentialsFactory is deprecated in AWSSDK.Core v4 but the replacement
+        // (DefaultAWSCredentialsIdentityResolver) requires async and returns BaseIdentity.
+        // Suppress until the DSQL token generator SDK accepts the new identity type.
+#pragma warning disable CS0618
         return FallbackCredentialsFactory.GetCredentials();
+#pragma warning restore CS0618
     }
 }
