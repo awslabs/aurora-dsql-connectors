@@ -1,8 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::util::{Host, Region, User};
-use crate::{DsqlError, Result};
+use crate::{
+    util::{Host, Region, User},
+    DsqlError, Result,
+};
 use aws_sdk_dsql::auth_token::{AuthTokenGenerator, Config};
 
 pub async fn generate_token_with_config(
@@ -42,14 +44,13 @@ pub async fn generate_token_with_config(
 #[cfg(test)]
 mod tests {
     use crate::util::Host;
-    use crate::DsqlConfig;
+    use crate::{DsqlConfig, DsqlConfigBuilder};
 
     #[tokio::test]
     async fn test_generate_token_admin_user() {
         let config = DsqlConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )
-        .await
         .unwrap();
 
         // Token generation is a local SigV4 presigning operation.
@@ -74,7 +75,6 @@ mod tests {
         let config = DsqlConfig::from_connection_string(
             "postgres://regular_user@example.dsql.us-east-1.on.aws/postgres",
         )
-        .await
         .unwrap();
 
         let result = config.generate_token().await;
@@ -96,7 +96,6 @@ mod tests {
         let config = DsqlConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?tokenDurationSecs=600",
         )
-        .await
         .unwrap();
 
         assert_eq!(config.token_duration_secs, Some(600));
@@ -109,7 +108,6 @@ mod tests {
         let config = DsqlConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?profile=nonexistent",
         )
-        .await
         .unwrap();
 
         assert_eq!(config.profile, Some("nonexistent".to_string()));
@@ -119,11 +117,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_token_requires_resolvable_region() {
-        let config = DsqlConfig {
-            host: Host::new("localhost"),
-            region: None,
-            ..DsqlConfig::default()
-        };
+        let config = DsqlConfigBuilder::default()
+            .host(Host::new("localhost"))
+            .build()
+            .unwrap();
 
         // Without a DSQL hostname, explicit region, or AWS_REGION env var,
         // region resolution may fail

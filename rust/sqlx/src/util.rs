@@ -152,13 +152,6 @@ pub fn build_hostname(cluster_id: &ClusterId, region: &Region) -> Host {
     Host::new(format!("{}.dsql.{}.on.aws", cluster_id, region))
 }
 
-/// Resolve the default AWS region using the SDK provider chain.
-pub async fn resolve_default_region() -> Option<Region> {
-    use aws_config::meta::region::RegionProviderChain;
-    let provider = RegionProviderChain::default_provider();
-    provider.region().await.map(|r| Region::new(r.to_string()))
-}
-
 /// Build the application_name string for the Postgres startup packet.
 pub fn build_application_name(prefix: Option<&str>) -> String {
     let version = env!("CARGO_PKG_VERSION");
@@ -243,31 +236,5 @@ mod tests {
     fn test_build_application_name_empty_prefix() {
         let name = build_application_name(Some(""));
         assert!(name.starts_with("aurora-dsql-rust-sqlx/"));
-    }
-
-    #[tokio::test]
-    async fn test_resolve_default_region() {
-        // Combined into one test to avoid env var races with parallel tests.
-
-        // AWS_REGION takes priority
-        std::env::set_var("AWS_REGION", "us-west-2");
-        std::env::remove_var("AWS_DEFAULT_REGION");
-        assert_eq!(
-            resolve_default_region().await,
-            Some(Region::new("us-west-2"))
-        );
-
-        // Falls back to AWS_DEFAULT_REGION
-        std::env::remove_var("AWS_REGION");
-        std::env::set_var("AWS_DEFAULT_REGION", "eu-central-1");
-        assert_eq!(
-            resolve_default_region().await,
-            Some(Region::new("eu-central-1"))
-        );
-
-        // Returns None when neither is set
-        std::env::remove_var("AWS_REGION");
-        std::env::remove_var("AWS_DEFAULT_REGION");
-        assert_eq!(resolve_default_region().await, None);
     }
 }

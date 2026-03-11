@@ -11,7 +11,6 @@ fn build_conn_str() -> String {
 }
 
 #[tokio::test]
-#[ignore = "requires a live DSQL cluster"]
 async fn test_dsql_connection() -> Result<()> {
     let conn_str = build_conn_str();
 

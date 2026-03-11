@@ -54,18 +54,25 @@ aurora-dsql-sqlx-connector = { version = "0.1", features = ["pool"] }
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `host` | `String` | (required) | Cluster endpoint |
-| `region` | `Option<String>` | (auto-detected) | AWS region |
-| `user` | `String` | `"admin"` | Database user |
+| `host` | `Host` | (required) | Cluster endpoint |
+| `region` | `Option<Region>` | (auto-detected) | AWS region |
+| `user` | `User` | `User::new("admin")` | Database user |
 | `database` | `String` | `"postgres"` | Database name |
 | `port` | `u16` | `5432` | Database port |
 | `profile` | `Option<String>` | `None` | AWS profile name for credentials |
 | `token_duration_secs` | `Option<u64>` | `None` (SDK default: 900) | Token validity duration in seconds |
 | `application_name` | `Option<String>` | `"aurora-dsql-rust-sqlx/{version}"` | Application name sent to Postgres |
-| `max_connections` | `u32` | `5` | Maximum pool connections (pool feature only) |
-| `max_lifetime_secs` | `u64` | `3300` (55 min) | Maximum connection lifetime (pool feature only) |
-| `idle_timeout_secs` | `u64` | `600` (10 min) | Maximum idle time before connection is closed (pool feature only) |
 | `pg_connect_options` | `Option<PgConnectOptions>` | `None` | Base SQLx connection options for driver-level customization |
+
+**DsqlPoolConfig** (pool feature only) — wraps a `DsqlConfig` with pool settings:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `connection` | `DsqlConfig` | (required) | Connection configuration |
+| `max_connections` | `u32` | `5` | Maximum pool connections |
+| `max_lifetime_secs` | `u64` | `3300` (55 min) | Maximum connection lifetime |
+| `idle_timeout_secs` | `u64` | `600` (10 min) | Maximum idle time before connection is closed |
+| `occ_max_retries` | `Option<u32>` | `None` | Enable automatic OCC retry with this many attempts |
 
 ## Quick Start
 
@@ -106,6 +113,7 @@ Both `postgres://` and `postgresql://` schemes are supported.
 - `maxConnections` — Maximum pool connections
 - `maxLifetimeSecs` — Maximum connection lifetime in seconds
 - `idleTimeoutSecs` — Maximum idle time in seconds
+- `occMaxRetries` — Enable automatic OCC retry with this many attempts
 - `applicationName` — Application name sent to Postgres
 
 **Region Resolution Priority:**
@@ -187,14 +195,39 @@ The pool generates a fresh IAM token for each new connection via the bb8 `Manage
 ### Pool Configuration
 
 ```rust
-use aurora_dsql_sqlx_connector::{DsqlConfig, DsqlPool};
+use aurora_dsql_sqlx_connector::{DsqlPoolConfig, DsqlPool};
 
-let config = DsqlConfig::from_connection_string(
+let config = DsqlPoolConfig::from_connection_string(
     "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres?\
      maxConnections=20&maxLifetimeSecs=1800&idleTimeoutSecs=300"
 )?;
 let pool = DsqlPool::from_config(config).await?;
 ```
+
+### Transactional Writes with OCC Retry
+
+Enable `occMaxRetries` in the pool config to opt in to automatic OCC retry. Then use `pool.with()` to run a closure inside a transaction with retry:
+
+```rust
+use aurora_dsql_sqlx_connector::{DsqlError, DsqlPool};
+
+let pool = DsqlPool::new(
+    "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres?occMaxRetries=3"
+).await?;
+
+pool.with(|conn| {
+    Box::pin(async move {
+        sqlx::query("INSERT INTO items(name) VALUES($1)")
+            .bind("widget")
+            .execute(conn)
+            .await
+            .map_err(DsqlError::DatabaseError)?;
+        Ok(())
+    })
+}).await?;
+```
+
+To opt out of retry for a specific operation, use `pool.get()` directly and manage the transaction yourself.
 
 ### Custom PgConnectOptions
 
@@ -276,15 +309,14 @@ cargo build --features pool
 Unit tests (no cluster required):
 
 ```bash
-cargo test
-cargo test --features pool
+cargo test --features pool --lib
 ```
 
-Integration tests (requires a DSQL cluster):
+Integration tests (requires a live DSQL cluster):
 
 ```bash
 export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
-cargo test --features pool
+cargo test --features pool --test tests
 ```
 
 ## Examples

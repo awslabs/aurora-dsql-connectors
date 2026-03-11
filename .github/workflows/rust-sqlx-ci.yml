@@ -34,10 +34,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: rustfmt, clippy
 
       - name: Check formatting
         run: cargo fmt --check
+
+      - name: Run clippy
+        run: cargo clippy --features pool -- -D warnings
 
       - name: Cache cargo registry & build
         uses: actions/cache@v4
@@ -49,7 +52,7 @@ jobs:
           key: rust-sqlx-${{ runner.os }}-${{ hashFiles('rust/sqlx/Cargo.lock') }}
 
       - name: Run connector unit tests
-        run: "cargo test --features pool unit::"
+        run: "cargo test --features pool --lib"
 
       - name: Download Amazon root certificate
         run: |
@@ -67,7 +70,7 @@ jobs:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           REGION: ${{ needs.create-cluster.outputs.region }}
-        run: "cargo test --features pool integration::"
+        run: "cargo test --features pool --test tests"
 
       - name: Build examples
         working-directory: rust/sqlx/example

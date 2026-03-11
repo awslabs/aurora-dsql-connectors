@@ -4,14 +4,8 @@
 use crate::{DsqlConfig, Result};
 use sqlx::PgConnection;
 
-/// Connect to Aurora DSQL from a connection string, returning a native `PgConnection`.
-///
-/// Generates a fresh IAM token at connect time. IAM tokens are valid for 15 minutes.
-///
-/// For production workloads, use `DsqlPool` which provides automatic token refresh
-/// and connection pooling.
 pub async fn dsql_connect(url: &str) -> Result<PgConnection> {
-    let config = DsqlConfig::from_connection_string(url).await?;
+    let config = DsqlConfig::from_connection_string(url)?;
     config.connect().await
 }
 
@@ -55,7 +49,6 @@ mod tests {
         let config = DsqlConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )
-        .await
         .unwrap();
 
         let result = config.connect().await;
