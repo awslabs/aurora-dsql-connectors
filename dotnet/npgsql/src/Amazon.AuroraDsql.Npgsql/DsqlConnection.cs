@@ -39,18 +39,16 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
         DsqlDataSource.ConfigureBuilder(builder, resolved, credentials, regionEndpoint);
 
         var dataSource = builder.Build();
-        NpgsqlConnection? conn = null;
         try
         {
-            conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            return new DsqlConnection(conn, dataSource);
         }
         catch
         {
-            if (conn != null) await conn.DisposeAsync().ConfigureAwait(false);
             await dataSource.DisposeAsync().ConfigureAwait(false);
             throw;
         }
-        return new DsqlConnection(conn, dataSource);
     }
 
     /// <summary>

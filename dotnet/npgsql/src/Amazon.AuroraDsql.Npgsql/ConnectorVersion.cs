@@ -7,7 +7,7 @@ namespace Amazon.AuroraDsql.Npgsql;
 
 internal static class ConnectorVersion
 {
-    internal const string Default = "0.0.0";
+    private const string Default = "0.0.0";
 
     internal static string Current { get; } = GetVersion();
 

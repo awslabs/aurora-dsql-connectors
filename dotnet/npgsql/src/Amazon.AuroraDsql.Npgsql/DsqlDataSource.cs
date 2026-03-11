@@ -88,6 +88,8 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
                 new ValueTask<string>(
                     Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint)));
 
+        // Defense-in-depth: .NET 8+ defaults to TLS 1.2+, but we pin explicitly
+        // in case the connector is used in an environment with a weaker default.
         builder.UseSslClientAuthenticationOptionsCallback(options =>
         {
             options.EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
@@ -117,6 +119,11 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// (fresh connection each attempt). The action MUST be safe to retry — either
     /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
     /// </summary>
+    /// <remarks>
+    /// This method does NOT wrap the action in a transaction. If your action performs writes,
+    /// you must issue BEGIN/COMMIT yourself inside the action, or use
+    /// <see cref="OccRetry.WithRetryAsync"/> which manages transactions automatically.
+    /// </remarks>
     public async Task ExecuteAsync(
         Func<NpgsqlConnection, Task> action,
         int? retryOcc = null,
@@ -141,6 +148,11 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// (fresh connection each attempt). The action MUST be safe to retry — either
     /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
     /// </summary>
+    /// <remarks>
+    /// This method does NOT wrap the action in a transaction. If your action performs writes,
+    /// you must issue BEGIN/COMMIT yourself inside the action, or use
+    /// <see cref="OccRetry.WithRetryAsync"/> which manages transactions automatically.
+    /// </remarks>
     public async Task<T> ExecuteAsync<T>(
         Func<NpgsqlConnection, Task<T>> action,
         int? retryOcc = null,

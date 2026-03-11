@@ -223,9 +223,9 @@ The `example/` directory contains runnable examples demonstrating various patter
 export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
 cd example
 
-dotnet run -- preferred
-dotnet run -- single-connection
-dotnet run -- manual-token
+dotnet test --filter "ExamplePreferredTest"
+dotnet test --filter "SingleConnectionExampleTest"
+dotnet test --filter "ManualTokenExampleTest"
 ```
 
 ## Development

@@ -18,7 +18,9 @@ public static class OccRetry
     internal static readonly TimeSpan DefaultInitialWait = TimeSpan.FromMilliseconds(100);
     internal static readonly TimeSpan DefaultMaxWait = TimeSpan.FromSeconds(5);
     internal const double DefaultMultiplier = 2.0;
-    internal const int DefaultMaxRetries = 3;
+
+    /// <summary>Default maximum retry attempts for OCC conflicts.</summary>
+    public const int DefaultMaxRetries = 3;
 
     /// <summary>
     /// Returns true if the exception is an OCC conflict error (SQLSTATE 40001, OC000, or OC001).
@@ -61,36 +63,35 @@ public static class OccRetry
     }
 
     /// <summary>
-    /// Retries the action on OCC conflict with exponential backoff.
-    /// Used by DsqlDataSource.ExecuteAsync.
+    /// Core retry loop with exponential backoff. All retry methods delegate here.
+    /// The <paramref name="attempt"/> delegate runs one attempt and returns a result.
+    /// It should throw on OCC errors; non-OCC exceptions propagate immediately.
     /// </summary>
-    internal static async Task RetryAsync(
-        DsqlDataSource dataSource,
+    private static async Task<T> RetryCoreAsync<T>(
         int maxRetries,
-        Func<NpgsqlConnection, Task> action,
+        Func<Task<T>> attempt,
+        string logPrefix,
         ILogger? logger,
         CancellationToken ct)
     {
         Exception? lastError = null;
         var currentWait = DefaultInitialWait;
 
-        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        for (int i = 0; i <= maxRetries; i++)
         {
             try
             {
-                await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-                await action(conn).ConfigureAwait(false);
-                return; // success
+                return await attempt().ConfigureAwait(false);
             }
             catch (Exception ex) when (IsOccError(ex))
             {
                 lastError = ex;
-                if (attempt < maxRetries)
+                if (i < maxRetries)
                 {
                     var (wait, nextWait) = CalculateBackoff(currentWait);
                     logger?.LogWarning(ex,
-                        "OCC conflict detected, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
-                        attempt + 1, maxRetries, wait.TotalSeconds);
+                        "OCC conflict detected{Prefix}, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
+                        logPrefix, i + 1, maxRetries, wait.TotalSeconds);
                     await Task.Delay(wait, ct).ConfigureAwait(false);
                     currentWait = nextWait;
                 }
@@ -102,42 +103,39 @@ public static class OccRetry
     }
 
     /// <summary>
+    /// Retries the action on OCC conflict with exponential backoff.
+    /// Used by DsqlDataSource.ExecuteAsync.
+    /// </summary>
+    internal static Task RetryAsync(
+        DsqlDataSource dataSource,
+        int maxRetries,
+        Func<NpgsqlConnection, Task> action,
+        ILogger? logger,
+        CancellationToken ct)
+    {
+        return RetryCoreAsync<object?>(maxRetries, async () =>
+        {
+            await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            await action(conn).ConfigureAwait(false);
+            return null;
+        }, "", logger, ct);
+    }
+
+    /// <summary>
     /// Retries the action (with return value) on OCC conflict.
     /// </summary>
-    internal static async Task<T> RetryAsync<T>(
+    internal static Task<T> RetryAsync<T>(
         DsqlDataSource dataSource,
         int maxRetries,
         Func<NpgsqlConnection, Task<T>> action,
         ILogger? logger,
         CancellationToken ct)
     {
-        Exception? lastError = null;
-        var currentWait = DefaultInitialWait;
-
-        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        return RetryCoreAsync(maxRetries, async () =>
         {
-            try
-            {
-                await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-                return await action(conn).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (IsOccError(ex))
-            {
-                lastError = ex;
-                if (attempt < maxRetries)
-                {
-                    var (wait, nextWait) = CalculateBackoff(currentWait);
-                    logger?.LogWarning(ex,
-                        "OCC conflict detected, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
-                        attempt + 1, maxRetries, wait.TotalSeconds);
-                    await Task.Delay(wait, ct).ConfigureAwait(false);
-                    currentWait = nextWait;
-                }
-            }
-        }
-
-        throw new DsqlException(
-            $"OCC max retries ({maxRetries}) exceeded", lastError!);
+            await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            return await action(conn).ConfigureAwait(false);
+        }, "", logger, ct);
     }
 
     /// <summary>
@@ -158,10 +156,7 @@ public static class OccRetry
         if (maxRetries < 0)
             throw new ArgumentException("maxRetries must be non-negative.", nameof(maxRetries));
 
-        Exception? lastError = null;
-        var currentWait = DefaultInitialWait;
-
-        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        await RetryCoreAsync<object?>(maxRetries, async () =>
         {
             await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
             await using var begin = new NpgsqlCommand("BEGIN", conn);
@@ -171,32 +166,20 @@ public static class OccRetry
                 await action(conn).ConfigureAwait(false);
                 await using var commit = new NpgsqlCommand("COMMIT", conn);
                 await commit.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
-                return; // success
+                return null;
             }
-            catch (Exception ex) when (IsOccError(ex))
+            catch
             {
-                lastError = ex;
+                // Best-effort rollback; the connection is discarded after this attempt anyway.
                 try
                 {
                     await using var rollback = new NpgsqlCommand("ROLLBACK", conn);
                     await rollback.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
                 }
-                catch { /* already failed */ }
-
-                if (attempt < maxRetries)
-                {
-                    var (wait, nextWait) = CalculateBackoff(currentWait);
-                    logger?.LogWarning(ex,
-                        "OCC conflict detected in transaction, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
-                        attempt + 1, maxRetries, wait.TotalSeconds);
-                    await Task.Delay(wait, ct).ConfigureAwait(false);
-                    currentWait = nextWait;
-                }
+                catch { /* connection may already be broken */ }
+                throw;
             }
-        }
-
-        throw new DsqlException(
-            $"OCC max retries ({maxRetries}) exceeded", lastError!);
+        }, " in transaction", logger, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -206,7 +189,7 @@ public static class OccRetry
     public static async Task ExecWithRetryAsync(
         DsqlDataSource dataSource,
         string sql,
-        int maxRetries = 3,
+        int maxRetries = DefaultMaxRetries,
         ILogger? logger = null,
         CancellationToken ct = default)
     {
