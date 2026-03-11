@@ -128,7 +128,7 @@ await using var conn = await AuroraDsql.ConnectAsync(
     "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres");
 ```
 
-The `DsqlConnection` wrapper delegates common methods (`CreateCommand`, `BeginTransactionAsync`). The underlying `NpgsqlConnection` is available via `conn.InnerConnection` for advanced use.
+The `DsqlConnection` wrapper delegates `CreateCommand` and exposes the underlying `NpgsqlConnection` via `conn.InnerConnection` for advanced use.
 
 ## OCC Retry
 
@@ -136,13 +136,12 @@ Aurora DSQL uses optimistic concurrency control (OCC). When two transactions mod
 
 ### Transaction retry with `WithRetryAsync`
 
-Manages `BEGIN`/`COMMIT`/`ROLLBACK` internally. Opens a fresh connection for each attempt:
+Manages `BEGIN`/`COMMIT`/`ROLLBACK` internally via raw SQL (DSQL rejects the isolation level clause that Npgsql's `BeginTransactionAsync` sends). Opens a fresh connection for each attempt:
 
 ```csharp
-await OccRetry.WithRetryAsync(ds, maxRetries: 3, async (conn, tx) =>
+await OccRetry.WithRetryAsync(ds, maxRetries: 3, async conn =>
 {
     await using var cmd = conn.CreateCommand();
-    cmd.Transaction = tx;
 
     cmd.CommandText = "UPDATE accounts SET balance = balance - 100 WHERE id = @from";
     cmd.Parameters.AddWithValue("from", fromId);
@@ -178,13 +177,18 @@ var ds = AuroraDsql.CreateDataSource(new DsqlConfig
 // Per-call: override with retryOcc parameter
 await ds.ExecuteAsync(async conn =>
 {
-    await using var tx = await conn.BeginTransactionAsync();
+    // Use raw BEGIN/COMMIT — DSQL rejects the isolation level clause
+    // that Npgsql's BeginTransactionAsync() sends.
+    await using (var begin = new NpgsqlCommand("BEGIN", conn))
+        await begin.ExecuteNonQueryAsync();
+
     await using var cmd = conn.CreateCommand();
-    cmd.Transaction = tx;
     cmd.CommandText = "INSERT INTO users (id, name) VALUES (gen_random_uuid(), @name)";
     cmd.Parameters.AddWithValue("name", "Alice");
     await cmd.ExecuteNonQueryAsync();
-    await tx.CommitAsync();
+
+    await using (var commit = new NpgsqlCommand("COMMIT", conn))
+        await commit.ExecuteNonQueryAsync();
 }, retryOcc: 3);
 ```
 

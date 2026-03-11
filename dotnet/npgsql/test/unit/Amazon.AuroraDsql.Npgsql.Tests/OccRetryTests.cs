@@ -46,7 +46,7 @@ public class OccRetryTests
     [Fact]
     public void CalculateBackoff_FirstAttempt_ReturnsInitialWait()
     {
-        var (wait, _) = OccRetry.CalculateBackoff(attempt: 0, currentWait: TimeSpan.FromMilliseconds(100));
+        var (wait, _) = OccRetry.CalculateBackoff(currentWait: TimeSpan.FromMilliseconds(100));
         // wait should be >= 100ms (base) and <= 124ms (base + max jitter: Next(0, 25) returns [0,24])
         Assert.InRange(wait.TotalMilliseconds, 100, 124);
     }
@@ -54,14 +54,14 @@ public class OccRetryTests
     [Fact]
     public void CalculateBackoff_NextWaitDoubles()
     {
-        var (_, nextWait) = OccRetry.CalculateBackoff(attempt: 0, currentWait: TimeSpan.FromMilliseconds(100));
+        var (_, nextWait) = OccRetry.CalculateBackoff(currentWait: TimeSpan.FromMilliseconds(100));
         Assert.Equal(200, nextWait.TotalMilliseconds);
     }
 
     [Fact]
     public void CalculateBackoff_CapsAtMaxWait()
     {
-        var (_, nextWait) = OccRetry.CalculateBackoff(attempt: 0, currentWait: TimeSpan.FromSeconds(4));
+        var (_, nextWait) = OccRetry.CalculateBackoff(currentWait: TimeSpan.FromSeconds(4));
         Assert.Equal(5000, nextWait.TotalMilliseconds); // capped at 5s
     }
 }

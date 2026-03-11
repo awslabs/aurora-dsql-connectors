@@ -15,17 +15,10 @@ public static class OccRetry
     private const string OC000 = "OC000";
     private const string OC001 = "OC001";
 
-    /// <summary>Default initial wait between retries.</summary>
-    public static readonly TimeSpan DefaultInitialWait = TimeSpan.FromMilliseconds(100);
-
-    /// <summary>Default maximum wait between retries.</summary>
-    public static readonly TimeSpan DefaultMaxWait = TimeSpan.FromSeconds(5);
-
-    /// <summary>Default backoff multiplier.</summary>
-    public const double DefaultMultiplier = 2.0;
-
-    /// <summary>Default maximum retry count for ExecWithRetryAsync.</summary>
-    public const int DefaultMaxRetries = 3;
+    internal static readonly TimeSpan DefaultInitialWait = TimeSpan.FromMilliseconds(100);
+    internal static readonly TimeSpan DefaultMaxWait = TimeSpan.FromSeconds(5);
+    internal const double DefaultMultiplier = 2.0;
+    internal const int DefaultMaxRetries = 3;
 
     /// <summary>
     /// Returns true if the exception is an OCC conflict error (SQLSTATE 40001, OC000, or OC001).
@@ -54,7 +47,7 @@ public static class OccRetry
     /// Calculates the backoff wait time with jitter.
     /// Returns (waitWithJitter, nextBaseWait).
     /// </summary>
-    internal static (TimeSpan wait, TimeSpan nextWait) CalculateBackoff(int attempt, TimeSpan currentWait)
+    internal static (TimeSpan wait, TimeSpan nextWait) CalculateBackoff(TimeSpan currentWait)
     {
         // Jitter: random [0, wait/4)
         var jitterMs = Random.Shared.Next(0, (int)(currentWait.TotalMilliseconds / 4));
@@ -94,7 +87,7 @@ public static class OccRetry
                 lastError = ex;
                 if (attempt < maxRetries)
                 {
-                    var (wait, nextWait) = CalculateBackoff(attempt, currentWait);
+                    var (wait, nextWait) = CalculateBackoff(currentWait);
                     logger?.LogWarning(ex,
                         "OCC conflict detected, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
                         attempt + 1, maxRetries, wait.TotalSeconds);
@@ -133,7 +126,7 @@ public static class OccRetry
                 lastError = ex;
                 if (attempt < maxRetries)
                 {
-                    var (wait, nextWait) = CalculateBackoff(attempt, currentWait);
+                    var (wait, nextWait) = CalculateBackoff(currentWait);
                     logger?.LogWarning(ex,
                         "OCC conflict detected, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
                         attempt + 1, maxRetries, wait.TotalSeconds);
@@ -149,8 +142,9 @@ public static class OccRetry
 
     /// <summary>
     /// Retries a transaction block with explicit retry configuration.
-    /// Manages BEGIN/COMMIT/ROLLBACK via raw SQL — DSQL does not support
-    /// Npgsql's BeginTransactionAsync which always sends an isolation level clause.
+    /// Manages BEGIN/COMMIT/ROLLBACK via raw SQL because DSQL rejects the
+    /// isolation level clause that Npgsql's BeginTransactionAsync sends
+    /// (e.g., "BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED").
     /// Opens a fresh connection for each attempt.
     /// </summary>
     public static async Task WithRetryAsync(
@@ -190,7 +184,7 @@ public static class OccRetry
 
                 if (attempt < maxRetries)
                 {
-                    var (wait, nextWait) = CalculateBackoff(attempt, currentWait);
+                    var (wait, nextWait) = CalculateBackoff(currentWait);
                     logger?.LogWarning(ex,
                         "OCC conflict detected in transaction, retrying (attempt {Attempt}/{MaxRetries}, wait {Wait:F2}s)",
                         attempt + 1, maxRetries, wait.TotalSeconds);
@@ -211,7 +205,7 @@ public static class OccRetry
     public static async Task ExecWithRetryAsync(
         DsqlDataSource dataSource,
         string sql,
-        int maxRetries = DefaultMaxRetries,
+        int maxRetries = 3,
         ILogger? logger = null,
         CancellationToken ct = default)
     {

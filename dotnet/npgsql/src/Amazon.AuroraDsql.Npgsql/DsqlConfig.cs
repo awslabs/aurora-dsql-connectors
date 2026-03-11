@@ -58,7 +58,7 @@ public class DsqlConfig
     /// Region resolution strategy. Override in tests to control environment behavior.
     /// Default: reads from FallbackRegionFactory, then AWS_DEFAULT_REGION env var.
     /// </summary>
-    internal static Func<string?> RegionResolver { get; set; } = DefaultResolveRegionFromEnvironment;
+    internal Func<string?> RegionResolver { get; set; } = DefaultResolveRegionFromEnvironment;
 
     /// <summary>
     /// Validates the configuration, applies defaults, and returns an immutable resolved config.

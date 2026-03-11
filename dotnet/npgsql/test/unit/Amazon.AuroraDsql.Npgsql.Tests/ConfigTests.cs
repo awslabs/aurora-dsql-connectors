@@ -6,26 +6,23 @@ using Xunit;
 
 namespace Amazon.AuroraDsql.Npgsql.Tests;
 
-public class ConfigTests : IDisposable
+public class ConfigTests
 {
-    private readonly Func<string?> _originalRegionResolver;
-
-    public ConfigTests()
+    /// <summary>
+    /// Creates a DsqlConfig with RegionResolver suppressed so tests
+    /// don't depend on the host machine's ~/.aws/config or env vars.
+    /// </summary>
+    private static DsqlConfig MakeConfig(string? host = null)
     {
-        // Save and override region resolver so tests don't depend on ~/.aws/config
-        _originalRegionResolver = DsqlConfig.RegionResolver;
-        DsqlConfig.RegionResolver = () => null;
-    }
-
-    public void Dispose()
-    {
-        DsqlConfig.RegionResolver = _originalRegionResolver;
+        var config = new DsqlConfig { RegionResolver = () => null };
+        if (host != null) config.Host = host;
+        return config;
     }
 
     [Fact]
     public void Resolve_WithFullHostname_AppliesDefaults()
     {
-        var config = new DsqlConfig { Host = "cluster.dsql.us-east-1.on.aws" };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
         var resolved = config.Resolve();
 
         Assert.Equal("cluster.dsql.us-east-1.on.aws", resolved.Host);
@@ -43,11 +40,8 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_WithClusterId_ExpandsHostname()
     {
-        var config = new DsqlConfig
-        {
-            Host = "abcdefghijklmnopqrstuvwxyz",
-            Region = "eu-west-1"
-        };
+        var config = MakeConfig("abcdefghijklmnopqrstuvwxyz");
+        config.Region = "eu-west-1";
         var resolved = config.Resolve();
 
         Assert.Equal("abcdefghijklmnopqrstuvwxyz.dsql.eu-west-1.on.aws", resolved.Host);
@@ -57,7 +51,7 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_ClusterIdWithoutRegion_ThrowsDsqlException()
     {
-        var config = new DsqlConfig { Host = "abcdefghijklmnopqrstuvwxyz" };
+        var config = MakeConfig("abcdefghijklmnopqrstuvwxyz");
         var ex = Assert.Throws<DsqlException>(() => config.Resolve());
         Assert.Contains("region", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -65,8 +59,11 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_ClusterIdWithRegionFromResolver_UsesIt()
     {
-        DsqlConfig.RegionResolver = () => "ap-southeast-1";
-        var config = new DsqlConfig { Host = "abcdefghijklmnopqrstuvwxyz" };
+        var config = new DsqlConfig
+        {
+            Host = "abcdefghijklmnopqrstuvwxyz",
+            RegionResolver = () => "ap-southeast-1"
+        };
         var resolved = config.Resolve();
 
         Assert.Equal("abcdefghijklmnopqrstuvwxyz.dsql.ap-southeast-1.on.aws", resolved.Host);
@@ -76,26 +73,24 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_MissingHost_ThrowsDsqlException()
     {
-        var config = new DsqlConfig();
+        var config = MakeConfig();
         Assert.Throws<DsqlException>(() => config.Resolve());
     }
 
     [Fact]
     public void Resolve_InvalidPort_ThrowsDsqlException()
     {
-        var config = new DsqlConfig { Host = "cluster.dsql.us-east-1.on.aws", Port = 0 };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.Port = 0;
         Assert.Throws<DsqlException>(() => config.Resolve());
     }
 
     [Fact]
     public void Resolve_MinPoolSizeExceedsMax_ThrowsDsqlException()
     {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            MinPoolSize = 50,
-            MaxPoolSize = 10
-        };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.MinPoolSize = 50;
+        config.MaxPoolSize = 10;
         var ex = Assert.Throws<DsqlException>(() => config.Resolve());
         Assert.Contains("MinPoolSize", ex.Message);
     }
@@ -103,11 +98,8 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_CustomUser_Preserved()
     {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            User = "myuser"
-        };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.User = "myuser";
         var resolved = config.Resolve();
         Assert.Equal("myuser", resolved.User);
     }
@@ -115,15 +107,12 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_CustomPoolSettings_Preserved()
     {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            MaxPoolSize = 50,
-            MinPoolSize = 5,
-            ConnectionLifetime = 1800,
-            ConnectionIdleLifetime = 300,
-            OccMaxRetries = 5
-        };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.MaxPoolSize = 50;
+        config.MinPoolSize = 5;
+        config.ConnectionLifetime = 1800;
+        config.ConnectionIdleLifetime = 300;
+        config.OccMaxRetries = 5;
         var resolved = config.Resolve();
         Assert.Equal(50, resolved.MaxPoolSize);
         Assert.Equal(5, resolved.MinPoolSize);
@@ -135,7 +124,7 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_ApplicationName_SetCorrectly()
     {
-        var config = new DsqlConfig { Host = "cluster.dsql.us-east-1.on.aws" };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
         var resolved = config.Resolve();
         Assert.StartsWith("aurora-dsql-dotnet-npgsql/", resolved.ApplicationName);
     }
@@ -143,11 +132,8 @@ public class ConfigTests : IDisposable
     [Fact]
     public void Resolve_OrmPrefix_PrependedToApplicationName()
     {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            OrmPrefix = "efcore"
-        };
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.OrmPrefix = "efcore";
         var resolved = config.Resolve();
         Assert.StartsWith("efcore:aurora-dsql-dotnet-npgsql/", resolved.ApplicationName);
     }

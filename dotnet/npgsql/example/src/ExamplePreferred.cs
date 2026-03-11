@@ -62,14 +62,20 @@ public static class ExamplePreferred
         Console.WriteLine("Concurrent reads completed");
 
         // --- Transactional write (INSERT + COMMIT) ---
+        // Use raw BEGIN/COMMIT SQL because DSQL rejects the isolation level clause
+        // that Npgsql's BeginTransactionAsync() sends by default.
         await using (var conn = await ds.OpenConnectionAsync())
         {
-            await using var tx = await conn.BeginTransactionAsync();
+            await using (var begin = new NpgsqlCommand("BEGIN", conn))
+                await begin.ExecuteNonQueryAsync();
+
             await using var insert = new NpgsqlCommand(
-                "INSERT INTO example_items (name) VALUES ($1)", conn, tx);
+                "INSERT INTO example_items (name) VALUES ($1)", conn);
             insert.Parameters.AddWithValue("test-item");
             await insert.ExecuteNonQueryAsync();
-            await tx.CommitAsync();
+
+            await using (var commit = new NpgsqlCommand("COMMIT", conn))
+                await commit.ExecuteNonQueryAsync();
         }
         Console.WriteLine("Transactional write completed");
 

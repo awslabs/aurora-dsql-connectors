@@ -62,22 +62,13 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// </summary>
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {
-        return new NpgsqlConnectionStringBuilder
-        {
-            Host = config.Host,
-            Port = config.Port,
-            Database = config.Database,
-            Username = config.User,
-            SslMode = SslMode.VerifyFull,
-            SslNegotiation = SslNegotiation.Direct,
-            ApplicationName = config.ApplicationName,
-            MaxPoolSize = config.MaxPoolSize,
-            MinPoolSize = config.MinPoolSize,
-            ConnectionLifetime = config.ConnectionLifetime,
-            ConnectionIdleLifetime = config.ConnectionIdleLifetime,
-            Enlist = false, // DSQL does not support PREPARE TRANSACTION
-            NoResetOnClose = true, // DSQL does not support DISCARD ALL
-        };
+        var csb = DsqlConnection.BuildBaseConnectionStringBuilder(config);
+        csb.MaxPoolSize = config.MaxPoolSize;
+        csb.MinPoolSize = config.MinPoolSize;
+        csb.ConnectionLifetime = config.ConnectionLifetime;
+        csb.ConnectionIdleLifetime = config.ConnectionIdleLifetime;
+        csb.NoResetOnClose = true; // DSQL does not support DISCARD ALL
+        return csb;
     }
 
     /// <summary>
@@ -122,6 +113,9 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
 
     /// <summary>
     /// Executes an action with a connection from the pool, with opt-in OCC retry.
+    /// When retry is enabled, the action is re-executed from scratch on OCC conflict
+    /// (fresh connection each attempt). The action MUST be safe to retry — either
+    /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
     /// </summary>
     public async Task ExecuteAsync(
         Func<NpgsqlConnection, Task> action,
@@ -143,6 +137,9 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
 
     /// <summary>
     /// Executes an action with a return value, with opt-in OCC retry.
+    /// When retry is enabled, the action is re-executed from scratch on OCC conflict
+    /// (fresh connection each attempt). The action MUST be safe to retry — either
+    /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
     /// </summary>
     public async Task<T> ExecuteAsync<T>(
         Func<NpgsqlConnection, Task<T>> action,

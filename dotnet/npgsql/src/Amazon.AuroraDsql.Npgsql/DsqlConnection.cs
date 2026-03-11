@@ -46,8 +46,8 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
         }
         catch
         {
-            conn?.Dispose();
-            dataSource.Dispose();
+            if (conn != null) await conn.DisposeAsync().ConfigureAwait(false);
+            await dataSource.DisposeAsync().ConfigureAwait(false);
             throw;
         }
         return new DsqlConnection(conn, dataSource);
@@ -68,6 +68,17 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     /// </summary>
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {
+        var csb = BuildBaseConnectionStringBuilder(config);
+        csb.Pooling = false;
+        return csb;
+    }
+
+    /// <summary>
+    /// Builds the shared base connection string properties used by both
+    /// DsqlDataSource (pooled) and DsqlConnection (unpooled).
+    /// </summary>
+    internal static NpgsqlConnectionStringBuilder BuildBaseConnectionStringBuilder(ResolvedConfig config)
+    {
         return new NpgsqlConnectionStringBuilder
         {
             Host = config.Host,
@@ -77,8 +88,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
             SslMode = SslMode.VerifyFull,
             SslNegotiation = SslNegotiation.Direct,
             ApplicationName = config.ApplicationName,
-            Pooling = false,
-            Enlist = false,
+            Enlist = false, // DSQL does not support PREPARE TRANSACTION
         };
     }
 
