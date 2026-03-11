@@ -169,7 +169,7 @@ public static class OccRetry
         for (int attempt = 0; attempt <= maxRetries; attempt++)
         {
             await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-            await using var tx = await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
+            await using var tx = await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct).ConfigureAwait(false);
             try
             {
                 await action(conn, tx).ConfigureAwait(false);

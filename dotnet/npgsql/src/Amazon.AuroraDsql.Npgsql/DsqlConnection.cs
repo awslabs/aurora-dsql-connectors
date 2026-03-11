@@ -92,9 +92,9 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
         return cmd;
     }
 
-    /// <summary>Begins a transaction on this connection.</summary>
+    /// <summary>Begins a SERIALIZABLE transaction (the only level DSQL supports).</summary>
     public ValueTask<NpgsqlTransaction> BeginTransactionAsync(CancellationToken ct = default)
-        => _inner.BeginTransactionAsync(ct);
+        => _inner.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
 
     /// <summary>Exposes the underlying NpgsqlConnection for advanced use.</summary>
     public NpgsqlConnection InnerConnection => _inner;

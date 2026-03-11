@@ -102,7 +102,7 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
             // Transactional INSERT
             await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
             {
-                await using var tx = await conn.BeginTransactionAsync();
+                await using var tx = await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
                 await using var cmd = new NpgsqlCommand(
                     $"INSERT INTO {table} (name) VALUES ($1)", conn, tx);
                 cmd.Parameters.AddWithValue("test-item");
