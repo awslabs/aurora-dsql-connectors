@@ -17,7 +17,8 @@ public class DsqlDataSourceTests
         int minPoolSize = 0,
         int connectionLifetime = 3300,
         int connectionIdleLifetime = 600,
-        string? ormPrefix = null) =>
+        string? ormPrefix = null,
+        Action<NpgsqlConnectionStringBuilder>? configureConnectionString = null) =>
         new(
             Host: host, Region: region, User: user,
             Database: "postgres", Port: 5432, Profile: null,
@@ -27,7 +28,8 @@ public class DsqlDataSourceTests
             ConnectionIdleLifetime: connectionIdleLifetime,
             OccMaxRetries: null, OrmPrefix: ormPrefix,
             ApplicationName: ConnectorVersion.BuildApplicationName(ormPrefix),
-            LoggerFactory: null);
+            LoggerFactory: null,
+            ConfigureConnectionString: configureConnectionString);
 
     [Fact]
     public void BuildConnectionString_SslDefaults()

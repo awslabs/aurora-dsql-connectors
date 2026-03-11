@@ -3,6 +3,7 @@
 
 using Amazon.Runtime;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Amazon.AuroraDsql.Npgsql;
 
@@ -55,6 +56,13 @@ public class DsqlConfig
     public ILoggerFactory? LoggerFactory { get; set; }
 
     /// <summary>
+    /// Optional callback to customize the underlying <see cref="NpgsqlConnectionStringBuilder"/>
+    /// after DSQL defaults are applied. Use this to set Npgsql-specific properties not exposed
+    /// by DsqlConfig (e.g., CommandTimeout, Timeout, IncludeErrorDetail).
+    /// </summary>
+    public Action<NpgsqlConnectionStringBuilder>? ConfigureConnectionString { get; set; }
+
+    /// <summary>
     /// Region resolution strategy. Override in tests to control environment behavior.
     /// Default: reads from FallbackRegionFactory, then AWS_DEFAULT_REGION env var.
     /// </summary>
@@ -88,6 +96,9 @@ public class DsqlConfig
 
         if (ConnectionIdleLifetime < 0)
             throw new DsqlException($"ConnectionIdleLifetime must be non-negative, got {ConnectionIdleLifetime}.");
+
+        if (OccMaxRetries.HasValue && OccMaxRetries.Value < 0)
+            throw new DsqlException($"OccMaxRetries must be null, 0, or positive, got {OccMaxRetries}.");
 
         var host = Host;
         string? region = Region;
@@ -126,7 +137,8 @@ public class DsqlConfig
             OccMaxRetries: OccMaxRetries,
             OrmPrefix: OrmPrefix,
             ApplicationName: ConnectorVersion.BuildApplicationName(OrmPrefix),
-            LoggerFactory: LoggerFactory);
+            LoggerFactory: LoggerFactory,
+            ConfigureConnectionString: ConfigureConnectionString);
     }
 
     /// <summary>
@@ -217,4 +229,5 @@ internal sealed record ResolvedConfig(
     int? OccMaxRetries,
     string? OrmPrefix,
     string ApplicationName,
-    ILoggerFactory? LoggerFactory);
+    ILoggerFactory? LoggerFactory,
+    Action<NpgsqlConnectionStringBuilder>? ConfigureConnectionString);

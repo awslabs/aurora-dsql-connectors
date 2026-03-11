@@ -38,7 +38,8 @@ public class TokenTests
             MaxPoolSize: 10, MinPoolSize: 0,
             ConnectionLifetime: 3300, ConnectionIdleLifetime: 600,
             OccMaxRetries: null, OrmPrefix: null,
-            ApplicationName: "test", LoggerFactory: null);
+            ApplicationName: "test", LoggerFactory: null,
+            ConfigureConnectionString: null);
 
         var resolved = Token.ResolveCredentials(config);
         Assert.Same(customCreds, resolved);

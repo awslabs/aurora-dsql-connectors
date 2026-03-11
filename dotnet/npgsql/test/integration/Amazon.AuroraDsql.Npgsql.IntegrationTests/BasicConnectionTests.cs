@@ -14,10 +14,10 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
 
     public BasicConnectionTests(IntegrationTestFixture fixture) => _fixture = fixture;
 
-    [Fact]
+    [SkippableFact]
     public async Task SelectOne()
     {
-        if (!_fixture.IsAvailable) return;
+        Skip.If(!_fixture.IsAvailable, "Requires CLUSTER_ENDPOINT environment variable");
 
         await using var conn = await _fixture.DataSource.OpenConnectionAsync();
         await using var cmd = new NpgsqlCommand("SELECT 1", conn);
@@ -26,10 +26,10 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
         Assert.Equal(1, result);
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task CreateInsertSelectDelete()
     {
-        if (!_fixture.IsAvailable) return;
+        Skip.If(!_fixture.IsAvailable, "Requires CLUSTER_ENDPOINT environment variable");
 
         var table = _fixture.GenerateTableName("basic");
 
@@ -75,10 +75,10 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task TransactionalWrite()
     {
-        if (!_fixture.IsAvailable) return;
+        Skip.If(!_fixture.IsAvailable, "Requires CLUSTER_ENDPOINT environment variable");
 
         var table = _fixture.GenerateTableName("txn");
 

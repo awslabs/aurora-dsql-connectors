@@ -14,10 +14,10 @@ public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
 
     public ConcurrentTransactionTests(IntegrationTestFixture fixture) => _fixture = fixture;
 
-    [Fact]
+    [SkippableFact]
     public async Task ConcurrentIncrements_BothSucceedViaOccRetry()
     {
-        if (!_fixture.IsAvailable) return;
+        Skip.If(!_fixture.IsAvailable, "Requires CLUSTER_ENDPOINT environment variable");
 
         var table = _fixture.GenerateTableName("conc");
         const int maxRetries = 5;

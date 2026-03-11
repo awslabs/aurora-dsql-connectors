@@ -9,7 +9,9 @@ namespace Amazon.AuroraDsql.Npgsql.Tests;
 
 public class DsqlConnectionTests
 {
-    private ResolvedConfig MakeConfig(string user = "admin") =>
+    private ResolvedConfig MakeConfig(
+        string user = "admin",
+        Action<NpgsqlConnectionStringBuilder>? configureConnectionString = null) =>
         new(
             Host: "cluster.dsql.us-east-1.on.aws", Region: "us-east-1",
             User: user, Database: "postgres", Port: 5432, Profile: null,
@@ -18,7 +20,8 @@ public class DsqlConnectionTests
             ConnectionLifetime: 3300, ConnectionIdleLifetime: 600,
             OccMaxRetries: null, OrmPrefix: null,
             ApplicationName: ConnectorVersion.ApplicationName,
-            LoggerFactory: null);
+            LoggerFactory: null,
+            ConfigureConnectionString: configureConnectionString);
 
     [Fact]
     public void BuildConnectionString_PoolingDisabled()
@@ -54,5 +57,13 @@ public class DsqlConnectionTests
     {
         var csb = DsqlConnection.BuildConnectionStringBuilder(MakeConfig());
         Assert.False(csb.Enlist);
+    }
+
+    [Fact]
+    public void BuildConnectionString_ConfigureConnectionStringApplied()
+    {
+        var csb = DsqlConnection.BuildConnectionStringBuilder(
+            MakeConfig(configureConnectionString: b => b.CommandTimeout = 60));
+        Assert.Equal(60, csb.CommandTimeout);
     }
 }

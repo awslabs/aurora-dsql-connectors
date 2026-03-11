@@ -9,18 +9,18 @@ namespace Amazon.AuroraDsql.Npgsql.Examples.Tests.Alternatives;
 [Collection("ExampleTests")]
 public class ManualTokenExampleTest
 {
-    [Fact]
+    [SkippableFact]
     public async Task RunExample()
     {
         var endpoint = Environment.GetEnvironmentVariable("CLUSTER_ENDPOINT");
         var user = Environment.GetEnvironmentVariable("CLUSTER_USER");
         var region = Environment.GetEnvironmentVariable("REGION");
 
-        if (string.IsNullOrEmpty(endpoint) ||
+        Skip.If(string.IsNullOrEmpty(endpoint) ||
             string.IsNullOrEmpty(user) ||
-            string.IsNullOrEmpty(region))
-            return; // Skip when required env vars are not set
+            string.IsNullOrEmpty(region),
+            "Requires CLUSTER_ENDPOINT, CLUSTER_USER, and REGION environment variables");
 
-        await ManualTokenExample.RunAsync(endpoint);
+        await ManualTokenExample.RunAsync(endpoint!);
     }
 }

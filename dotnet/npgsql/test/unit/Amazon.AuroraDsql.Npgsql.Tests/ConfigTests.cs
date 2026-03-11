@@ -123,6 +123,15 @@ public class ConfigTests
     }
 
     [Fact]
+    public void Validate_NegativeOccMaxRetries_ThrowsDsqlException()
+    {
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.OccMaxRetries = -1;
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
+        Assert.Contains("OccMaxRetries", ex.Message);
+    }
+
+    [Fact]
     public void Resolve_CustomUser_Preserved()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");

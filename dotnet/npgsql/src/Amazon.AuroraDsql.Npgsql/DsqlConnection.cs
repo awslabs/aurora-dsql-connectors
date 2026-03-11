@@ -81,7 +81,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     /// </summary>
     internal static NpgsqlConnectionStringBuilder BuildBaseConnectionStringBuilder(ResolvedConfig config)
     {
-        return new NpgsqlConnectionStringBuilder
+        var csb = new NpgsqlConnectionStringBuilder
         {
             Host = config.Host,
             Port = config.Port,
@@ -90,8 +90,12 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
             SslMode = SslMode.VerifyFull,
             SslNegotiation = SslNegotiation.Direct,
             ApplicationName = config.ApplicationName,
-            Enlist = false, // DSQL handles distributed consistency internally
+            Enlist = false, // DSQL does not support PREPARE TRANSACTION
         };
+
+        config.ConfigureConnectionString?.Invoke(csb);
+
+        return csb;
     }
 
     // --- Delegation of common NpgsqlConnection methods ---

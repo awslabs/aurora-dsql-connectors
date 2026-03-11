@@ -52,12 +52,23 @@ await using var ds = AuroraDsql.CreateDataSource(new DsqlConfig
     Host = "your-cluster.dsql.us-east-1.on.aws"
 });
 
-// Execute a query
-await using var conn = await ds.OpenConnectionAsync();
-await using var cmd = conn.CreateCommand();
-cmd.CommandText = "SELECT 'Hello, DSQL!'";
-var greeting = await cmd.ExecuteScalarAsync();
-Console.WriteLine(greeting);
+// Read
+await using (var conn = await ds.OpenConnectionAsync())
+{
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "SELECT 'Hello, DSQL!'";
+    var greeting = await cmd.ExecuteScalarAsync();
+    Console.WriteLine(greeting);
+}
+
+// Transactional write
+await OccRetry.WithTransactionRetryAsync(ds, maxRetries: 3, async conn =>
+{
+    await using var cmd = conn.CreateCommand();
+    cmd.CommandText = "INSERT INTO users (id, name) VALUES (gen_random_uuid(), @name)";
+    cmd.Parameters.AddWithValue("name", "Alice");
+    await cmd.ExecuteNonQueryAsync();
+});
 ```
 
 ## Configuration Options
@@ -78,13 +89,15 @@ Console.WriteLine(greeting);
 | `OccMaxRetries` | `int?` | `null` (disabled) | Max OCC retries on `ExecuteAsync`; enables retry when set |
 | `OrmPrefix` | `string?` | `null` | ORM prefix prepended to `application_name` (e.g., `"efcore"`) |
 | `LoggerFactory` | `ILoggerFactory?` | `null` | Logger factory for retry warnings and diagnostics |
+| `ConfigureConnectionString` | `Action<NpgsqlConnectionStringBuilder>?` | `null` | Callback to set additional Npgsql connection string properties after defaults |
 
 ## Connection String Format
 
-The connector supports PostgreSQL connection string format:
+The connector supports `postgres://` and `postgresql://` connection string formats:
 
 ```
 postgres://[user@]host[:port]/[database][?param=value&...]
+postgresql://[user@]host[:port]/[database][?param=value&...]
 ```
 
 **Supported query parameters:**
@@ -209,7 +222,7 @@ The `example/` directory contains runnable examples demonstrating various patter
 
 | Example | Description |
 |---------|-------------|
-| [ExamplePreferred](example/src/ExamplePreferred.cs) | Recommended: Connection pool with concurrent queries |
+| [ExamplePreferred](example/src/ExamplePreferred.cs) | Recommended: Connection pool with concurrent queries and transactional write |
 | [SingleConnection](example/src/alternatives/SingleConnection/) | Single connection without pooling |
 | [ManualToken](example/src/alternatives/ManualToken/) | Manual IAM token generation without the connector |
 
@@ -258,27 +271,40 @@ dotnet format src/Amazon.AuroraDsql.Npgsql/
 
 When using this connector with Aurora DSQL, follow these practices:
 
-1. **UUID Primary Keys**: Always use `UUID DEFAULT gen_random_uuid()` - DSQL doesn't support sequences or SERIAL
+1. **UUID Primary Keys**: Always use `UUID DEFAULT gen_random_uuid()` — DSQL doesn't support sequences or SERIAL
 2. **OCC Handling**: DSQL uses optimistic concurrency control. Enable retry via `OccMaxRetries` in config; for single connections, use `OccRetry` explicitly
-3. **No Foreign Keys**: DSQL doesn't support foreign key constraints - enforce relationships in your application
-4. **Async Indexes**: Use `CREATE INDEX ASYNC` for index creation
-5. **Transaction Limits**: Transactions are limited to 3,000 rows, 10 MiB, and 5 minutes
-6. **Connection Limits**: Connections timeout after 60 minutes; configure `ConnectionLifetime` accordingly (default 55 minutes)
-7. **No SAVEPOINT**: Partial rollbacks via SAVEPOINT are not supported
-8. **No Stored Procedures**: DSQL does not support `CALL` or PL/pgSQL
-9. **No PREPARE TRANSACTION**: Distributed transactions via `TransactionScope` / `System.Transactions` are disabled (`Enlist=false` is forced)
-10. **No NativeAOT**: Npgsql source generators have not been tested with this connector due to AWS SDK dependencies
-11. **Npgsql 10.x**: Root CA validation changes in Npgsql 10.x may require providing an explicit certificate path; this connector currently targets Npgsql 9.x
+3. **No Foreign Keys**: Enforce referential integrity in your application
+4. **Async Indexes**: Use `CREATE INDEX ASYNC` for index creation (max 24 indexes per table, max 8 columns per index)
+5. **One DDL per Transaction**: Separate DDL and DML into distinct transactions
+6. **Transaction Limits**: 3,000 rows, 10 MiB, and 5 minutes per transaction
+7. **Connection Limits**: Connections timeout after 60 minutes; configure `ConnectionLifetime` accordingly (default 55 minutes). Max 10,000 connections per cluster
+8. **Fixed Isolation Level**: DSQL uses Repeatable Read isolation — it cannot be changed
+9. **No TRUNCATE**: Use `DELETE FROM table` instead
+10. **No SAVEPOINT**: Partial rollbacks are not supported
+11. **No Triggers**: Implement in your application layer
+12. **No Temp Tables**: Use regular tables or application-level caching
+13. **No Partitioning**: Manage data distribution in your application
+14. **No Stored Procedures**: DSQL does not support `CALL` or PL/pgSQL
+15. **No Extensions**: PL/pgSQL, PostGIS, pgvector, etc. are not available
+16. **No PREPARE TRANSACTION**: Distributed transactions via `TransactionScope` / `System.Transactions` are disabled (`Enlist=false` is forced)
+17. **Single Database**: DSQL always uses `postgres`
+18. **Token Expiry**: IAM auth tokens are valid for 15 minutes (DSQL enforced maximum). The connector generates a fresh token for each new connection, so this is handled automatically
+19. **Limited Type System**: Use VARCHAR, TEXT, INTEGER, DECIMAL, BOOLEAN, TIMESTAMP, UUID. Arrays and JSON types are not natively supported — store as TEXT and parse in your application
+20. **No NativeAOT**: Npgsql source generators have not been tested with this connector due to AWS SDK dependencies
+21. **Npgsql 10.x**: Root CA validation changes in Npgsql 10.x may require providing an explicit certificate path; this connector currently targets Npgsql 9.x
 
 ## Horizontal Scaling
 
 When scaling your application horizontally with Aurora DSQL:
 
-- **Pool sizing**: Configure `MaxPoolSize` between 10-50 connections per application instance. DSQL supports many concurrent connections across instances, so keep per-instance pools modest.
-- **Batch size**: Keep write batches between 500-1,000 rows per transaction to stay within DSQL's transaction limits (3,000 rows, 10 MiB).
+- **Pool sizing**: Configure `MaxPoolSize` between 10–50 connections per application instance. DSQL supports up to 10,000 concurrent connections per cluster, so keep per-instance pools modest.
+- **Batch size**: Keep write batches between 500–1,000 rows per transaction to stay within DSQL's transaction limits (3,000 rows, 10 MiB).
 - **UUID primary keys**: Always use `gen_random_uuid()` to avoid key collisions across instances.
-- **Retry on OCC conflicts**: With more instances, OCC conflicts become more likely on contended rows. Always enable retry logic (`OccMaxRetries`) for write workloads.
+- **Hot key avoidance**: Compute aggregates via `SELECT` queries instead of maintaining running counters. See [Avoiding Hot Keys](https://marc-bowes.com/dsql-avoid-hot-keys.html).
+- **Retry on OCC conflicts**: With more instances, OCC conflicts become more likely on contended rows. Enable retry logic (`OccMaxRetries`) for write workloads.
+- **Retry on internal errors**: Internal errors are retryable. The retry uses a new connection from the pool with backoff and jitter to avoid thundering herd.
 - **Connection lifetime**: Keep `ConnectionLifetime` under 60 minutes (the default 55 minutes is recommended) to avoid server-side timeouts.
+- **Fresh tokens per connection**: The connector generates a fresh IAM token for each new physical connection. Token generation is a local SigV4 presigning operation (no network calls), so this adds negligible overhead even at scale.
 
 ## Additional Resources
 

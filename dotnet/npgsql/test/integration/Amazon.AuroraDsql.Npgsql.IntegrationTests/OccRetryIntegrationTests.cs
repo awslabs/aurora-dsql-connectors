@@ -14,10 +14,10 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
 
     public OccRetryIntegrationTests(IntegrationTestFixture fixture) => _fixture = fixture;
 
-    [Fact]
+    [SkippableFact]
     public async Task WithTransactionRetryAsync_NonConflictingWrite()
     {
-        if (!_fixture.IsAvailable) return;
+        Skip.If(!_fixture.IsAvailable, "Requires CLUSTER_ENDPOINT environment variable");
 
         var table = _fixture.GenerateTableName("occ_wr");
 
@@ -56,10 +56,10 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task ExecWithRetryAsync_DDL()
     {
-        if (!_fixture.IsAvailable) return;
+        Skip.If(!_fixture.IsAvailable, "Requires CLUSTER_ENDPOINT environment variable");
 
         var table = _fixture.GenerateTableName("occ_ddl");
 
