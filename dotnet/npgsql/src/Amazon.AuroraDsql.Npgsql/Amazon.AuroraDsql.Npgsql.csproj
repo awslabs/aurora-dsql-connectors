@@ -2,14 +2,29 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Amazon.AuroraDsql.Npgsql</RootNamespace>
     <PackageId>Amazon.AuroraDsql.Npgsql</PackageId>
-    <Version>0.0.1</Version>
+    <Version>1.0.0</Version>
     <Authors>Amazon Web Services</Authors>
-    <Description>Aurora DSQL connector for Npgsql</Description>
+    <Description>Aurora DSQL connector for .NET using Npgsql. Provides IAM authentication, connection pooling, and OCC retry.</Description>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/awslabs/aurora-dsql-connectors</RepositoryUrl>
     <PackageProjectUrl>https://github.com/awslabs/aurora-dsql-connectors/tree/main/dotnet/npgsql</PackageProjectUrl>
-    <PackageTags>aws;aurora;dsql;postgres;npgsql</PackageTags>
+    <PackageTags>aws;aurora;dsql;npgsql;postgresql</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="9.0.3" />
+    <PackageReference Include="AWSSDK.DSQL" Version="4.0.1" />
+    <PackageReference Include="AWSSDK.Core" Version="4.0.3.3" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Amazon.AuroraDsql.Npgsql.Tests" />
+  </ItemGroup>
 
 </Project>
