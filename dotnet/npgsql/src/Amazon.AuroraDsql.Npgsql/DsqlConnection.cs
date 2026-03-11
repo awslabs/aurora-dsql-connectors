@@ -3,6 +3,7 @@
 
 using Amazon;
 using Amazon.Runtime;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace Amazon.AuroraDsql.Npgsql;
@@ -29,7 +30,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     /// </summary>
     public static async Task<DsqlConnection> ConnectAsync(DsqlConfig config, CancellationToken ct = default)
     {
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
         var credentials = Token.ResolveCredentials(resolved);
         var regionEndpoint = RegionEndpoint.GetBySystemName(resolved.Region);
 
@@ -37,6 +38,9 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
         var builder = new NpgsqlDataSourceBuilder(csb.ConnectionString);
 
         DsqlDataSource.ConfigureBuilder(builder, resolved, credentials, regionEndpoint);
+
+        if (resolved.LoggerFactory != null)
+            builder.UseLoggerFactory(resolved.LoggerFactory);
 
         var dataSource = builder.Build();
         try
@@ -101,7 +105,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     }
 
     /// <summary>Exposes the underlying NpgsqlConnection for advanced use.</summary>
-    public NpgsqlConnection InnerConnection => _inner;
+    public NpgsqlConnection Connection => _inner;
 
     /// <inheritdoc />
     public void Dispose()

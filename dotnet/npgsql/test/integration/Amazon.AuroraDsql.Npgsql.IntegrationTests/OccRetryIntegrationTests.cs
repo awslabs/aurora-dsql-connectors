@@ -14,7 +14,7 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
     public OccRetryIntegrationTests(IntegrationTestFixture fixture) => _fixture = fixture;
 
     [Fact]
-    public async Task WithRetryAsync_NonConflictingWrite()
+    public async Task WithTransactionRetryAsync_NonConflictingWrite()
     {
         if (!_fixture.IsAvailable) return;
 
@@ -27,7 +27,7 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
                 $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL)");
 
             // Insert with OCC retry (no conflict expected, should succeed on first attempt)
-            await OccRetry.WithRetryAsync(
+            await OccRetry.WithTransactionRetryAsync(
                 _fixture.DataSource,
                 maxRetries: 3,
                 async conn =>

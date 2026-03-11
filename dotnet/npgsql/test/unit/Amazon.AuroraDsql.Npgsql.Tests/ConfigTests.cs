@@ -23,7 +23,7 @@ public class ConfigTests
     public void Resolve_WithFullHostname_AppliesDefaults()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
 
         Assert.Equal("cluster.dsql.us-east-1.on.aws", resolved.Host);
         Assert.Equal("us-east-1", resolved.Region);
@@ -42,17 +42,17 @@ public class ConfigTests
     {
         var config = MakeConfig("abcdefghijklmnopqrstuvwxyz");
         config.Region = "eu-west-1";
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
 
         Assert.Equal("abcdefghijklmnopqrstuvwxyz.dsql.eu-west-1.on.aws", resolved.Host);
         Assert.Equal("eu-west-1", resolved.Region);
     }
 
     [Fact]
-    public void Resolve_ClusterIdWithoutRegion_ThrowsDsqlException()
+    public void Validate_ClusterIdWithoutRegion_ThrowsDsqlException()
     {
         var config = MakeConfig("abcdefghijklmnopqrstuvwxyz");
-        var ex = Assert.Throws<DsqlException>(() => config.Resolve());
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
         Assert.Contains("region", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -64,34 +64,34 @@ public class ConfigTests
             Host = "abcdefghijklmnopqrstuvwxyz",
             RegionResolver = () => "ap-southeast-1"
         };
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
 
         Assert.Equal("abcdefghijklmnopqrstuvwxyz.dsql.ap-southeast-1.on.aws", resolved.Host);
         Assert.Equal("ap-southeast-1", resolved.Region);
     }
 
     [Fact]
-    public void Resolve_MissingHost_ThrowsDsqlException()
+    public void Validate_MissingHost_ThrowsDsqlException()
     {
         var config = MakeConfig();
-        Assert.Throws<DsqlException>(() => config.Resolve());
+        Assert.Throws<DsqlException>(() => config.Validate());
     }
 
     [Fact]
-    public void Resolve_InvalidPort_ThrowsDsqlException()
+    public void Validate_InvalidPort_ThrowsDsqlException()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
         config.Port = 0;
-        Assert.Throws<DsqlException>(() => config.Resolve());
+        Assert.Throws<DsqlException>(() => config.Validate());
     }
 
     [Fact]
-    public void Resolve_MinPoolSizeExceedsMax_ThrowsDsqlException()
+    public void Validate_MinPoolSizeExceedsMax_ThrowsDsqlException()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
         config.MinPoolSize = 50;
         config.MaxPoolSize = 10;
-        var ex = Assert.Throws<DsqlException>(() => config.Resolve());
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
         Assert.Contains("MinPoolSize", ex.Message);
     }
 
@@ -100,7 +100,7 @@ public class ConfigTests
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
         config.User = "myuser";
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
         Assert.Equal("myuser", resolved.User);
     }
 
@@ -113,7 +113,7 @@ public class ConfigTests
         config.ConnectionLifetime = 1800;
         config.ConnectionIdleLifetime = 300;
         config.OccMaxRetries = 5;
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
         Assert.Equal(50, resolved.MaxPoolSize);
         Assert.Equal(5, resolved.MinPoolSize);
         Assert.Equal(1800, resolved.ConnectionLifetime);
@@ -125,7 +125,7 @@ public class ConfigTests
     public void Resolve_ApplicationName_SetCorrectly()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
         Assert.StartsWith("aurora-dsql-dotnet-npgsql/", resolved.ApplicationName);
     }
 
@@ -134,7 +134,7 @@ public class ConfigTests
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
         config.OrmPrefix = "efcore";
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
         Assert.StartsWith("efcore:aurora-dsql-dotnet-npgsql/", resolved.ApplicationName);
     }
 

@@ -46,7 +46,7 @@ public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
             {
                 try
                 {
-                    await OccRetry.WithRetryAsync(
+                    await OccRetry.WithTransactionRetryAsync(
                         _fixture.DataSource,
                         maxRetries: maxRetries,
                         async conn =>

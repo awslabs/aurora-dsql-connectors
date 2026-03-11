@@ -32,7 +32,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// </summary>
     public static DsqlDataSource Create(DsqlConfig config)
     {
-        var resolved = config.Resolve();
+        var resolved = config.ResolveInternal();
         var credentials = Token.ResolveCredentials(resolved);
         var regionEndpoint = RegionEndpoint.GetBySystemName(resolved.Region);
 
@@ -119,17 +119,23 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// (fresh connection each attempt). The action MUST be safe to retry — either
     /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
     /// </summary>
+    /// <param name="action">The async action to execute with a pooled connection.</param>
+    /// <param name="maxOccRetries">
+    /// Maximum OCC retry attempts. Overrides <see cref="DsqlConfig.OccMaxRetries"/>.
+    /// Pass null to use the config default, or 0 to disable retry.
+    /// </param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// This method does NOT wrap the action in a transaction. If your action performs writes,
     /// you must issue BEGIN/COMMIT yourself inside the action, or use
-    /// <see cref="OccRetry.WithRetryAsync"/> which manages transactions automatically.
+    /// <see cref="OccRetry.WithTransactionRetryAsync"/> which manages transactions automatically.
     /// </remarks>
     public async Task ExecuteAsync(
         Func<NpgsqlConnection, Task> action,
-        int? retryOcc = null,
+        int? maxOccRetries = null,
         CancellationToken ct = default)
     {
-        var maxRetries = ResolveRetryCount(retryOcc);
+        var maxRetries = ResolveRetryCount(maxOccRetries);
 
         if (maxRetries <= 0)
         {
@@ -148,17 +154,23 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// (fresh connection each attempt). The action MUST be safe to retry — either
     /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
     /// </summary>
+    /// <param name="action">The async action to execute with a pooled connection.</param>
+    /// <param name="maxOccRetries">
+    /// Maximum OCC retry attempts. Overrides <see cref="DsqlConfig.OccMaxRetries"/>.
+    /// Pass null to use the config default, or 0 to disable retry.
+    /// </param>
+    /// <param name="ct">Cancellation token.</param>
     /// <remarks>
     /// This method does NOT wrap the action in a transaction. If your action performs writes,
     /// you must issue BEGIN/COMMIT yourself inside the action, or use
-    /// <see cref="OccRetry.WithRetryAsync"/> which manages transactions automatically.
+    /// <see cref="OccRetry.WithTransactionRetryAsync"/> which manages transactions automatically.
     /// </remarks>
     public async Task<T> ExecuteAsync<T>(
         Func<NpgsqlConnection, Task<T>> action,
-        int? retryOcc = null,
+        int? maxOccRetries = null,
         CancellationToken ct = default)
     {
-        var maxRetries = ResolveRetryCount(retryOcc);
+        var maxRetries = ResolveRetryCount(maxOccRetries);
 
         if (maxRetries <= 0)
         {
@@ -171,7 +183,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     }
 
     /// <summary>Exposes the underlying NpgsqlDataSource for advanced use.</summary>
-    public NpgsqlDataSource InnerDataSource => _inner;
+    public NpgsqlDataSource DataSource => _inner;
 
     /// <inheritdoc />
     public void Dispose() => _inner.Dispose();
@@ -179,10 +191,10 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// <inheritdoc />
     public ValueTask DisposeAsync() => _inner.DisposeAsync();
 
-    private int ResolveRetryCount(int? retryOcc)
+    private int ResolveRetryCount(int? maxOccRetries)
     {
-        if (retryOcc < 0)
-            throw new ArgumentException("retryOcc must be null, 0, or a positive integer.", nameof(retryOcc));
-        return retryOcc ?? _config.OccMaxRetries ?? 0;
+        if (maxOccRetries < 0)
+            throw new ArgumentException("maxOccRetries must be null, 0, or a positive integer.", nameof(maxOccRetries));
+        return maxOccRetries ?? _config.OccMaxRetries ?? 0;
     }
 }

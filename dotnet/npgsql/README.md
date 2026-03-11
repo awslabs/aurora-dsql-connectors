@@ -128,18 +128,18 @@ await using var conn = await AuroraDsql.ConnectAsync(
     "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres");
 ```
 
-The `DsqlConnection` wrapper delegates `CreateCommand` and exposes the underlying `NpgsqlConnection` via `conn.InnerConnection` for advanced use.
+The `DsqlConnection` wrapper delegates `CreateCommand` and exposes the underlying `NpgsqlConnection` via `conn.Connection` for advanced use.
 
 ## OCC Retry
 
 Aurora DSQL uses optimistic concurrency control (OCC). When two transactions modify the same data, the first to commit wins and the second receives an OCC error (SQLSTATE `40001`).
 
-### Transaction retry with `WithRetryAsync`
+### Transaction retry with `WithTransactionRetryAsync`
 
-Manages `BEGIN`/`COMMIT`/`ROLLBACK` internally via raw SQL (DSQL rejects the isolation level clause that Npgsql's `BeginTransactionAsync` sends). Opens a fresh connection for each attempt:
+Manages `BEGIN`/`COMMIT`/`ROLLBACK` internally via raw SQL (DSQL uses fixed Repeatable Read isolation, so the isolation level clause that Npgsql's `BeginTransactionAsync` sends is unnecessary). Opens a fresh connection for each attempt:
 
 ```csharp
-await OccRetry.WithRetryAsync(ds, maxRetries: 3, async conn =>
+await OccRetry.WithTransactionRetryAsync(ds, maxRetries: 3, async conn =>
 {
     await using var cmd = conn.CreateCommand();
 
@@ -164,7 +164,7 @@ await OccRetry.ExecWithRetryAsync(ds, "CREATE INDEX ASYNC idx_users_name ON user
 
 ### Pool-level retry with `ExecuteAsync`
 
-Use `ExecuteAsync` on the data source for automatic retry. Enable globally via `OccMaxRetries` in config, or per-call via `retryOcc`:
+Use `ExecuteAsync` on the data source for automatic retry. Enable globally via `OccMaxRetries` in config, or per-call via `maxOccRetries`:
 
 ```csharp
 // Global: set OccMaxRetries in config
@@ -174,23 +174,19 @@ var ds = AuroraDsql.CreateDataSource(new DsqlConfig
     OccMaxRetries = 3
 });
 
-// Per-call: override with retryOcc parameter
+// Per-call: override with maxOccRetries parameter
 await ds.ExecuteAsync(async conn =>
 {
-    // Use raw BEGIN/COMMIT — DSQL rejects the isolation level clause
-    // that Npgsql's BeginTransactionAsync() sends.
-    await using (var begin = new NpgsqlCommand("BEGIN", conn))
-        await begin.ExecuteNonQueryAsync();
-
     await using var cmd = conn.CreateCommand();
     cmd.CommandText = "INSERT INTO users (id, name) VALUES (gen_random_uuid(), @name)";
     cmd.Parameters.AddWithValue("name", "Alice");
     await cmd.ExecuteNonQueryAsync();
-
-    await using (var commit = new NpgsqlCommand("COMMIT", conn))
-        await commit.ExecuteNonQueryAsync();
-}, retryOcc: 3);
+}, maxOccRetries: 3);
 ```
+
+> **Note:** `ExecuteAsync` does NOT wrap the action in a transaction. For transactional
+> writes, use `OccRetry.WithTransactionRetryAsync` which manages `BEGIN`/`COMMIT`/`ROLLBACK`
+> automatically.
 
 ### OCC error detection
 

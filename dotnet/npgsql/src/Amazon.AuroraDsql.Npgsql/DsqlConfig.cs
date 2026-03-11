@@ -7,8 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace Amazon.AuroraDsql.Npgsql;
 
 /// <summary>
-/// Configuration for Aurora DSQL connections. Call <see cref="Resolve"/> to validate and
-/// apply defaults, returning an immutable <see cref="ResolvedConfig"/>.
+/// Configuration for Aurora DSQL connections. Call <see cref="Validate"/> to check
+/// configuration eagerly before creating a data source or connection.
 /// </summary>
 public class DsqlConfig
 {
@@ -61,9 +61,15 @@ public class DsqlConfig
     internal Func<string?> RegionResolver { get; set; } = DefaultResolveRegionFromEnvironment;
 
     /// <summary>
+    /// Validates the configuration and throws <see cref="DsqlException"/> if invalid.
+    /// Call this to check configuration eagerly before creating a data source or connection.
+    /// </summary>
+    public void Validate() => ResolveInternal();
+
+    /// <summary>
     /// Validates the configuration, applies defaults, and returns an immutable resolved config.
     /// </summary>
-    public ResolvedConfig Resolve()
+    internal ResolvedConfig ResolveInternal()
     {
         if (string.IsNullOrWhiteSpace(Host))
             throw new DsqlException("Host is required. Provide a full DSQL endpoint or a 26-character cluster ID.");
@@ -187,7 +193,7 @@ public class DsqlConfig
 /// <summary>
 /// Immutable resolved configuration with all defaults applied.
 /// </summary>
-public sealed record ResolvedConfig(
+internal sealed record ResolvedConfig(
     string Host,
     string Region,
     string User,

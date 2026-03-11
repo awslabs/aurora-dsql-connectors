@@ -113,12 +113,7 @@ public static class OccRetry
         ILogger? logger,
         CancellationToken ct)
     {
-        return RetryCoreAsync<object?>(maxRetries, async () =>
-        {
-            await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-            await action(conn).ConfigureAwait(false);
-            return null;
-        }, "", logger, ct);
+        return RetryAsync(dataSource.DataSource, maxRetries, action, logger, ct);
     }
 
     /// <summary>
@@ -131,9 +126,34 @@ public static class OccRetry
         ILogger? logger,
         CancellationToken ct)
     {
+        return RetryAsync(dataSource.DataSource, maxRetries, action, logger, ct);
+    }
+
+    private static Task RetryAsync(
+        NpgsqlDataSource npgsqlDataSource,
+        int maxRetries,
+        Func<NpgsqlConnection, Task> action,
+        ILogger? logger,
+        CancellationToken ct)
+    {
+        return RetryCoreAsync<object?>(maxRetries, async () =>
+        {
+            await using var conn = await npgsqlDataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            await action(conn).ConfigureAwait(false);
+            return null;
+        }, "", logger, ct);
+    }
+
+    private static Task<T> RetryAsync<T>(
+        NpgsqlDataSource npgsqlDataSource,
+        int maxRetries,
+        Func<NpgsqlConnection, Task<T>> action,
+        ILogger? logger,
+        CancellationToken ct)
+    {
         return RetryCoreAsync(maxRetries, async () =>
         {
-            await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            await using var conn = await npgsqlDataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
             return await action(conn).ConfigureAwait(false);
         }, "", logger, ct);
     }
@@ -146,8 +166,23 @@ public static class OccRetry
     /// LEVEL READ COMMITTED") that is unnecessary here.
     /// Opens a fresh connection for each attempt.
     /// </summary>
-    public static async Task WithRetryAsync(
+    public static Task WithTransactionRetryAsync(
         DsqlDataSource dataSource,
+        int maxRetries,
+        Func<NpgsqlConnection, Task> action,
+        ILogger? logger = null,
+        CancellationToken ct = default)
+    {
+        return WithTransactionRetryAsync(dataSource.DataSource, maxRetries, action, logger, ct);
+    }
+
+    /// <summary>
+    /// Retries a transaction block using a raw NpgsqlDataSource.
+    /// Use this overload when you have an NpgsqlDataSource from manual setup
+    /// or dependency injection rather than a DsqlDataSource.
+    /// </summary>
+    public static async Task WithTransactionRetryAsync(
+        NpgsqlDataSource npgsqlDataSource,
         int maxRetries,
         Func<NpgsqlConnection, Task> action,
         ILogger? logger = null,
@@ -158,7 +193,7 @@ public static class OccRetry
 
         await RetryCoreAsync<object?>(maxRetries, async () =>
         {
-            await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+            await using var conn = await npgsqlDataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
             await using var begin = new NpgsqlCommand("BEGIN", conn);
             await begin.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
             try
@@ -186,14 +221,32 @@ public static class OccRetry
     /// Convenience method: executes a single SQL statement with OCC retry.
     /// Useful for DDL statements like CREATE INDEX ASYNC.
     /// </summary>
-    public static async Task ExecWithRetryAsync(
+    public static Task ExecWithRetryAsync(
         DsqlDataSource dataSource,
         string sql,
         int maxRetries = DefaultMaxRetries,
         ILogger? logger = null,
         CancellationToken ct = default)
     {
-        await RetryAsync(dataSource, maxRetries, async conn =>
+        return ExecWithRetryAsync(dataSource.DataSource, sql, maxRetries, logger, ct);
+    }
+
+    /// <summary>
+    /// Executes a single SQL statement with OCC retry using a raw NpgsqlDataSource.
+    /// Use this overload when you have an NpgsqlDataSource from manual setup
+    /// or dependency injection rather than a DsqlDataSource.
+    /// </summary>
+    public static async Task ExecWithRetryAsync(
+        NpgsqlDataSource npgsqlDataSource,
+        string sql,
+        int maxRetries = DefaultMaxRetries,
+        ILogger? logger = null,
+        CancellationToken ct = default)
+    {
+        if (maxRetries < 0)
+            throw new ArgumentException("maxRetries must be non-negative.", nameof(maxRetries));
+
+        await RetryAsync(npgsqlDataSource, maxRetries, async conn =>
         {
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;

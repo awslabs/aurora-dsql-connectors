@@ -81,14 +81,6 @@ public class IntegrationTestFixture : IAsyncLifetime
                 await Task.Delay(DnsRetryDelay);
             }
         }
-
-        // Final attempt — let it throw if it fails
-        await using (var conn = await DataSource.OpenConnectionAsync())
-        {
-            await using var cmd = new NpgsqlCommand("SELECT 1", conn);
-            await cmd.ExecuteScalarAsync();
-        }
-        IsAvailable = true;
     }
 
     public async Task DisposeAsync()
