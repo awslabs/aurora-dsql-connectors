@@ -40,6 +40,7 @@ public static class ManualTokenExample
             SslNegotiation = SslNegotiation.Direct,
             Database = "postgres",
             Username = clusterUser,
+            NoResetOnClose = true, // DSQL does not support DISCARD ALL
         };
 
         var builder = new NpgsqlDataSourceBuilder(csb.ConnectionString);
@@ -66,7 +67,7 @@ public static class ManualTokenExample
         await using (var conn = await dataSource.OpenConnectionAsync())
         {
             await using var create = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)",
+                "CREATE TABLE IF NOT EXISTS manual_token_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)",
                 conn);
             await create.ExecuteNonQueryAsync();
         }
@@ -75,7 +76,7 @@ public static class ManualTokenExample
         await using (var conn = await dataSource.OpenConnectionAsync())
         {
             await using var insert = new NpgsqlCommand(
-                "INSERT INTO example_items (name) VALUES ($1)", conn);
+                "INSERT INTO manual_token_items (name) VALUES ($1)", conn);
             insert.Parameters.AddWithValue("manual-token-item");
             await insert.ExecuteNonQueryAsync();
         }
@@ -85,7 +86,7 @@ public static class ManualTokenExample
         await using (var conn = await dataSource.OpenConnectionAsync())
         {
             await using var select = new NpgsqlCommand(
-                "SELECT name FROM example_items WHERE name = $1", conn);
+                "SELECT name FROM manual_token_items WHERE name = $1", conn);
             select.Parameters.AddWithValue("manual-token-item");
             var name = (string?)await select.ExecuteScalarAsync();
             Console.WriteLine($"Read back: {name}");
@@ -95,7 +96,7 @@ public static class ManualTokenExample
         await using (var conn = await dataSource.OpenConnectionAsync())
         {
             await using var delete = new NpgsqlCommand(
-                "DELETE FROM example_items WHERE name = $1", conn);
+                "DELETE FROM manual_token_items WHERE name = $1", conn);
             delete.Parameters.AddWithValue("manual-token-item");
             await delete.ExecuteNonQueryAsync();
         }

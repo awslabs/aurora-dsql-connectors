@@ -27,26 +27,26 @@ public static class SingleConnectionExample
 
         // Ensure the example table exists
         await using var create = conn.CreateCommand(
-            "CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)");
+            "CREATE TABLE IF NOT EXISTS single_conn_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)");
         await create.ExecuteNonQueryAsync();
 
         // Insert a row
         await using var insert = conn.CreateCommand(
-            "INSERT INTO example_items (name) VALUES ($1)");
+            "INSERT INTO single_conn_items (name) VALUES ($1)");
         insert.Parameters.AddWithValue("single-conn-item");
         await insert.ExecuteNonQueryAsync();
         Console.WriteLine("Insert completed");
 
         // Read it back
         await using var select = conn.CreateCommand(
-            "SELECT name FROM example_items WHERE name = $1");
+            "SELECT name FROM single_conn_items WHERE name = $1");
         select.Parameters.AddWithValue("single-conn-item");
         var name = (string?)await select.ExecuteScalarAsync();
         Console.WriteLine($"Read back: {name}");
 
         // Cleanup
         await using var delete = conn.CreateCommand(
-            "DELETE FROM example_items WHERE name = $1");
+            "DELETE FROM single_conn_items WHERE name = $1");
         delete.Parameters.AddWithValue("single-conn-item");
         await delete.ExecuteNonQueryAsync();
         Console.WriteLine("Cleanup completed");
