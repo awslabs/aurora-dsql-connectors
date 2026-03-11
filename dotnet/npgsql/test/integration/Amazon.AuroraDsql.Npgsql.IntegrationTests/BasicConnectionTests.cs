@@ -35,13 +35,8 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
         try
         {
             // CREATE
-            await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
-            {
-                await using var cmd = new NpgsqlCommand(
-                    $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL)",
-                    conn);
-                await cmd.ExecuteNonQueryAsync();
-            }
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL)");
 
             // INSERT
             await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
@@ -74,10 +69,8 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
         }
         finally
         {
-            // DROP TABLE
-            await using var conn = await _fixture.DataSource.OpenConnectionAsync();
-            await using var drop = new NpgsqlCommand($"DROP TABLE IF EXISTS {table}", conn);
-            await drop.ExecuteNonQueryAsync();
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"DROP TABLE IF EXISTS {table}");
         }
     }
 
@@ -91,23 +84,18 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
         try
         {
             // Create the table
-            await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
-            {
-                await using var cmd = new NpgsqlCommand(
-                    $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT NOT NULL)",
-                    conn);
-                await cmd.ExecuteNonQueryAsync();
-            }
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT NOT NULL)");
 
-            // Transactional INSERT
+            // Transactional INSERT using raw SQL BEGIN/COMMIT (DSQL rejects isolation level clauses)
             await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
             {
-                await using var tx = await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+                await new NpgsqlCommand("BEGIN", conn).ExecuteNonQueryAsync();
                 await using var cmd = new NpgsqlCommand(
-                    $"INSERT INTO {table} (name) VALUES ($1)", conn, tx);
+                    $"INSERT INTO {table} (name) VALUES ($1)", conn);
                 cmd.Parameters.AddWithValue("test-item");
                 await cmd.ExecuteNonQueryAsync();
-                await tx.CommitAsync();
+                await new NpgsqlCommand("COMMIT", conn).ExecuteNonQueryAsync();
             }
 
             // Verify the row was committed
@@ -122,9 +110,8 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
         }
         finally
         {
-            await using var conn = await _fixture.DataSource.OpenConnectionAsync();
-            await using var drop = new NpgsqlCommand($"DROP TABLE IF EXISTS {table}", conn);
-            await drop.ExecuteNonQueryAsync();
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"DROP TABLE IF EXISTS {table}");
         }
     }
 }

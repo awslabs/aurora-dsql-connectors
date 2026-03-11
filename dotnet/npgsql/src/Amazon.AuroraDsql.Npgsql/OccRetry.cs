@@ -149,14 +149,14 @@ public static class OccRetry
 
     /// <summary>
     /// Retries a transaction block with explicit retry configuration.
-    /// Manages BEGIN/COMMIT/ROLLBACK internally — the callback receives a connection
-    /// and transaction, similar to Go's WithRetry(func(tx pgx.Tx)).
+    /// Manages BEGIN/COMMIT/ROLLBACK via raw SQL — DSQL does not support
+    /// Npgsql's BeginTransactionAsync which always sends an isolation level clause.
     /// Opens a fresh connection for each attempt.
     /// </summary>
     public static async Task WithRetryAsync(
         DsqlDataSource dataSource,
         int maxRetries,
-        Func<NpgsqlConnection, NpgsqlTransaction, Task> action,
+        Func<NpgsqlConnection, Task> action,
         ILogger? logger = null,
         CancellationToken ct = default)
     {
@@ -169,17 +169,24 @@ public static class OccRetry
         for (int attempt = 0; attempt <= maxRetries; attempt++)
         {
             await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-            await using var tx = await conn.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct).ConfigureAwait(false);
+            await using var begin = new NpgsqlCommand("BEGIN", conn);
+            await begin.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
             try
             {
-                await action(conn, tx).ConfigureAwait(false);
-                await tx.CommitAsync(ct).ConfigureAwait(false);
+                await action(conn).ConfigureAwait(false);
+                await using var commit = new NpgsqlCommand("COMMIT", conn);
+                await commit.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
                 return; // success
             }
             catch (Exception ex) when (IsOccError(ex))
             {
                 lastError = ex;
-                try { await tx.RollbackAsync(ct).ConfigureAwait(false); } catch { /* already failed */ }
+                try
+                {
+                    await using var rollback = new NpgsqlCommand("ROLLBACK", conn);
+                    await rollback.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+                }
+                catch { /* already failed */ }
 
                 if (attempt < maxRetries)
                 {

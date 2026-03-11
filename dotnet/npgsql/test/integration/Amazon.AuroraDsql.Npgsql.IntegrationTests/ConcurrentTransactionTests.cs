@@ -24,13 +24,8 @@ public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
         try
         {
             // Create counter table
-            await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
-            {
-                await using var cmd = new NpgsqlCommand(
-                    $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, counter INT NOT NULL DEFAULT 0)",
-                    conn);
-                await cmd.ExecuteNonQueryAsync();
-            }
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, counter INT NOT NULL DEFAULT 0)");
 
             // Insert a row with counter = 0
             string rowId;
@@ -54,11 +49,11 @@ public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
                     await OccRetry.WithRetryAsync(
                         _fixture.DataSource,
                         maxRetries: maxRetries,
-                        async (conn, tx) =>
+                        async conn =>
                         {
                             // Read current counter value
                             await using var readCmd = new NpgsqlCommand(
-                                $"SELECT counter FROM {table} WHERE id = $1::uuid", conn, tx);
+                                $"SELECT counter FROM {table} WHERE id = $1::uuid", conn);
                             readCmd.Parameters.AddWithValue(rowId);
                             var current = (int)(await readCmd.ExecuteScalarAsync())!;
 
@@ -74,7 +69,7 @@ public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
 
                             // Increment
                             await using var writeCmd = new NpgsqlCommand(
-                                $"UPDATE {table} SET counter = $1 WHERE id = $2::uuid", conn, tx);
+                                $"UPDATE {table} SET counter = $1 WHERE id = $2::uuid", conn);
                             writeCmd.Parameters.AddWithValue(current + 1);
                             writeCmd.Parameters.AddWithValue(rowId);
                             await writeCmd.ExecuteNonQueryAsync();
@@ -106,9 +101,8 @@ public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
         }
         finally
         {
-            await using var conn = await _fixture.DataSource.OpenConnectionAsync();
-            await using var drop = new NpgsqlCommand($"DROP TABLE IF EXISTS {table}", conn);
-            await drop.ExecuteNonQueryAsync();
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"DROP TABLE IF EXISTS {table}");
         }
     }
 }

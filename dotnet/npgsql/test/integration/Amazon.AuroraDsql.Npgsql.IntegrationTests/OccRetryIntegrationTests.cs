@@ -23,22 +23,17 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
         try
         {
             // Create table
-            await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
-            {
-                await using var cmd = new NpgsqlCommand(
-                    $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL)",
-                    conn);
-                await cmd.ExecuteNonQueryAsync();
-            }
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, value INT NOT NULL)");
 
             // Insert with OCC retry (no conflict expected, should succeed on first attempt)
             await OccRetry.WithRetryAsync(
                 _fixture.DataSource,
                 maxRetries: 3,
-                async (conn, tx) =>
+                async conn =>
                 {
                     await using var cmd = new NpgsqlCommand(
-                        $"INSERT INTO {table} (value) VALUES ($1)", conn, tx);
+                        $"INSERT INTO {table} (value) VALUES ($1)", conn);
                     cmd.Parameters.AddWithValue(42);
                     await cmd.ExecuteNonQueryAsync();
                 });
@@ -55,9 +50,8 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
         }
         finally
         {
-            await using var conn = await _fixture.DataSource.OpenConnectionAsync();
-            await using var drop = new NpgsqlCommand($"DROP TABLE IF EXISTS {table}", conn);
-            await drop.ExecuteNonQueryAsync();
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"DROP TABLE IF EXISTS {table}");
         }
     }
 
@@ -94,9 +88,8 @@ public class OccRetryIntegrationTests : IClassFixture<IntegrationTestFixture>
         }
         finally
         {
-            await using var conn = await _fixture.DataSource.OpenConnectionAsync();
-            await using var drop = new NpgsqlCommand($"DROP TABLE IF EXISTS {table}", conn);
-            await drop.ExecuteNonQueryAsync();
+            await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
+                $"DROP TABLE IF EXISTS {table}");
         }
     }
 }
