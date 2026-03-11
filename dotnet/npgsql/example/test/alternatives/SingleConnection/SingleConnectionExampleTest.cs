@@ -6,6 +6,8 @@ using Xunit;
 
 namespace Amazon.AuroraDsql.Npgsql.Examples.Tests.Alternatives;
 
+// Run all example tests sequentially to avoid OCC conflicts on concurrent DDL
+[Collection("ExampleTests")]
 public class SingleConnectionExampleTest
 {
     [Fact]
