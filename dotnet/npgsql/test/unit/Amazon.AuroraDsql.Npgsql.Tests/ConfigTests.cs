@@ -96,6 +96,33 @@ public class ConfigTests
     }
 
     [Fact]
+    public void Validate_MaxPoolSizeZero_ThrowsDsqlException()
+    {
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.MaxPoolSize = 0;
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
+        Assert.Contains("MaxPoolSize", ex.Message);
+    }
+
+    [Fact]
+    public void Validate_NegativeConnectionLifetime_ThrowsDsqlException()
+    {
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.ConnectionLifetime = -1;
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
+        Assert.Contains("ConnectionLifetime", ex.Message);
+    }
+
+    [Fact]
+    public void Validate_NegativeConnectionIdleLifetime_ThrowsDsqlException()
+    {
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.ConnectionIdleLifetime = -1;
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
+        Assert.Contains("ConnectionIdleLifetime", ex.Message);
+    }
+
+    [Fact]
     public void Resolve_CustomUser_Preserved()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");

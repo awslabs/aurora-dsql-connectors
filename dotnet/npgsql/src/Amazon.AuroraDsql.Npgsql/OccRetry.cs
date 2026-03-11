@@ -206,10 +206,11 @@ public static class OccRetry
             catch
             {
                 // Best-effort rollback; the connection is discarded after this attempt anyway.
+                // Use CancellationToken.None so the rollback succeeds even if the caller cancelled.
                 try
                 {
                     await using var rollback = new NpgsqlCommand("ROLLBACK", conn);
-                    await rollback.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+                    await rollback.ExecuteNonQueryAsync(CancellationToken.None).ConfigureAwait(false);
                 }
                 catch { /* connection may already be broken */ }
                 throw;

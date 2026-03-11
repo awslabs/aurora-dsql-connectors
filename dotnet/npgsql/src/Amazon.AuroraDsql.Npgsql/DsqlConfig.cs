@@ -77,8 +77,17 @@ public class DsqlConfig
         if (Port < 1 || Port > 65535)
             throw new DsqlException($"Port must be between 1 and 65535, got {Port}.");
 
+        if (MaxPoolSize < 1)
+            throw new DsqlException($"MaxPoolSize must be at least 1, got {MaxPoolSize}.");
+
         if (MinPoolSize > MaxPoolSize)
             throw new DsqlException($"MinPoolSize ({MinPoolSize}) must not exceed MaxPoolSize ({MaxPoolSize}).");
+
+        if (ConnectionLifetime < 1)
+            throw new DsqlException($"ConnectionLifetime must be at least 1 second, got {ConnectionLifetime}.");
+
+        if (ConnectionIdleLifetime < 0)
+            throw new DsqlException($"ConnectionIdleLifetime must be non-negative, got {ConnectionIdleLifetime}.");
 
         var host = Host;
         string? region = Region;
