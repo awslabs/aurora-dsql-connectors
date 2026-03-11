@@ -3,9 +3,9 @@
 
 use std::time::Duration;
 
-use crate::token;
-use crate::util::Region;
-use crate::{DsqlConfig, DsqlError, Result};
+use crate::{
+    occ_retry::OCCRetryConfig, token, util::Region, DsqlConfig, DsqlError, DsqlPoolConfig, Result,
+};
 use sqlx::{Connection, PgConnection};
 
 // We use bb8 instead of sqlx::Pool because sqlx's built-in pool bakes the
@@ -53,20 +53,28 @@ impl bb8::ManageConnection for DsqlConnectionManager {
 
 pub struct DsqlPool {
     pool: bb8::Pool<DsqlConnectionManager>,
+    occ_retry_config: Option<OCCRetryConfig>,
 }
 
 impl DsqlPool {
     pub async fn new(conn_str: &str) -> Result<Self> {
-        let config = DsqlConfig::from_connection_string(conn_str).await?;
+        let config = DsqlPoolConfig::from_connection_string(conn_str)?;
         Self::from_config(config).await
     }
 
-    pub async fn from_config(config: DsqlConfig) -> Result<Self> {
-        let sdk_config = config.load_aws_config().await.clone();
-        let region = config.resolve_region_with_sdk_config(&sdk_config)?;
+    pub async fn from_config(config: DsqlPoolConfig) -> Result<Self> {
+        let mut connection = config.connection;
+        let sdk_config = connection.load_aws_config().await;
+        connection.host = connection.resolve_host(&sdk_config)?;
+        let region = connection.resolve_region(&sdk_config)?;
+
+        let occ_retry_config = config.occ_max_retries.map(|max_retries| OCCRetryConfig {
+            max_attempts: max_retries,
+            ..OCCRetryConfig::default()
+        });
 
         let manager = DsqlConnectionManager {
-            config: config.clone(),
+            config: connection,
             region,
             sdk_config,
         };
@@ -78,14 +86,53 @@ impl DsqlPool {
             .build(manager)
             .await?;
 
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            occ_retry_config,
+        })
     }
 
+    /// Get a raw connection from the pool.
+    ///
+    /// This bypasses OCC retry — callers are responsible for handling
+    /// OCC errors (SQLSTATE 40001/OC000/OC001) themselves. Prefer
+    /// [`with()`](Self::with) for write operations that need automatic retry.
     pub async fn get(&self) -> Result<bb8::PooledConnection<'_, DsqlConnectionManager>> {
         self.pool.get().await.map_err(|e| match e {
             bb8::RunError::User(dsql_err) => dsql_err,
             bb8::RunError::TimedOut => DsqlError::PoolError("connection pool timed out".into()),
         })
+    }
+
+    /// Execute a transactional block with automatic OCC retry.
+    ///
+    /// If `occ_max_retries` was set in the pool config, the closure is
+    /// retried on OCC conflict with exponential backoff. Otherwise
+    /// the closure runs once without retry.
+    ///
+    /// The closure receives a mutable reference to the active transaction
+    /// and should contain only operations that are safe to re-execute.
+    pub async fn with<F, T>(&self, f: F) -> Result<T>
+    where
+        F: for<'c> Fn(
+            &'c mut sqlx::PgConnection,
+        ) -> std::pin::Pin<
+            Box<dyn std::future::Future<Output = Result<T>> + Send + 'c>,
+        >,
+        T: Send,
+    {
+        let run = || async {
+            let mut conn = self.get().await?;
+            let mut tx = conn.begin().await.map_err(DsqlError::DatabaseError)?;
+            let result = f(&mut tx).await?;
+            tx.commit().await.map_err(DsqlError::DatabaseError)?;
+            Ok(result)
+        };
+
+        match &self.occ_retry_config {
+            Some(config) => crate::occ_retry::retry_on_occ(config, run).await,
+            None => run().await,
+        }
     }
 }
 
@@ -107,10 +154,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_pool_from_config_creates_pool() {
-        let config = DsqlConfig::from_connection_string(
+        let config = DsqlPoolConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )
-        .await
         .unwrap();
 
         // bb8 does not eagerly connect, so pool creation should succeed
@@ -125,11 +171,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_pool_from_config_with_custom_params() {
-        let config = DsqlConfig::from_connection_string(
+        let config = DsqlPoolConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?\
              maxConnections=20&maxLifetimeSecs=1800&idleTimeoutSecs=300",
         )
-        .await
         .unwrap();
 
         assert_eq!(config.max_connections, 20);
@@ -145,11 +190,35 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_pool_get_fails_without_database() {
-        let config = DsqlConfig::from_connection_string(
+    async fn test_pool_from_config_with_occ_max_retries() {
+        let config = DsqlPoolConfig::from_connection_string(
+            "postgres://admin@example.dsql.us-east-1.on.aws/postgres?occMaxRetries=5",
+        )
+        .unwrap();
+
+        assert_eq!(config.occ_max_retries, Some(5));
+
+        let pool = DsqlPool::from_config(config).await.unwrap();
+        assert!(pool.occ_retry_config.is_some());
+        assert_eq!(pool.occ_retry_config.as_ref().unwrap().max_attempts, 5);
+    }
+
+    #[tokio::test]
+    async fn test_pool_from_config_without_occ_max_retries() {
+        let config = DsqlPoolConfig::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )
-        .await
+        .unwrap();
+
+        let pool = DsqlPool::from_config(config).await.unwrap();
+        assert!(pool.occ_retry_config.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_pool_get_fails_without_database() {
+        let config = DsqlPoolConfig::from_connection_string(
+            "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
+        )
         .unwrap();
 
         // Pool creation succeeds (no eager connection)

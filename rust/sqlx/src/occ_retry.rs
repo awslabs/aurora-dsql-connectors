@@ -31,23 +31,18 @@ impl Default for OCCRetryConfig {
     }
 }
 
-/// Detect OCC errors from a raw sqlx::Error (SQLSTATE 40001, OC000, OC001).
-pub fn is_occ_error(err: &sqlx::Error) -> bool {
-    if let sqlx::Error::Database(db_err) = err {
-        if let Some(code) = db_err.code() {
-            let code_str = code.as_ref();
-            if code_str == "40001" || code_str == "OC000" || code_str == "OC001" {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Detect OCC errors from a DsqlError by inspecting the underlying sqlx error.
-pub fn is_occ_dsql_error(err: &DsqlError) -> bool {
+/// Detect OCC errors by inspecting the SQLSTATE code (40001, OC000, OC001).
+pub fn is_occ_error(err: &DsqlError) -> bool {
     match err {
-        DsqlError::DatabaseError(sqlx_err) => is_occ_error(sqlx_err),
+        DsqlError::DatabaseError(sqlx_err) => {
+            if let sqlx::Error::Database(db_err) = sqlx_err {
+                if let Some(code) = db_err.code() {
+                    let c = code.as_ref();
+                    return c == "40001" || c == "OC000" || c == "OC001";
+                }
+            }
+            false
+        }
         _ => false,
     }
 }
@@ -83,7 +78,7 @@ where
     for attempt in 0..config.max_attempts {
         match f().await {
             Ok(val) => return Ok(val),
-            Err(e) if is_occ_dsql_error(&e) => {
+            Err(e) if is_occ_error(&e) => {
                 last_err = Some(e);
                 if attempt + 1 < config.max_attempts {
                     let delay = calculate_backoff(config, attempt + 1);
@@ -97,7 +92,6 @@ where
     let cause = last_err.unwrap();
     Err(DsqlError::OCCRetryExhausted {
         attempts: config.max_attempts,
-        message: cause.to_string(),
         source: Box::new(cause),
     })
 }
@@ -146,40 +140,40 @@ mod tests {
 
     #[test]
     fn test_occ_error_detection_sqlstate() {
-        let err = sqlx::Error::Database(Box::new(MockDbError {
+        let err = DsqlError::DatabaseError(sqlx::Error::Database(Box::new(MockDbError {
             code: Some("40001".to_string()),
             message: "serialization failure".to_string(),
-        }));
+        })));
 
         assert!(is_occ_error(&err));
     }
 
     #[test]
     fn test_occ_error_detection_oc000() {
-        let err = sqlx::Error::Database(Box::new(MockDbError {
+        let err = DsqlError::DatabaseError(sqlx::Error::Database(Box::new(MockDbError {
             code: Some("OC000".to_string()),
             message: "optimistic concurrency failure".to_string(),
-        }));
+        })));
 
         assert!(is_occ_error(&err));
     }
 
     #[test]
     fn test_occ_error_detection_oc001() {
-        let err = sqlx::Error::Database(Box::new(MockDbError {
+        let err = DsqlError::DatabaseError(sqlx::Error::Database(Box::new(MockDbError {
             code: Some("OC001".to_string()),
             message: "transaction conflict".to_string(),
-        }));
+        })));
 
         assert!(is_occ_error(&err));
     }
 
     #[test]
     fn test_non_occ_error() {
-        let err = sqlx::Error::Database(Box::new(MockDbError {
+        let err = DsqlError::DatabaseError(sqlx::Error::Database(Box::new(MockDbError {
             code: Some("23505".to_string()),
             message: "unique violation".to_string(),
-        }));
+        })));
 
         assert!(!is_occ_error(&err));
     }
@@ -227,30 +221,19 @@ mod tests {
     }
 
     #[test]
-    fn test_is_occ_dsql_error_oc000() {
-        let sqlx_err = sqlx::Error::Database(Box::new(MockDbError {
-            code: Some("OC000".to_string()),
-            message: "mutation conflict".to_string(),
-        }));
-        let err = DsqlError::DatabaseError(sqlx_err);
-        assert!(is_occ_dsql_error(&err));
-    }
-
-    #[test]
-    fn test_is_occ_dsql_error_non_occ() {
-        let sqlx_err = sqlx::Error::Database(Box::new(MockDbError {
-            code: Some("23505".to_string()),
-            message: "unique violation".to_string(),
-        }));
-        let err = DsqlError::DatabaseError(sqlx_err);
-        assert!(!is_occ_dsql_error(&err));
-    }
-
-    #[test]
-    fn test_is_occ_dsql_error_non_database() {
+    fn test_is_occ_error_non_database() {
         let sqlx_err = sqlx::Error::Protocol("connection refused".into());
         let err = DsqlError::ConnectionError(sqlx_err);
-        assert!(!is_occ_dsql_error(&err));
+        assert!(!is_occ_error(&err));
+    }
+
+    #[test]
+    fn test_is_occ_error_no_sqlstate_code() {
+        let err = DsqlError::DatabaseError(sqlx::Error::Database(Box::new(MockDbError {
+            code: None,
+            message: "unknown error".to_string(),
+        })));
+        assert!(!is_occ_error(&err));
     }
 
     #[test]
@@ -259,16 +242,9 @@ mod tests {
             code: Some("OC000".to_string()),
             message: "OC000 conflict".to_string(),
         }));
-        let cause = DsqlError::DatabaseError(sqlx_err);
-        let msg = cause.to_string();
-        let source_err = sqlx::Error::Database(Box::new(MockDbError {
-            code: Some("OC000".to_string()),
-            message: "OC000 conflict".to_string(),
-        }));
         let err = DsqlError::OCCRetryExhausted {
             attempts: 3,
-            message: msg,
-            source: Box::new(DsqlError::DatabaseError(source_err)),
+            source: Box::new(DsqlError::DatabaseError(sqlx_err)),
         };
         assert!(err.to_string().contains("3 attempts"));
         assert!(err.to_string().contains("OC000"));

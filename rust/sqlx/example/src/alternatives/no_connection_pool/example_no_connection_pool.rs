@@ -6,10 +6,9 @@ use sqlx::{Executor, Row};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let cluster_endpoint =
-        std::env::var("CLUSTER_ENDPOINT").expect("CLUSTER_ENDPOINT environment variable is not set");
-    let cluster_user =
-        std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
+    let cluster_endpoint = std::env::var("CLUSTER_ENDPOINT")
+        .expect("CLUSTER_ENDPOINT environment variable is not set");
+    let cluster_user = std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
 
     let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
 
@@ -26,10 +25,8 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     // Insert a row
-    conn.execute(
-        "INSERT INTO owner(name, city) VALUES('John Doe', 'Anytown')",
-    )
-    .await?;
+    conn.execute("INSERT INTO owner(name, city) VALUES('John Doe', 'Anytown')")
+        .await?;
 
     // Query it back
     let row = sqlx::query("SELECT * FROM owner WHERE name = $1")
