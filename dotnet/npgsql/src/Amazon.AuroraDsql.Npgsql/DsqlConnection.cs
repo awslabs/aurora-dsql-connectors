@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Security.Authentication;
 using Amazon;
 using Amazon.Runtime;
 using Npgsql;
@@ -37,19 +36,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
         var csb = BuildConnectionStringBuilder(resolved);
         var builder = new NpgsqlDataSourceBuilder(csb.ConnectionString);
 
-        // Fresh IAM token per connection
-        builder.UsePasswordProvider(
-            passwordProvider: (_) =>
-                Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint),
-            passwordProviderAsync: (_, _) =>
-                new ValueTask<string>(
-                    Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint)));
-
-        // Enforce TLS 1.2+
-        builder.UseSslClientAuthenticationOptionsCallback(options =>
-        {
-            options.EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
-        });
+        DsqlDataSource.ConfigureBuilder(builder, resolved, credentials, regionEndpoint);
 
         var dataSource = builder.Build();
         NpgsqlConnection? conn = null;

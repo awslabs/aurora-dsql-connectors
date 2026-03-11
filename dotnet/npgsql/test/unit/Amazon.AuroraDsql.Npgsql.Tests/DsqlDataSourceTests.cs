@@ -21,7 +21,7 @@ public class DsqlDataSourceTests
         new(
             Host: host, Region: region, User: user,
             Database: "postgres", Port: 5432, Profile: null,
-            TokenDurationSecs: 900, CustomCredentialsProvider: null,
+            CustomCredentialsProvider: null,
             MaxPoolSize: maxPoolSize, MinPoolSize: minPoolSize,
             ConnectionLifetime: connectionLifetime,
             ConnectionIdleLifetime: connectionIdleLifetime,

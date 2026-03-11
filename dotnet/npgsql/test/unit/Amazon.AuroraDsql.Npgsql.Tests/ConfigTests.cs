@@ -33,7 +33,6 @@ public class ConfigTests : IDisposable
         Assert.Equal("admin", resolved.User);
         Assert.Equal("postgres", resolved.Database);
         Assert.Equal(5432, resolved.Port);
-        Assert.Equal(900, resolved.TokenDurationSecs);
         Assert.Equal(10, resolved.MaxPoolSize);
         Assert.Equal(0, resolved.MinPoolSize);
         Assert.Equal(3300, resolved.ConnectionLifetime);
@@ -86,14 +85,6 @@ public class ConfigTests : IDisposable
     {
         var config = new DsqlConfig { Host = "cluster.dsql.us-east-1.on.aws", Port = 0 };
         Assert.Throws<DsqlException>(() => config.Resolve());
-    }
-
-    [Fact]
-    public void Resolve_InvalidTokenDuration_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig { Host = "cluster.dsql.us-east-1.on.aws", TokenDurationSecs = -1 };
-        var ex = Assert.Throws<DsqlException>(() => config.Resolve());
-        Assert.Contains("TokenDurationSecs", ex.Message);
     }
 
     [Fact]
@@ -167,12 +158,11 @@ public class ConfigTests : IDisposable
     public void ParseConnectionString_ValidUri_ExtractsDsqlParams()
     {
         var config = DsqlConfig.FromConnectionString(
-            "postgres://myuser@cluster.dsql.us-east-1.on.aws/postgres?profile=dev&tokenDurationSecs=600");
+            "postgres://myuser@cluster.dsql.us-east-1.on.aws/postgres?profile=dev");
 
         Assert.Equal("cluster.dsql.us-east-1.on.aws", config.Host);
         Assert.Equal("myuser", config.User);
         Assert.Equal("dev", config.Profile);
-        Assert.Equal(600, config.TokenDurationSecs);
     }
 
     [Fact]
@@ -181,14 +171,6 @@ public class ConfigTests : IDisposable
         var config = DsqlConfig.FromConnectionString(
             "postgresql://admin@cluster.dsql.us-east-1.on.aws/postgres");
         Assert.Equal("cluster.dsql.us-east-1.on.aws", config.Host);
-    }
-
-    [Fact]
-    public void ParseConnectionString_MalformedTokenDuration_Throws()
-    {
-        Assert.Throws<DsqlException>(() =>
-            DsqlConfig.FromConnectionString(
-                "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?tokenDurationSecs=abc"));
     }
 
     [Fact]

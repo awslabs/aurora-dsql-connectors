@@ -39,19 +39,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
         var csb = BuildConnectionStringBuilder(resolved);
         var builder = new NpgsqlDataSourceBuilder(csb.ConnectionString);
 
-        // Fresh IAM token per physical connection
-        builder.UsePasswordProvider(
-            passwordProvider: (_) =>
-                Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint),
-            passwordProviderAsync: (_, _) =>
-                new ValueTask<string>(
-                    Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint)));
-
-        // Enforce TLS 1.2+
-        builder.UseSslClientAuthenticationOptionsCallback(options =>
-        {
-            options.EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
-        });
+        ConfigureBuilder(builder, resolved, credentials, regionEndpoint);
 
         if (resolved.LoggerFactory != null)
             builder.UseLoggerFactory(resolved.LoggerFactory);
@@ -90,6 +78,29 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
             Enlist = false, // DSQL does not support PREPARE TRANSACTION
             NoResetOnClose = true, // DSQL does not support DISCARD ALL
         };
+    }
+
+    /// <summary>
+    /// Configures the data source builder with IAM password provider and TLS settings.
+    /// Shared by DsqlDataSource.Create and DsqlConnection.ConnectAsync.
+    /// </summary>
+    internal static void ConfigureBuilder(
+        NpgsqlDataSourceBuilder builder,
+        ResolvedConfig resolved,
+        AWSCredentials credentials,
+        RegionEndpoint regionEndpoint)
+    {
+        builder.UsePasswordProvider(
+            passwordProvider: (_) =>
+                Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint),
+            passwordProviderAsync: (_, _) =>
+                new ValueTask<string>(
+                    Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint)));
+
+        builder.UseSslClientAuthenticationOptionsCallback(options =>
+        {
+            options.EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+        });
     }
 
     // --- Delegation of NpgsqlDataSource API ---

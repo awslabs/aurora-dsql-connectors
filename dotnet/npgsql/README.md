@@ -70,7 +70,6 @@ Console.WriteLine(greeting);
 | `Database` | `string` | `"postgres"` | Database name |
 | `Port` | `int` | `5432` | Database port |
 | `Profile` | `string?` | `null` | AWS profile name for credentials |
-| `TokenDurationSecs` | `int` | `900` (15 min) | Token validity duration in seconds |
 | `CustomCredentialsProvider` | `AWSCredentials?` | `null` | Custom AWS credentials provider |
 | `MaxPoolSize` | `int` | `10` | Maximum pool connections |
 | `MinPoolSize` | `int` | `0` | Minimum pool connections |
@@ -91,7 +90,6 @@ postgres://[user@]host[:port]/[database][?param=value&...]
 **Supported query parameters:**
 - `region` - AWS region
 - `profile` - AWS profile name
-- `tokenDurationSecs` - Token validity duration in seconds
 
 **Examples:**
 
@@ -103,10 +101,6 @@ await using var ds = AuroraDsql.CreateDataSource(
 // With AWS profile
 await using var ds = AuroraDsql.CreateDataSource(
     "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?profile=dev");
-
-// With custom token duration
-await using var ds = AuroraDsql.CreateDataSource(
-    "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?tokenDurationSecs=600");
 ```
 
 ## Single Connection Usage

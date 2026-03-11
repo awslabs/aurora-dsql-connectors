@@ -30,9 +30,6 @@ public class DsqlConfig
     /// <summary>AWS profile name for credential resolution.</summary>
     public string? Profile { get; set; }
 
-    /// <summary>IAM token duration in seconds. Default: 900 (15 minutes, DSQL max).</summary>
-    public int TokenDurationSecs { get; set; } = 900;
-
     /// <summary>Explicit AWS credentials for cross-account or assume-role scenarios.</summary>
     public AWSCredentials? CustomCredentialsProvider { get; set; }
 
@@ -74,9 +71,6 @@ public class DsqlConfig
         if (Port < 1 || Port > 65535)
             throw new DsqlException($"Port must be between 1 and 65535, got {Port}.");
 
-        if (TokenDurationSecs <= 0)
-            throw new DsqlException($"TokenDurationSecs must be a positive integer, got {TokenDurationSecs}.");
-
         if (MinPoolSize > MaxPoolSize)
             throw new DsqlException($"MinPoolSize ({MinPoolSize}) must not exceed MaxPoolSize ({MaxPoolSize}).");
 
@@ -109,7 +103,6 @@ public class DsqlConfig
             Database: Database,
             Port: Port,
             Profile: Profile,
-            TokenDurationSecs: TokenDurationSecs,
             CustomCredentialsProvider: CustomCredentialsProvider,
             MaxPoolSize: MaxPoolSize,
             MinPoolSize: MinPoolSize,
@@ -123,7 +116,7 @@ public class DsqlConfig
 
     /// <summary>
     /// Parses a postgres:// or postgresql:// connection string into a DsqlConfig.
-    /// DSQL-specific params (region, profile, tokenDurationSecs) are extracted and stripped.
+    /// DSQL-specific params (region, profile) are extracted and stripped.
     /// </summary>
     public static DsqlConfig FromConnectionString(string connectionString)
     {
@@ -169,15 +162,6 @@ public class DsqlConfig
         if (profile != null)
             config.Profile = profile;
 
-        var tokenDuration = query.Get("tokenDurationSecs");
-        if (tokenDuration != null)
-        {
-            if (!int.TryParse(tokenDuration, out var secs) || secs <= 0)
-                throw new DsqlException(
-                    $"Connection string parameter 'tokenDurationSecs' must be a positive integer, got '{tokenDuration}'.");
-            config.TokenDurationSecs = secs;
-        }
-
         return config;
     }
 
@@ -210,7 +194,6 @@ public sealed record ResolvedConfig(
     string Database,
     int Port,
     string? Profile,
-    int TokenDurationSecs,
     AWSCredentials? CustomCredentialsProvider,
     int MaxPoolSize,
     int MinPoolSize,

@@ -15,10 +15,17 @@ public static class OccRetry
     private const string OC000 = "OC000";
     private const string OC001 = "OC001";
 
-    private static readonly TimeSpan DefaultInitialWait = TimeSpan.FromMilliseconds(100);
-    private static readonly TimeSpan DefaultMaxWait = TimeSpan.FromSeconds(5);
-    private const double DefaultMultiplier = 2.0;
-    private const int DefaultMaxRetries = 3;
+    /// <summary>Default initial wait between retries.</summary>
+    public static readonly TimeSpan DefaultInitialWait = TimeSpan.FromMilliseconds(100);
+
+    /// <summary>Default maximum wait between retries.</summary>
+    public static readonly TimeSpan DefaultMaxWait = TimeSpan.FromSeconds(5);
+
+    /// <summary>Default backoff multiplier.</summary>
+    public const double DefaultMultiplier = 2.0;
+
+    /// <summary>Default maximum retry count for ExecWithRetryAsync.</summary>
+    public const int DefaultMaxRetries = 3;
 
     /// <summary>
     /// Returns true if the exception is an OCC conflict error (SQLSTATE 40001, OC000, or OC001).
@@ -198,6 +205,7 @@ public static class OccRetry
         DsqlDataSource dataSource,
         string sql,
         int maxRetries = DefaultMaxRetries,
+        ILogger? logger = null,
         CancellationToken ct = default)
     {
         await RetryAsync(dataSource, maxRetries, async conn =>
@@ -205,6 +213,6 @@ public static class OccRetry
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
             await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
-        }, logger: null, ct).ConfigureAwait(false);
+        }, logger, ct).ConfigureAwait(false);
     }
 }

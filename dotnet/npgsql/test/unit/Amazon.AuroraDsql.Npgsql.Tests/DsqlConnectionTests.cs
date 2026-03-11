@@ -13,7 +13,7 @@ public class DsqlConnectionTests
         new(
             Host: "cluster.dsql.us-east-1.on.aws", Region: "us-east-1",
             User: user, Database: "postgres", Port: 5432, Profile: null,
-            TokenDurationSecs: 900, CustomCredentialsProvider: null,
+            CustomCredentialsProvider: null,
             MaxPoolSize: 10, MinPoolSize: 0,
             ConnectionLifetime: 3300, ConnectionIdleLifetime: 600,
             OccMaxRetries: null, OrmPrefix: null,
