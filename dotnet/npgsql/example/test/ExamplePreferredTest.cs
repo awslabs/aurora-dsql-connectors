@@ -6,7 +6,6 @@ using Xunit;
 
 namespace Amazon.AuroraDsql.Npgsql.Examples.Tests;
 
-// Run all example tests sequentially to avoid OCC conflicts on concurrent DDL
 [Collection("ExampleTests")]
 public class ExamplePreferredTest
 {

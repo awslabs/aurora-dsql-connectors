@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Amazon.AuroraDsql.Npgsql.IntegrationTests;
 
+[Collection("IntegrationTests")]
 public class ConcurrentTransactionTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly IntegrationTestFixture _fixture;
