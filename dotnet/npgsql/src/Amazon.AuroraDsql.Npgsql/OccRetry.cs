@@ -142,9 +142,10 @@ public static class OccRetry
 
     /// <summary>
     /// Retries a transaction block with explicit retry configuration.
-    /// Manages BEGIN/COMMIT/ROLLBACK via raw SQL because DSQL rejects the
-    /// isolation level clause that Npgsql's BeginTransactionAsync sends
-    /// (e.g., "BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED").
+    /// Manages BEGIN/COMMIT/ROLLBACK via raw SQL because DSQL uses fixed
+    /// Repeatable Read isolation — Npgsql's BeginTransactionAsync sends an
+    /// explicit isolation level clause (e.g., "BEGIN TRANSACTION ISOLATION
+    /// LEVEL READ COMMITTED") that is unnecessary here.
     /// Opens a fresh connection for each attempt.
     /// </summary>
     public static async Task WithRetryAsync(

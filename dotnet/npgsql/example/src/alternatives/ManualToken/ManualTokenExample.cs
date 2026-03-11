@@ -40,7 +40,7 @@ public static class ManualTokenExample
             SslNegotiation = SslNegotiation.Direct,
             Database = "postgres",
             Username = clusterUser,
-            NoResetOnClose = true, // DSQL does not support DISCARD ALL
+            NoResetOnClose = true, // DSQL manages session state automatically
         };
 
         var builder = new NpgsqlDataSourceBuilder(csb.ConnectionString);

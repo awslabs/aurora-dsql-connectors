@@ -62,8 +62,8 @@ public static class ExamplePreferred
         Console.WriteLine("Concurrent reads completed");
 
         // --- Transactional write (INSERT + COMMIT) ---
-        // Use raw BEGIN/COMMIT SQL because DSQL rejects the isolation level clause
-        // that Npgsql's BeginTransactionAsync() sends by default.
+        // Use raw BEGIN/COMMIT SQL — DSQL uses fixed Repeatable Read isolation,
+        // so the isolation level clause that Npgsql's BeginTransactionAsync() sends is unnecessary.
         await using (var conn = await ds.OpenConnectionAsync())
         {
             await using (var begin = new NpgsqlCommand("BEGIN", conn))

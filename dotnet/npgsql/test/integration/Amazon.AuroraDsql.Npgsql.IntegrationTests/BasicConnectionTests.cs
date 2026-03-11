@@ -87,7 +87,7 @@ public class BasicConnectionTests : IClassFixture<IntegrationTestFixture>
             await OccRetry.ExecWithRetryAsync(_fixture.DataSource,
                 $"CREATE TABLE {table} (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT NOT NULL)");
 
-            // Transactional INSERT using raw SQL BEGIN/COMMIT (DSQL rejects isolation level clauses)
+            // Transactional INSERT using raw SQL BEGIN/COMMIT (DSQL uses fixed Repeatable Read isolation)
             await using (var conn = await _fixture.DataSource.OpenConnectionAsync())
             {
                 await new NpgsqlCommand("BEGIN", conn).ExecuteNonQueryAsync();

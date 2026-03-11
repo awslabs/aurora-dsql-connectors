@@ -88,7 +88,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
             SslMode = SslMode.VerifyFull,
             SslNegotiation = SslNegotiation.Direct,
             ApplicationName = config.ApplicationName,
-            Enlist = false, // DSQL does not support PREPARE TRANSACTION
+            Enlist = false, // DSQL handles distributed consistency internally
         };
     }
 

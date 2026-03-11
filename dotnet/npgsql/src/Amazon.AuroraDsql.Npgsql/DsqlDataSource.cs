@@ -67,7 +67,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
         csb.MinPoolSize = config.MinPoolSize;
         csb.ConnectionLifetime = config.ConnectionLifetime;
         csb.ConnectionIdleLifetime = config.ConnectionIdleLifetime;
-        csb.NoResetOnClose = true; // DSQL does not support DISCARD ALL
+        csb.NoResetOnClose = true; // DSQL manages session state automatically
         return csb;
     }
 
