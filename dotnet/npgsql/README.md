@@ -181,7 +181,7 @@ Use `ExecuteAsync` on the data source for automatic retry. Enable globally via `
 
 ```csharp
 // Global: set OccMaxRetries in config
-var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
+await using var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
 {
     Host = "your-cluster.dsql.us-east-1.on.aws",
     OccMaxRetries = 3
@@ -288,7 +288,7 @@ When using this connector with Aurora DSQL, follow these practices:
 15. **No Extensions**: PL/pgSQL, PostGIS, pgvector, etc. are not available
 16. **No PREPARE TRANSACTION**: Distributed transactions via `TransactionScope` / `System.Transactions` are disabled (`Enlist=false` is forced)
 17. **Single Database**: DSQL always uses `postgres`
-18. **Token Expiry**: IAM auth tokens are valid for 15 minutes (DSQL enforced maximum). The connector generates a fresh token for each new connection, so this is handled automatically
+18. **Token Expiry**: IAM auth tokens are valid for 15 minutes. The connector generates a fresh token for each new connection, so this is handled automatically
 19. **Limited Type System**: Use VARCHAR, TEXT, INTEGER, DECIMAL, BOOLEAN, TIMESTAMP, UUID. Arrays and JSON types are not natively supported — store as TEXT and parse in your application
 20. **No NativeAOT**: Npgsql source generators have not been tested with this connector due to AWS SDK dependencies
 21. **Npgsql 10.x**: Root CA validation changes in Npgsql 10.x may require providing an explicit certificate path; this connector currently targets Npgsql 9.x

@@ -66,7 +66,6 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
 
     /// <summary>
     /// Builds the connection string for a single (unpooled) connection.
-    /// Exposed as internal for unit testing.
     /// </summary>
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {

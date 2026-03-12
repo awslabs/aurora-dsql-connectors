@@ -58,7 +58,6 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
 
     /// <summary>
     /// Builds the NpgsqlConnectionStringBuilder with all DSQL defaults applied.
-    /// Exposed as internal for unit testing.
     /// </summary>
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {
