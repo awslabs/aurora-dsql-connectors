@@ -62,7 +62,7 @@ public class IntegrationTestFixture : IAsyncLifetime
         if (!string.IsNullOrEmpty(Region))
             config.Region = Region;
 
-        DataSource = AuroraDsql.CreateDataSource(config);
+        DataSource = await AuroraDsql.CreateDataSourceAsync(config);
 
         // Retry initial connection to handle DNS propagation delay
         // on freshly created clusters in CI.

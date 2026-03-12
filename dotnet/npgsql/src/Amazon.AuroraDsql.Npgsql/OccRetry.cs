@@ -166,6 +166,11 @@ public static class OccRetry
     /// LEVEL READ COMMITTED") that is unnecessary here.
     /// Opens a fresh connection for each attempt.
     /// </summary>
+    /// <remarks>
+    /// On OCC conflict, the transaction is rolled back and the action is re-executed from
+    /// scratch with a fresh connection. Ensure the action has no non-transactional side
+    /// effects that should not be repeated (e.g., sending notifications, enqueuing messages).
+    /// </remarks>
     public static Task WithTransactionRetryAsync(
         DsqlDataSource dataSource,
         int maxRetries,
@@ -173,6 +178,8 @@ public static class OccRetry
         ILogger? logger = null,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(dataSource);
+        ArgumentNullException.ThrowIfNull(action);
         return WithTransactionRetryAsync(dataSource.DataSource, maxRetries, action, logger, ct);
     }
 
@@ -181,6 +188,7 @@ public static class OccRetry
     /// Use this overload when you have an NpgsqlDataSource from manual setup
     /// or dependency injection rather than a DsqlDataSource.
     /// </summary>
+    /// <inheritdoc cref="WithTransactionRetryAsync(DsqlDataSource, int, Func{NpgsqlConnection, Task}, ILogger?, CancellationToken)" path="/remarks"/>
     public static async Task WithTransactionRetryAsync(
         NpgsqlDataSource npgsqlDataSource,
         int maxRetries,
@@ -188,6 +196,8 @@ public static class OccRetry
         ILogger? logger = null,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(npgsqlDataSource);
+        ArgumentNullException.ThrowIfNull(action);
         if (maxRetries < 0)
             throw new ArgumentException("maxRetries must be non-negative.", nameof(maxRetries));
 
@@ -229,6 +239,8 @@ public static class OccRetry
         ILogger? logger = null,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(dataSource);
+        ArgumentNullException.ThrowIfNull(sql);
         return ExecWithRetryAsync(dataSource.DataSource, sql, maxRetries, logger, ct);
     }
 
@@ -244,6 +256,8 @@ public static class OccRetry
         ILogger? logger = null,
         CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(npgsqlDataSource);
+        ArgumentNullException.ThrowIfNull(sql);
         if (maxRetries < 0)
             throw new ArgumentException("maxRetries must be non-negative.", nameof(maxRetries));
 

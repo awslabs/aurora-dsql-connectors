@@ -5,6 +5,7 @@ using Amazon;
 using Amazon.DSQL.Util;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
+using Amazon.Runtime.Credentials;
 
 namespace Amazon.AuroraDsql.Npgsql;
 
@@ -34,7 +35,7 @@ internal static class Token
     /// Resolves AWS credentials from the config's credential chain.
     /// Order: CustomCredentialsProvider > Profile > SDK default chain.
     /// </summary>
-    internal static AWSCredentials ResolveCredentials(ResolvedConfig config)
+    internal static async Task<AWSCredentials> ResolveCredentialsAsync(ResolvedConfig config)
     {
         if (config.CustomCredentialsProvider != null)
             return config.CustomCredentialsProvider;
@@ -47,12 +48,6 @@ internal static class Token
             throw new DsqlException($"AWS profile '{config.Profile}' not found or has no credentials.");
         }
 
-        // SDK default credential chain (synchronous).
-        // FallbackCredentialsFactory is deprecated in AWSSDK.Core v4 but the replacement
-        // (DefaultAWSCredentialsIdentityResolver) requires async and returns BaseIdentity.
-        // Suppress until the DSQL token generator SDK accepts the new identity type.
-#pragma warning disable CS0618
-        return FallbackCredentialsFactory.GetCredentials();
-#pragma warning restore CS0618
+        return await DefaultAWSCredentialsIdentityResolver.GetCredentialsAsync().ConfigureAwait(false);
     }
 }

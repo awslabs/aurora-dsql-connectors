@@ -31,7 +31,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     public static async Task<DsqlConnection> ConnectAsync(DsqlConfig config, CancellationToken ct = default)
     {
         var resolved = config.ResolveInternal();
-        var credentials = Token.ResolveCredentials(resolved);
+        var credentials = await Token.ResolveCredentialsAsync(resolved).ConfigureAwait(false);
         var regionEndpoint = RegionEndpoint.GetBySystemName(resolved.Region);
 
         var csb = BuildConnectionStringBuilder(resolved);
@@ -114,14 +114,14 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        _inner.Dispose();
-        _dataSource.Dispose();
+        try { _inner.Dispose(); }
+        finally { _dataSource.Dispose(); }
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        await _inner.DisposeAsync().ConfigureAwait(false);
-        await _dataSource.DisposeAsync().ConfigureAwait(false);
+        try { await _inner.DisposeAsync().ConfigureAwait(false); }
+        finally { await _dataSource.DisposeAsync().ConfigureAwait(false); }
     }
 }

@@ -30,10 +30,10 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// Creates a new DsqlDataSource from the given config.
     /// Resolves AWS credentials once; generates fresh IAM tokens per physical connection.
     /// </summary>
-    public static DsqlDataSource Create(DsqlConfig config)
+    public static async Task<DsqlDataSource> CreateAsync(DsqlConfig config)
     {
         var resolved = config.ResolveInternal();
-        var credentials = Token.ResolveCredentials(resolved);
+        var credentials = await Token.ResolveCredentialsAsync(resolved).ConfigureAwait(false);
         var regionEndpoint = RegionEndpoint.GetBySystemName(resolved.Region);
 
         var csb = BuildConnectionStringBuilder(resolved);
@@ -50,10 +50,10 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// <summary>
     /// Creates a new DsqlDataSource from a connection string.
     /// </summary>
-    public static DsqlDataSource Create(string connectionString)
+    public static Task<DsqlDataSource> CreateAsync(string connectionString)
     {
         var config = DsqlConfig.FromConnectionString(connectionString);
-        return Create(config);
+        return CreateAsync(config);
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
 
     /// <summary>
     /// Configures the data source builder with IAM password provider and TLS settings.
-    /// Shared by DsqlDataSource.Create and DsqlConnection.ConnectAsync.
+    /// Shared by DsqlDataSource.CreateAsync and DsqlConnection.ConnectAsync.
     /// </summary>
     internal static void ConfigureBuilder(
         NpgsqlDataSourceBuilder builder,

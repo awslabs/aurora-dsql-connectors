@@ -105,6 +105,15 @@ public class ConfigTests
     }
 
     [Fact]
+    public void Validate_NegativeMinPoolSize_ThrowsDsqlException()
+    {
+        var config = MakeConfig("cluster.dsql.us-east-1.on.aws");
+        config.MinPoolSize = -1;
+        var ex = Assert.Throws<DsqlException>(() => config.Validate());
+        Assert.Contains("MinPoolSize", ex.Message);
+    }
+
+    [Fact]
     public void Validate_NegativeConnectionLifetime_ThrowsDsqlException()
     {
         var config = MakeConfig("cluster.dsql.us-east-1.on.aws");

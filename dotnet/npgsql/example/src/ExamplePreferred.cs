@@ -17,11 +17,12 @@ public static class ExamplePreferred
     public static async Task RunAsync(string clusterEndpoint)
     {
         // Create a connection pool via the connector
-        await using var ds = AuroraDsql.CreateDataSource(new DsqlConfig
+        await using var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
         {
             Host = clusterEndpoint,
             MaxPoolSize = 10,
             MinPoolSize = 2,
+            OccMaxRetries = 3,
         });
 
         // Verify connectivity
@@ -32,14 +33,14 @@ public static class ExamplePreferred
         }
         Console.WriteLine("Connected to Aurora DSQL");
 
-        // Ensure the example table exists
-        await using (var conn = await ds.OpenConnectionAsync())
+        // Ensure the example table exists (DDL — retried on OCC conflict via ExecuteAsync)
+        await ds.ExecuteAsync(async conn =>
         {
             await using var create = new NpgsqlCommand(
                 "CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)",
                 conn);
             await create.ExecuteNonQueryAsync();
-        }
+        });
 
         // --- Concurrent reads ---
         var tasks = new Task<string>[NumConcurrentQueries];
@@ -61,10 +62,11 @@ public static class ExamplePreferred
             Console.WriteLine(r);
         Console.WriteLine("Concurrent reads completed");
 
-        // --- Transactional write (INSERT + COMMIT) ---
+        // --- Transactional write (INSERT + COMMIT) with OCC retry ---
+        // ExecuteAsync retries the entire lambda on OCC conflict, getting a fresh connection each time.
         // Use raw BEGIN/COMMIT SQL — DSQL uses fixed Repeatable Read isolation,
         // so the isolation level clause that Npgsql's BeginTransactionAsync() sends is unnecessary.
-        await using (var conn = await ds.OpenConnectionAsync())
+        await ds.ExecuteAsync(async conn =>
         {
             await using (var begin = new NpgsqlCommand("BEGIN", conn))
                 await begin.ExecuteNonQueryAsync();
@@ -76,7 +78,7 @@ public static class ExamplePreferred
 
             await using (var commit = new NpgsqlCommand("COMMIT", conn))
                 await commit.ExecuteNonQueryAsync();
-        }
+        });
         Console.WriteLine("Transactional write completed");
 
         // --- Cleanup (DELETE) ---

@@ -11,14 +11,14 @@ public static class AuroraDsql
     /// <summary>
     /// Creates a connection pool (DsqlDataSource) with IAM token injection and DSQL defaults.
     /// </summary>
-    public static DsqlDataSource CreateDataSource(DsqlConfig config)
-        => DsqlDataSource.Create(config);
+    public static Task<DsqlDataSource> CreateDataSourceAsync(DsqlConfig config)
+        => DsqlDataSource.CreateAsync(config);
 
     /// <summary>
     /// Creates a connection pool from a connection string.
     /// </summary>
-    public static DsqlDataSource CreateDataSource(string connectionString)
-        => DsqlDataSource.Create(connectionString);
+    public static Task<DsqlDataSource> CreateDataSourceAsync(string connectionString)
+        => DsqlDataSource.CreateAsync(connectionString);
 
     /// <summary>
     /// Creates and opens a single (unpooled) DSQL connection.

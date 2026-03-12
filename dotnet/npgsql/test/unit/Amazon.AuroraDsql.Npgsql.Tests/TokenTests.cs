@@ -27,7 +27,7 @@ public class TokenTests
     }
 
     [Fact]
-    public void ResolveCredentials_CustomProvider_ReturnedDirectly()
+    public async Task ResolveCredentialsAsync_CustomProvider_ReturnedDirectly()
     {
         var customCreds = new Amazon.Runtime.BasicAWSCredentials("test-key", "test-secret");
         var config = new ResolvedConfig(
@@ -41,7 +41,7 @@ public class TokenTests
             ApplicationName: "test", LoggerFactory: null,
             ConfigureConnectionString: null);
 
-        var resolved = Token.ResolveCredentials(config);
+        var resolved = await Token.ResolveCredentialsAsync(config);
         Assert.Same(customCreds, resolved);
     }
 }

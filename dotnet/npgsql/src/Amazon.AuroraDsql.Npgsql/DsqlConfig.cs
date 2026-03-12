@@ -88,6 +88,9 @@ public class DsqlConfig
         if (MaxPoolSize < 1)
             throw new DsqlException($"MaxPoolSize must be at least 1, got {MaxPoolSize}.");
 
+        if (MinPoolSize < 0)
+            throw new DsqlException($"MinPoolSize must be non-negative, got {MinPoolSize}.");
+
         if (MinPoolSize > MaxPoolSize)
             throw new DsqlException($"MinPoolSize ({MinPoolSize}) must not exceed MaxPoolSize ({MaxPoolSize}).");
 

@@ -47,7 +47,7 @@ dotnet add package Amazon.AuroraDsql.Npgsql
 using Amazon.AuroraDsql.Npgsql;
 
 // Create a connection pool (recommended)
-await using var ds = AuroraDsql.CreateDataSource(new DsqlConfig
+await using var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
 {
     Host = "your-cluster.dsql.us-east-1.on.aws"
 });
@@ -108,11 +108,11 @@ postgresql://[user@]host[:port]/[database][?param=value&...]
 
 ```csharp
 // Full endpoint (region auto-detected)
-await using var ds = AuroraDsql.CreateDataSource(
+await using var ds = await AuroraDsql.CreateDataSourceAsync(
     "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres");
 
 // With AWS profile
-await using var ds = AuroraDsql.CreateDataSource(
+await using var ds = await AuroraDsql.CreateDataSourceAsync(
     "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?profile=dev");
 ```
 
@@ -181,7 +181,7 @@ Use `ExecuteAsync` on the data source for automatic retry. Enable globally via `
 
 ```csharp
 // Global: set OccMaxRetries in config
-var ds = AuroraDsql.CreateDataSource(new DsqlConfig
+var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
 {
     Host = "your-cluster.dsql.us-east-1.on.aws",
     OccMaxRetries = 3
@@ -302,7 +302,6 @@ When scaling your application horizontally with Aurora DSQL:
 - **UUID primary keys**: Always use `gen_random_uuid()` to avoid key collisions across instances.
 - **Hot key avoidance**: Compute aggregates via `SELECT` queries instead of maintaining running counters. See [Avoiding Hot Keys](https://marc-bowes.com/dsql-avoid-hot-keys.html).
 - **Retry on OCC conflicts**: With more instances, OCC conflicts become more likely on contended rows. Enable retry logic (`OccMaxRetries`) for write workloads.
-- **Retry on internal errors**: Internal errors are retryable. The retry uses a new connection from the pool with backoff and jitter to avoid thundering herd.
 - **Connection lifetime**: Keep `ConnectionLifetime` under 60 minutes (the default 55 minutes is recommended) to avoid server-side timeouts.
 - **Fresh tokens per connection**: The connector generates a fresh IAM token for each new physical connection. Token generation is a local SigV4 presigning operation (no network calls), so this adds negligible overhead even at scale.
 
