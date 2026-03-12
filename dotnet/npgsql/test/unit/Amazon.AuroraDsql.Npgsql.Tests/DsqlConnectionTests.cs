@@ -66,4 +66,20 @@ public class DsqlConnectionTests
             MakeConfig(configureConnectionString: b => b.CommandTimeout = 60));
         Assert.Equal(60, csb.CommandTimeout);
     }
+
+    [Fact]
+    public void BuildConnectionString_CallbackCannotOverrideSslMode()
+    {
+        var csb = DsqlConnection.BuildConnectionStringBuilder(
+            MakeConfig(configureConnectionString: b => b.SslMode = SslMode.Disable));
+        Assert.Equal(SslMode.VerifyFull, csb.SslMode);
+    }
+
+    [Fact]
+    public void BuildConnectionString_CallbackCannotOverrideEnlist()
+    {
+        var csb = DsqlConnection.BuildConnectionStringBuilder(
+            MakeConfig(configureConnectionString: b => b.Enlist = true));
+        Assert.False(csb.Enlist);
+    }
 }

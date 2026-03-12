@@ -94,6 +94,11 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
 
         config.ConfigureConnectionString?.Invoke(csb);
 
+        // DSQL security invariants — not overridable
+        csb.SslMode = SslMode.VerifyFull;
+        csb.SslNegotiation = SslNegotiation.Direct;
+        csb.Enlist = false;
+
         return csb;
     }
 

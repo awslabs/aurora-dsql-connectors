@@ -31,7 +31,7 @@ public class ConfigTests
         Assert.Equal("postgres", resolved.Database);
         Assert.Equal(5432, resolved.Port);
         Assert.Equal(10, resolved.MaxPoolSize);
-        Assert.Equal(0, resolved.MinPoolSize);
+        Assert.Equal(1, resolved.MinPoolSize);
         Assert.Equal(3300, resolved.ConnectionLifetime);
         Assert.Equal(600, resolved.ConnectionIdleLifetime);
         Assert.Null(resolved.OccMaxRetries);
@@ -218,5 +218,14 @@ public class ConfigTests
         var config = DsqlConfig.FromConnectionString(
             "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?region=us-west-2");
         Assert.Equal("us-west-2", config.Region);
+    }
+
+    [Fact]
+    public void ParseConnectionString_UnrecognizedParam_Throws()
+    {
+        var ex = Assert.Throws<DsqlException>(() =>
+            DsqlConfig.FromConnectionString(
+                "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?regin=us-west-2"));
+        Assert.Contains("regin", ex.Message);
     }
 }

@@ -37,8 +37,8 @@ public class DsqlConfig
     /// <summary>Maximum pool size. Default: 10.</summary>
     public int MaxPoolSize { get; set; } = 10;
 
-    /// <summary>Minimum pool size. Default: 0.</summary>
-    public int MinPoolSize { get; set; }
+    /// <summary>Minimum pool size. Default: 1.</summary>
+    public int MinPoolSize { get; set; } = 1;
 
     /// <summary>Max connection lifetime in seconds. Default: 3300 (55 min).</summary>
     public int ConnectionLifetime { get; set; } = 3300;
@@ -180,6 +180,15 @@ public class DsqlConfig
         }
 
         // Extract and strip DSQL-specific params
+        var knownParams = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "region", "profile" };
+        var unrecognized = query.AllKeys
+            .Where(k => k != null && !knownParams.Contains(k))
+            .ToList();
+        if (unrecognized.Count > 0)
+            throw new DsqlException(
+                $"Unrecognized connection string parameter(s): {string.Join(", ", unrecognized)}. " +
+                $"Valid parameters are: {string.Join(", ", knownParams.Order())}.");
+
         var region = query.Get("region");
         if (region != null)
         {

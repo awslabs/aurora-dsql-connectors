@@ -6,7 +6,7 @@ namespace Amazon.AuroraDsql.Npgsql;
 /// <summary>
 /// Exception thrown by the Aurora DSQL connector.
 /// </summary>
-public class DsqlException : Exception
+public sealed class DsqlException : Exception
 {
     /// <inheritdoc />
     public DsqlException(string message) : base(message) { }
