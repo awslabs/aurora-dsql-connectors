@@ -37,8 +37,8 @@ public class DsqlConfig
     /// <summary>Maximum pool size. Default: 10.</summary>
     public int MaxPoolSize { get; set; } = 10;
 
-    /// <summary>Minimum pool size. Default: 1.</summary>
-    public int MinPoolSize { get; set; } = 1;
+    /// <summary>Minimum pool size. Default: 0.</summary>
+    public int MinPoolSize { get; set; } = 0;
 
     /// <summary>Max connection lifetime in seconds. Default: 3300 (55 min).</summary>
     public int ConnectionLifetime { get; set; } = 3300;
