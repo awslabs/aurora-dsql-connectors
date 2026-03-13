@@ -39,7 +39,6 @@ const (
 	// DefaultMaxConnIdleTime is the default maximum idle time (10 minutes)
 	DefaultMaxConnIdleTime = 10 * time.Minute
 	// DefaultTokenDuration is the default token validity duration (15 minutes)
-	// This is the maximum allowed by Aurora DSQL
 	DefaultTokenDuration = 15 * time.Minute
 )
 
