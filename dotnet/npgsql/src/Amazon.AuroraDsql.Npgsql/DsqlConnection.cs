@@ -30,6 +30,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     /// </summary>
     public static async Task<DsqlConnection> ConnectAsync(DsqlConfig config, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(config);
         var resolved = config.ResolveInternal();
         var credentials = await Token.ResolveCredentialsAsync(resolved).ConfigureAwait(false);
         var regionEndpoint = RegionEndpoint.GetBySystemName(resolved.Region);

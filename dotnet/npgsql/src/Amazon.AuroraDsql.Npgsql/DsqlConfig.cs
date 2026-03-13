@@ -46,7 +46,7 @@ public class DsqlConfig
     /// <summary>Max idle time in seconds. Default: 600 (10 min).</summary>
     public int ConnectionIdleLifetime { get; set; } = 600;
 
-    /// <summary>Enable OCC retry on ExecuteAsync when set to a positive integer. Default: null (disabled).</summary>
+    /// <summary>Default max OCC retries for retry methods on the data source. Default: null (disabled).</summary>
     public int? OccMaxRetries { get; set; }
 
     /// <summary>ORM prefix prepended to application_name (e.g., "efcore").</summary>
@@ -199,7 +199,11 @@ public class DsqlConfig
 
         var profile = query.Get("profile");
         if (profile != null)
+        {
+            if (string.IsNullOrWhiteSpace(profile))
+                throw new DsqlException("Connection string parameter 'profile' must not be empty.");
             config.Profile = profile;
+        }
 
         return config;
     }

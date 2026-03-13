@@ -33,14 +33,9 @@ public static class ExamplePreferred
         }
         Console.WriteLine("Connected to Aurora DSQL");
 
-        // Ensure the example table exists (DDL — retried on OCC conflict via ExecuteAsync)
-        await ds.ExecuteAsync(async conn =>
-        {
-            await using var create = new NpgsqlCommand(
-                "CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)",
-                conn);
-            await create.ExecuteNonQueryAsync();
-        });
+        // Ensure the example table exists (DDL — retried on OCC conflict)
+        await ds.ExecWithRetryAsync(
+            "CREATE TABLE IF NOT EXISTS example_items (id UUID DEFAULT gen_random_uuid() PRIMARY KEY, name TEXT)");
 
         // --- Concurrent reads ---
         var tasks = new Task<string>[NumConcurrentQueries];
@@ -63,21 +58,14 @@ public static class ExamplePreferred
         Console.WriteLine("Concurrent reads completed");
 
         // --- Transactional write (INSERT + COMMIT) with OCC retry ---
-        // ExecuteAsync retries the entire lambda on OCC conflict, getting a fresh connection each time.
-        // Use raw BEGIN/COMMIT SQL — DSQL uses fixed Repeatable Read isolation,
-        // so the isolation level clause that Npgsql's BeginTransactionAsync() sends is unnecessary.
-        await ds.ExecuteAsync(async conn =>
+        // WithTransactionRetryAsync manages BEGIN/COMMIT/ROLLBACK automatically.
+        // On OCC conflict, it rolls back and re-executes with a fresh connection.
+        await ds.WithTransactionRetryAsync(async conn =>
         {
-            await using (var begin = new NpgsqlCommand("BEGIN", conn))
-                await begin.ExecuteNonQueryAsync();
-
             await using var insert = new NpgsqlCommand(
                 "INSERT INTO example_items (name) VALUES ($1)", conn);
             insert.Parameters.AddWithValue("test-item");
             await insert.ExecuteNonQueryAsync();
-
-            await using (var commit = new NpgsqlCommand("COMMIT", conn))
-                await commit.ExecuteNonQueryAsync();
         });
         Console.WriteLine("Transactional write completed");
 

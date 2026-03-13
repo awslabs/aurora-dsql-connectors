@@ -103,62 +103,6 @@ public static class OccRetry
     }
 
     /// <summary>
-    /// Retries the action on OCC conflict with exponential backoff.
-    /// Used by DsqlDataSource.ExecuteAsync.
-    /// </summary>
-    internal static Task RetryAsync(
-        DsqlDataSource dataSource,
-        int maxRetries,
-        Func<NpgsqlConnection, Task> action,
-        ILogger? logger,
-        CancellationToken ct)
-    {
-        return RetryAsync(dataSource.DataSource, maxRetries, action, logger, ct);
-    }
-
-    /// <summary>
-    /// Retries the action (with return value) on OCC conflict.
-    /// </summary>
-    internal static Task<T> RetryAsync<T>(
-        DsqlDataSource dataSource,
-        int maxRetries,
-        Func<NpgsqlConnection, Task<T>> action,
-        ILogger? logger,
-        CancellationToken ct)
-    {
-        return RetryAsync(dataSource.DataSource, maxRetries, action, logger, ct);
-    }
-
-    private static Task RetryAsync(
-        NpgsqlDataSource npgsqlDataSource,
-        int maxRetries,
-        Func<NpgsqlConnection, Task> action,
-        ILogger? logger,
-        CancellationToken ct)
-    {
-        return RetryCoreAsync<object?>(maxRetries, async () =>
-        {
-            await using var conn = await npgsqlDataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-            await action(conn).ConfigureAwait(false);
-            return null;
-        }, "", logger, ct);
-    }
-
-    private static Task<T> RetryAsync<T>(
-        NpgsqlDataSource npgsqlDataSource,
-        int maxRetries,
-        Func<NpgsqlConnection, Task<T>> action,
-        ILogger? logger,
-        CancellationToken ct)
-    {
-        return RetryCoreAsync(maxRetries, async () =>
-        {
-            await using var conn = await npgsqlDataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-            return await action(conn).ConfigureAwait(false);
-        }, "", logger, ct);
-    }
-
-    /// <summary>
     /// Retries a transaction block with explicit retry configuration.
     /// Manages BEGIN/COMMIT/ROLLBACK via raw SQL because DSQL uses fixed
     /// Repeatable Read isolation — Npgsql's BeginTransactionAsync sends an
@@ -261,11 +205,13 @@ public static class OccRetry
         if (maxRetries < 0)
             throw new ArgumentException("maxRetries must be non-negative.", nameof(maxRetries));
 
-        await RetryAsync(npgsqlDataSource, maxRetries, async conn =>
+        await RetryCoreAsync<object?>(maxRetries, async () =>
         {
+            await using var conn = await npgsqlDataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = sql;
             await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
-        }, logger, ct).ConfigureAwait(false);
+            return null;
+        }, "", logger, ct).ConfigureAwait(false);
     }
 }

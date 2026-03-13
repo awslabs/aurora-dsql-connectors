@@ -9,12 +9,12 @@ namespace Amazon.AuroraDsql.Npgsql.Examples.Tests.Alternatives;
 [Collection("ExampleTests")]
 public class SingleConnectionExampleTest
 {
-    [SkippableFact]
+    [Fact]
     public async Task RunExample()
     {
-        var endpoint = Environment.GetEnvironmentVariable("CLUSTER_ENDPOINT");
-        Skip.If(string.IsNullOrEmpty(endpoint), "Requires CLUSTER_ENDPOINT environment variable");
+        var endpoint = Environment.GetEnvironmentVariable("CLUSTER_ENDPOINT")
+            ?? throw new InvalidOperationException("CLUSTER_ENDPOINT environment variable is required.");
 
-        await SingleConnectionExample.RunAsync(endpoint!);
+        await SingleConnectionExample.RunAsync(endpoint);
     }
 }

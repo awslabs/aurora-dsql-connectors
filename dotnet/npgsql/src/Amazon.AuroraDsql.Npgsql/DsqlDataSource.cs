@@ -32,6 +32,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     /// </summary>
     public static async Task<DsqlDataSource> CreateAsync(DsqlConfig config)
     {
+        ArgumentNullException.ThrowIfNull(config);
         var resolved = config.ResolveInternal();
         var credentials = await Token.ResolveCredentialsAsync(resolved).ConfigureAwait(false);
         var regionEndpoint = RegionEndpoint.GetBySystemName(resolved.Region);
@@ -113,72 +114,70 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
         => _inner.CreateBatch();
 
     /// <summary>
-    /// Executes an action with a connection from the pool, with opt-in OCC retry.
-    /// When retry is enabled, the action is re-executed from scratch on OCC conflict
-    /// (fresh connection each attempt). The action MUST be safe to retry — either
-    /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
+    /// Executes an action with a connection from the pool.
     /// </summary>
     /// <param name="action">The async action to execute with a pooled connection.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task ExecuteAsync(
+        Func<NpgsqlConnection, Task> action,
+        CancellationToken ct = default)
+    {
+        await using var conn = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await action(conn).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Executes an action with a return value using a connection from the pool.
+    /// </summary>
+    /// <param name="action">The async action to execute with a pooled connection.</param>
+    /// <param name="ct">Cancellation token.</param>
+    public async Task<T> ExecuteAsync<T>(
+        Func<NpgsqlConnection, Task<T>> action,
+        CancellationToken ct = default)
+    {
+        await using var conn = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        return await action(conn).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Executes an action inside a transaction with OCC retry.
+    /// Manages BEGIN/COMMIT/ROLLBACK automatically. On OCC conflict,
+    /// rolls back and re-executes with a fresh connection.
+    /// </summary>
+    /// <param name="action">The async action to execute within the transaction.</param>
     /// <param name="maxOccRetries">
     /// Maximum OCC retry attempts. Overrides <see cref="DsqlConfig.OccMaxRetries"/>.
     /// Pass null to use the config default, or 0 to disable retry.
     /// </param>
     /// <param name="ct">Cancellation token.</param>
-    /// <remarks>
-    /// This method does NOT wrap the action in a transaction. If your action performs writes,
-    /// you must issue BEGIN/COMMIT yourself inside the action, or use
-    /// <see cref="OccRetry.WithTransactionRetryAsync"/> which manages transactions automatically.
-    /// </remarks>
-    public async Task ExecuteAsync(
+    public async Task WithTransactionRetryAsync(
         Func<NpgsqlConnection, Task> action,
         int? maxOccRetries = null,
         CancellationToken ct = default)
     {
         var maxRetries = ResolveRetryCount(maxOccRetries);
-
-        if (maxRetries <= 0)
-        {
-            await using var conn = await OpenConnectionAsync(ct).ConfigureAwait(false);
-            await action(conn).ConfigureAwait(false);
-            return;
-        }
-
-        await OccRetry.RetryAsync(
-            this, maxRetries, action, _logger, ct).ConfigureAwait(false);
+        await OccRetry.WithTransactionRetryAsync(
+            _inner, maxRetries, action, _logger, ct).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Executes an action with a return value, with opt-in OCC retry.
-    /// When retry is enabled, the action is re-executed from scratch on OCC conflict
-    /// (fresh connection each attempt). The action MUST be safe to retry — either
-    /// wrap writes in a transaction (BEGIN/COMMIT) or ensure idempotency.
+    /// Executes a single SQL statement with OCC retry.
+    /// Useful for DDL statements like CREATE TABLE or CREATE INDEX ASYNC.
     /// </summary>
-    /// <param name="action">The async action to execute with a pooled connection.</param>
+    /// <param name="sql">The SQL statement to execute.</param>
     /// <param name="maxOccRetries">
     /// Maximum OCC retry attempts. Overrides <see cref="DsqlConfig.OccMaxRetries"/>.
     /// Pass null to use the config default, or 0 to disable retry.
     /// </param>
     /// <param name="ct">Cancellation token.</param>
-    /// <remarks>
-    /// This method does NOT wrap the action in a transaction. If your action performs writes,
-    /// you must issue BEGIN/COMMIT yourself inside the action, or use
-    /// <see cref="OccRetry.WithTransactionRetryAsync"/> which manages transactions automatically.
-    /// </remarks>
-    public async Task<T> ExecuteAsync<T>(
-        Func<NpgsqlConnection, Task<T>> action,
+    public async Task ExecWithRetryAsync(
+        string sql,
         int? maxOccRetries = null,
         CancellationToken ct = default)
     {
         var maxRetries = ResolveRetryCount(maxOccRetries);
-
-        if (maxRetries <= 0)
-        {
-            await using var conn = await OpenConnectionAsync(ct).ConfigureAwait(false);
-            return await action(conn).ConfigureAwait(false);
-        }
-
-        return await OccRetry.RetryAsync(
-            this, maxRetries, action, _logger, ct).ConfigureAwait(false);
+        await OccRetry.ExecWithRetryAsync(
+            _inner, sql, maxRetries, _logger, ct).ConfigureAwait(false);
     }
 
     /// <summary>Exposes the underlying NpgsqlDataSource for advanced use.</summary>

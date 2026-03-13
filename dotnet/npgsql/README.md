@@ -61,8 +61,8 @@ await using (var conn = await ds.OpenConnectionAsync())
     Console.WriteLine(greeting);
 }
 
-// Transactional write
-await OccRetry.WithTransactionRetryAsync(ds, maxRetries: 3, async conn =>
+// Transactional write with OCC retry
+await ds.WithTransactionRetryAsync(async conn =>
 {
     await using var cmd = conn.CreateCommand();
     cmd.CommandText = "INSERT INTO users (id, name) VALUES (gen_random_uuid(), @name)";
@@ -86,7 +86,7 @@ await OccRetry.WithTransactionRetryAsync(ds, maxRetries: 3, async conn =>
 | `MinPoolSize` | `int` | `0` | Minimum pool connections |
 | `ConnectionLifetime` | `int` | `3300` (55 min) | Max connection lifetime in seconds |
 | `ConnectionIdleLifetime` | `int` | `600` (10 min) | Max idle time before connection is closed |
-| `OccMaxRetries` | `int?` | `null` (disabled) | Max OCC retries on `ExecuteAsync`; enables retry when set |
+| `OccMaxRetries` | `int?` | `null` (disabled) | Default max OCC retries for retry methods on the data source |
 | `OrmPrefix` | `string?` | `null` | ORM prefix prepended to `application_name` (e.g., `"efcore"`) |
 | `LoggerFactory` | `ILoggerFactory?` | `null` | Logger factory for retry warnings and diagnostics |
 | `ConfigureConnectionString` | `Action<NpgsqlConnectionStringBuilder>?` | `null` | Callback to set additional Npgsql connection string properties after defaults |
@@ -149,10 +149,16 @@ Aurora DSQL uses optimistic concurrency control (OCC). When two transactions mod
 
 ### Transaction retry with `WithTransactionRetryAsync`
 
-Manages `BEGIN`/`COMMIT`/`ROLLBACK` internally via raw SQL (DSQL uses fixed Repeatable Read isolation, so the isolation level clause that Npgsql's `BeginTransactionAsync` sends is unnecessary). Opens a fresh connection for each attempt:
+Use `WithTransactionRetryAsync` on the data source for transactional writes with automatic OCC retry. It manages `BEGIN`/`COMMIT`/`ROLLBACK` internally and opens a fresh connection for each attempt. Set `OccMaxRetries` in config for the default, or override per-call:
 
 ```csharp
-await OccRetry.WithTransactionRetryAsync(ds, maxRetries: 3, async conn =>
+await using var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
+{
+    Host = "your-cluster.dsql.us-east-1.on.aws",
+    OccMaxRetries = 3
+});
+
+await ds.WithTransactionRetryAsync(async conn =>
 {
     await using var cmd = conn.CreateCommand();
 
@@ -167,39 +173,17 @@ await OccRetry.WithTransactionRetryAsync(ds, maxRetries: 3, async conn =>
 });
 ```
 
+The static `OccRetry.WithTransactionRetryAsync` overloads are also available for use with a raw `NpgsqlDataSource`.
+
 ### Single SQL retry with `ExecWithRetryAsync`
 
 For DDL or single DML statements:
 
 ```csharp
-await OccRetry.ExecWithRetryAsync(ds, "CREATE INDEX ASYNC idx_users_name ON users (name)", maxRetries: 3);
+await ds.ExecWithRetryAsync("CREATE INDEX ASYNC idx_users_name ON users (name)");
 ```
 
-### Pool-level retry with `ExecuteAsync`
-
-Use `ExecuteAsync` on the data source for automatic retry. Enable globally via `OccMaxRetries` in config, or per-call via `maxOccRetries`:
-
-```csharp
-// Global: set OccMaxRetries in config
-await using var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
-{
-    Host = "your-cluster.dsql.us-east-1.on.aws",
-    OccMaxRetries = 3
-});
-
-// Per-call: override with maxOccRetries parameter
-await ds.ExecuteAsync(async conn =>
-{
-    await using var cmd = conn.CreateCommand();
-    cmd.CommandText = "INSERT INTO users (id, name) VALUES (gen_random_uuid(), @name)";
-    cmd.Parameters.AddWithValue("name", "Alice");
-    await cmd.ExecuteNonQueryAsync();
-}, maxOccRetries: 3);
-```
-
-> **Note:** `ExecuteAsync` does NOT wrap the action in a transaction. For transactional
-> writes, use `OccRetry.WithTransactionRetryAsync` which manages `BEGIN`/`COMMIT`/`ROLLBACK`
-> automatically.
+The static `OccRetry.ExecWithRetryAsync` overloads are also available for use with a raw `NpgsqlDataSource`.
 
 ### OCC error detection
 
@@ -267,47 +251,11 @@ dotnet test test/integration/Amazon.AuroraDsql.Npgsql.IntegrationTests/
 dotnet format src/Amazon.AuroraDsql.Npgsql/
 ```
 
-## DSQL Best Practices
-
-When using this connector with Aurora DSQL, follow these practices:
-
-1. **UUID Primary Keys**: Always use `UUID DEFAULT gen_random_uuid()` — DSQL doesn't support sequences or SERIAL
-2. **OCC Handling**: DSQL uses optimistic concurrency control. Enable retry via `OccMaxRetries` in config; for single connections, use `OccRetry` explicitly
-3. **No Foreign Keys**: Enforce referential integrity in your application
-4. **Async Indexes**: Use `CREATE INDEX ASYNC` for index creation (max 24 indexes per table, max 8 columns per index)
-5. **One DDL per Transaction**: Separate DDL and DML into distinct transactions
-6. **Transaction Limits**: 3,000 rows, 10 MiB, and 5 minutes per transaction
-7. **Connection Limits**: Connections timeout after 60 minutes; configure `ConnectionLifetime` accordingly (default 55 minutes). Max 10,000 connections per cluster
-8. **Fixed Isolation Level**: DSQL uses Repeatable Read isolation — it cannot be changed
-9. **No TRUNCATE**: Use `DELETE FROM table` instead
-10. **No SAVEPOINT**: Partial rollbacks are not supported
-11. **No Triggers**: Implement in your application layer
-12. **No Temp Tables**: Use regular tables or application-level caching
-13. **No Partitioning**: Manage data distribution in your application
-14. **No Stored Procedures**: DSQL does not support `CALL` or PL/pgSQL
-15. **No Extensions**: PL/pgSQL, PostGIS, pgvector, etc. are not available
-16. **No PREPARE TRANSACTION**: Distributed transactions via `TransactionScope` / `System.Transactions` are disabled (`Enlist=false` is forced)
-17. **Single Database**: DSQL always uses `postgres`
-18. **Token Expiry**: IAM auth tokens are valid for 15 minutes. The connector generates a fresh token for each new connection, so this is handled automatically
-19. **Limited Type System**: Use VARCHAR, TEXT, INTEGER, DECIMAL, BOOLEAN, TIMESTAMP, UUID. Arrays and JSON types are not natively supported — store as TEXT and parse in your application
-20. **No NativeAOT**: Npgsql source generators have not been tested with this connector due to AWS SDK dependencies
-21. **Npgsql 10.x**: Root CA validation changes in Npgsql 10.x may require providing an explicit certificate path; this connector currently targets Npgsql 9.x
-
-## Horizontal Scaling
-
-When scaling your application horizontally with Aurora DSQL:
-
-- **Pool sizing**: Configure `MaxPoolSize` between 10–50 connections per application instance. DSQL supports up to 10,000 concurrent connections per cluster, so keep per-instance pools modest.
-- **Batch size**: Keep write batches between 500–1,000 rows per transaction to stay within DSQL's transaction limits (3,000 rows, 10 MiB).
-- **UUID primary keys**: Always use `gen_random_uuid()` to avoid key collisions across instances.
-- **Hot key avoidance**: Compute aggregates via `SELECT` queries instead of maintaining running counters. See [Avoiding Hot Keys](https://marc-bowes.com/dsql-avoid-hot-keys.html).
-- **Retry on OCC conflicts**: With more instances, OCC conflicts become more likely on contended rows. Enable retry logic (`OccMaxRetries`) for write workloads.
-- **Connection lifetime**: Keep `ConnectionLifetime` under 60 minutes (the default 55 minutes is recommended) to avoid server-side timeouts.
-- **Fresh tokens per connection**: The connector generates a fresh IAM token for each new physical connection. Token generation is a local SigV4 presigning operation (no network calls), so this adds negligible overhead even at scale.
-
 ## Additional Resources
 
 - [Amazon Aurora DSQL Documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html)
+- [SQL Feature Compatibility in Aurora DSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility.html)
+- [Aurora DSQL and PostgreSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with.html)
 - [Npgsql Documentation](https://www.npgsql.org/doc/)
 - [NpgsqlDataSource API Reference](https://www.npgsql.org/doc/api/Npgsql.NpgsqlDataSource.html)
 - [AWS SDK for .NET](https://docs.aws.amazon.com/sdk-for-net/v3/developer-guide/welcome.html)

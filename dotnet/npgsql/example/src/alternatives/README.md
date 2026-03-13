@@ -29,6 +29,3 @@ export REGION=us-east-1
 dotnet test --filter "ManualTokenExampleTest"
 ```
 
-## DSQL Best Practices
-
-All examples follow DSQL best practices. See the [main README](../../../README.md#dsql-best-practices) for the complete list.

@@ -10,15 +10,12 @@ namespace Amazon.AuroraDsql.Npgsql.IntegrationTests;
 /// <summary>
 /// Shared xUnit class fixture for integration tests.
 /// Creates a DsqlDataSource once per test class and provides unique table names.
-/// Tests are skipped when CLUSTER_ENDPOINT is not set.
+/// Tests fail when CLUSTER_ENDPOINT is not set.
 /// </summary>
 public class IntegrationTestFixture : IAsyncLifetime
 {
     private const int DnsRetryCount = 3;
     private static readonly TimeSpan DnsRetryDelay = TimeSpan.FromSeconds(5);
-
-    /// <summary>True when a cluster endpoint is available and the data source is ready.</summary>
-    public bool IsAvailable { get; private set; }
 
     /// <summary>Shared data source for all tests in the class.</summary>
     public DsqlDataSource DataSource { get; private set; } = null!;
@@ -43,12 +40,9 @@ public class IntegrationTestFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        Endpoint = Environment.GetEnvironmentVariable("CLUSTER_ENDPOINT") ?? string.Empty;
-        if (string.IsNullOrEmpty(Endpoint))
-        {
-            IsAvailable = false;
-            return;
-        }
+        Endpoint = Environment.GetEnvironmentVariable("CLUSTER_ENDPOINT")
+            ?? throw new InvalidOperationException(
+                "CLUSTER_ENDPOINT environment variable is required for integration tests.");
 
         User = Environment.GetEnvironmentVariable("CLUSTER_USER") ?? "admin";
         Region = Environment.GetEnvironmentVariable("REGION");
@@ -73,7 +67,6 @@ public class IntegrationTestFixture : IAsyncLifetime
                 await using var conn = await DataSource.OpenConnectionAsync();
                 await using var cmd = new NpgsqlCommand("SELECT 1", conn);
                 await cmd.ExecuteScalarAsync();
-                IsAvailable = true;
                 return;
             }
             catch (Exception) when (attempt < DnsRetryCount)
