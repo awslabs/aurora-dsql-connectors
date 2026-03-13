@@ -38,7 +38,7 @@ func TestConfigDefaultTokenDuration(t *testing.T) {
 	resolved, err := cfg.resolve()
 	require.NoError(t, err)
 
-	// Should default to 15 minutes
+	// Should default to 15 minutes (recommended default)
 	assert.Equal(t, 15*time.Minute, resolved.TokenDuration)
 }
 

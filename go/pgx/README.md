@@ -50,7 +50,7 @@ go get github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql
 | `Database` | `string` | `"postgres"` | Database name |
 | `Port` | `int` | `5432` | Database port |
 | `Profile` | `string` | `""` | AWS profile name for credentials |
-| `TokenDurationSecs` | `int` | `900` (15 min) | Token validity duration in seconds |
+| `TokenDurationSecs` | `int` | `900` (15 min) | Token validity duration in seconds (max 1 week) |
 | `CustomCredentialsProvider` | `aws.CredentialsProvider` | `nil` | Custom AWS credentials provider |
 | `MaxConns` | `int32` | `0` | Maximum pool connections (0 = pgxpool default) |
 | `MinConns` | `int32` | `0` | Minimum pool connections (0 = pgxpool default) |
@@ -215,7 +215,7 @@ The connector automatically generates IAM authentication tokens:
 
 For the `admin` user, the connector generates admin tokens using `GenerateDBConnectAdminAuthToken`. For other users, it generates standard tokens using `GenerateDbConnectAuthToken`.
 
-Token duration defaults to 15 minutes (the maximum allowed by Aurora DSQL).
+Token duration defaults to 15 minutes (recommended). The maximum allowed token lifetime is 1 week.
 
 ## Development
 
