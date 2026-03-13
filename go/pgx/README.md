@@ -52,11 +52,8 @@ go get github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql
 | `Profile` | `string` | `""` | AWS profile name for credentials |
 | `TokenDurationSecs` | `int` | `900` (15 min) | Token validity duration in seconds (max 1 week) |
 | `CustomCredentialsProvider` | `aws.CredentialsProvider` | `nil` | Custom AWS credentials provider |
-| `MaxConns` | `int32` | `0` | Maximum pool connections (0 = pgxpool default) |
-| `MinConns` | `int32` | `0` | Minimum pool connections (0 = pgxpool default) |
-| `MaxConnLifetime` | `time.Duration` | `55 minutes` | Maximum connection lifetime (aligns with DSQL characteristics) |
-| `MaxConnIdleTime` | `time.Duration` | `10 minutes` | Maximum idle time before connection is closed |
-| `HealthCheckPeriod` | `time.Duration` | `0` | Interval between health checks |
+
+Pool configuration is passed directly via `*pgxpool.Config` as a separate parameter to `NewPool`. See [Pool Configuration Tuning](#pool-configuration-tuning) for details.
 
 ## Quick Start
 
@@ -164,18 +161,31 @@ pool, err := dsql.NewPool(ctx, dsql.Config{
 
 ### Pool Configuration Tuning
 
-Configure the connection pool for your workload:
+Pool settings are configured via an optional `*pgxpool.Config` parameter to `NewPool`.
+When omitted, the connector applies DSQL-specific defaults:
+- `MaxConnLifetime`: 55 minutes (connections timeout after 60 minutes)
+- `MaxConnIdleTime`: 10 minutes
+
+All other fields use pgxpool defaults. To customize, create a config via
+`pgxpool.ParseConfig` and override the fields you need:
 
 ```go
+poolCfg, _ := pgxpool.ParseConfig("")
+poolCfg.MaxConns = 20
+poolCfg.MinConns = 5
+poolCfg.MaxConnLifetime = time.Hour
+poolCfg.MaxConnIdleTime = 30 * time.Minute
+poolCfg.MaxConnLifetimeJitter = 5 * time.Minute
+poolCfg.HealthCheckPeriod = time.Minute
+
 pool, err := dsql.NewPool(ctx, dsql.Config{
-    Host:              "your-cluster.dsql.us-east-1.on.aws",
-    MaxConns:          20,
-    MinConns:          5,
-    MaxConnLifetime:   time.Hour,
-    MaxConnIdleTime:   30 * time.Minute,
-    HealthCheckPeriod: time.Minute,
-})
+    Host: "your-cluster.dsql.us-east-1.on.aws",
+}, poolCfg)
 ```
+
+Setting `MaxConnLifetimeJitter` is recommended to prevent all connections from expiring simultaneously, which can cause a thundering herd of reconnections.
+
+See [pgxpool.Config](https://pkg.go.dev/github.com/jackc/pgx/v5/pgxpool#Config) for all available options.
 
 ### Single Connection Usage
 
@@ -287,7 +297,7 @@ When using this connector with Aurora DSQL, follow these practices:
 3. **No Foreign Keys**: DSQL doesn't support foreign key constraints - enforce relationships in your application
 4. **Async Indexes**: Use `CREATE INDEX ASYNC` for index creation
 5. **Transaction Limits**: Transactions are limited to 3,000 rows, 10 MiB, and 5 minutes
-6. **Connection Limits**: Connections timeout after 60 minutes; configure pool `MaxConnLifetime` accordingly
+6. **Connection Limits**: Connections timeout after 60 minutes; configure `MaxConnLifetime` on your `pgxpool.Config` accordingly
 7. **No SAVEPOINT**: Partial rollbacks via SAVEPOINT are not supported
 
 ## Additional Resources
