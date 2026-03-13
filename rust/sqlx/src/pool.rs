@@ -51,6 +51,7 @@ impl bb8::ManageConnection for DsqlConnectionManager {
     }
 }
 
+#[derive(Clone)]
 pub struct DsqlPool {
     pool: bb8::Pool<DsqlConnectionManager>,
     occ_retry_config: Option<OCCRetryConfig>,

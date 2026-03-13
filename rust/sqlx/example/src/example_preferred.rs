@@ -1,9 +1,10 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{DsqlError, DsqlPool};
+use aurora_dsql_sqlx_connector::{
+    DsqlConfigBuilder, DsqlError, DsqlPool, DsqlPoolConfigBuilder, Host, User,
+};
 use sqlx::{Executor, Row};
-use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -11,16 +12,20 @@ async fn main() -> anyhow::Result<()> {
         .expect("CLUSTER_ENDPOINT environment variable is not set");
     let cluster_user = std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
 
-    // Enable automatic OCC retry (3 attempts) at the pool level
-    let conn_str = format!(
-        "postgres://{}@{}/postgres?occMaxRetries=3",
-        cluster_user, cluster_endpoint
-    );
+    // Build pool config with automatic OCC retry (3 attempts)
+    let connection = DsqlConfigBuilder::default()
+        .host(Host::new(&cluster_endpoint))
+        .user(User::new(&cluster_user))
+        .build()?;
 
-    let pool = DsqlPool::new(&conn_str).await?;
+    let pool_config = DsqlPoolConfigBuilder::default()
+        .connection(connection)
+        .occ_max_retries(Some(3))
+        .build()?;
+
+    let pool = DsqlPool::from_config(pool_config).await?;
 
     // -- Concurrent read queries --
-    let pool = Arc::new(pool);
     let mut handles = Vec::new();
     for i in 0..5 {
         let pool = pool.clone();
@@ -40,8 +45,6 @@ async fn main() -> anyhow::Result<()> {
     }
 
     println!("Concurrent pool operations completed successfully");
-
-    let pool = Arc::try_unwrap(pool).unwrap_or_else(|_| panic!("pool still has multiple owners"));
 
     // -- Setup table --
     pool.get()

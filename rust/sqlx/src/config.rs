@@ -115,7 +115,12 @@ impl DsqlConfig {
                     })?);
                 }
                 "applicationName" => application_name = Some(value.to_string()),
-                _ => {}
+                other => {
+                    eprintln!(
+                        "aurora-dsql-sqlx-connector: ignoring unrecognized connection parameter '{}'",
+                        other
+                    );
+                }
             }
         }
 
@@ -262,9 +267,16 @@ impl DsqlPoolConfig {
         for (key, value) in url.query_pairs() {
             match key.as_ref() {
                 "maxConnections" => {
-                    max_connections = value.parse().map_err(|_| {
+                    let parsed: u32 = value.parse().map_err(|_| {
                         DsqlError::ConfigError(format!("invalid maxConnections: '{}'", value))
                     })?;
+                    if parsed < 1 {
+                        return Err(DsqlError::ConfigError(format!(
+                            "maxConnections must be at least 1, got {}",
+                            parsed
+                        )));
+                    }
+                    max_connections = parsed;
                 }
                 "maxLifetimeSecs" => {
                     max_lifetime_secs = value.parse().map_err(|_| {
@@ -281,7 +293,14 @@ impl DsqlPoolConfig {
                         DsqlError::ConfigError(format!("invalid occMaxRetries: '{}'", value))
                     })?);
                 }
-                _ => {}
+                // Params already handled by DsqlConfig::from_url
+                "region" | "profile" | "tokenDurationSecs" | "applicationName" => {}
+                other => {
+                    eprintln!(
+                        "aurora-dsql-sqlx-connector: ignoring unrecognized pool parameter '{}'",
+                        other
+                    );
+                }
             }
         }
 

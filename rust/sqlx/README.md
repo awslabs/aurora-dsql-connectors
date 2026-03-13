@@ -40,14 +40,14 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-aurora-dsql-sqlx-connector = "0.1"
+aurora-dsql-sqlx-connector = "0.0.1"
 ```
 
 For connection pooling, enable the `pool` feature:
 
 ```toml
 [dependencies]
-aurora-dsql-sqlx-connector = { version = "0.1", features = ["pool"] }
+aurora-dsql-sqlx-connector = { version = "0.0.1", features = ["pool"] }
 ```
 
 ## Configuration Options
