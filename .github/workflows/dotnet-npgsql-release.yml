@@ -27,6 +27,9 @@ jobs:
     needs: wait-for-ci
     runs-on: ubuntu-latest
     environment: .NET
+    permissions:
+      id-token: write # required for requesting the JWT
+      contents: read # required for actions/checkout
     steps:
       - uses: actions/checkout@v6
 
@@ -34,6 +37,23 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "8.0.x"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.NUGET_PUBLISH_IAM_ROLE }}
+          role-session-name: dotnet-npgsql-nuget-publish
+          aws-region: us-west-2
+
+      - name: Get NuGet API Key
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "production/build/AuroraDsql-nuget-api-key" \
+            --query 'SecretString' \
+            --output text)
+          NUGET_API_KEY=$(echo "$SECRET_JSON" | jq -r '.Key')
+          echo "::add-mask::$NUGET_API_KEY"
+          echo "NUGET_API_KEY=$NUGET_API_KEY" >> "$GITHUB_ENV"
 
       - name: Set version from tag
         run: |
@@ -45,7 +65,7 @@ jobs:
         run: dotnet pack -c Release -o ./nupkg
 
       - name: Publish to NuGet
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NU_GET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ env.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
 
   update-changelog:
     needs: publish
