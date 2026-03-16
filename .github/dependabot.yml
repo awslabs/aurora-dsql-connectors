@@ -80,6 +80,20 @@ updates:
     schedule:
       interval: "weekly"
 
+  # Rust connector
+  - package-ecosystem: "cargo"
+    directory: "/rust/sqlx"
+    schedule:
+      interval: "weekly"
+
+  # .NET connector
+  - package-ecosystem: "nuget"
+    directories:
+      - "/dotnet/npgsql/src/Amazon.AuroraDsql.Npgsql"
+      - "/dotnet/npgsql/example"
+    schedule:
+      interval: "weekly"
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"

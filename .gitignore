@@ -22,3 +22,9 @@ obj/
 # IDE
 .idea/
 *.iml
+
+# Secrets & credentials
+.env
+*.pem
+*.key
+*.p12
