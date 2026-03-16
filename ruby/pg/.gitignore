@@ -7,5 +7,5 @@
 /pkg/
 /spec/reports/
 /tmp/
-Gemfile.lock
+/Gemfile.lock
 .rspec_status
