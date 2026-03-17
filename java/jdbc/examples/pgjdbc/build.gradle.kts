@@ -20,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:1.4.0")
 
     testImplementation(platform("org.junit:junit-bom:6.0.3"))
