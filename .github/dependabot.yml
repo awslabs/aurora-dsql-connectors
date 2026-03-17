@@ -44,7 +44,9 @@ updates:
 
   # Java connector
   - package-ecosystem: "gradle"
-    directory: "/java/jdbc"
+    directories:
+      - "/java/jdbc"
+      - "/java/jdbc/examples/pgjdbc"
     schedule:
       interval: "weekly"
     ignore:
