@@ -4,6 +4,10 @@
  */
 
 // Package example_preferred demonstrates concurrent queries using the DSQL connector pool.
+//
+// Works with both admin and non-admin users:
+//   - Admin users operate in the default "public" schema
+//   - Non-admin users operate in a custom "myschema" schema
 package example_preferred
 
 import (
@@ -14,18 +18,35 @@ import (
 	"sync"
 
 	"github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const numConcurrentQueries = 8
 
-func createPool(ctx context.Context, clusterEndpoint string) (*dsql.Pool, error) {
+func createPool(ctx context.Context, clusterEndpoint, clusterUser string) (*dsql.Pool, error) {
 	poolCfg, _ := pgxpool.ParseConfig("")
 	poolCfg.MaxConns = 10
 	poolCfg.MinConns = 2
 
+	// Set search_path on each new connection based on user type
+	var schema string
+	if clusterUser == "admin" {
+		schema = "public"
+	} else {
+		schema = "myschema"
+	}
+	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		_, err := conn.Exec(ctx, fmt.Sprintf("SET search_path = %s", pgx.Identifier{schema}.Sanitize()))
+		if err != nil {
+			return fmt.Errorf("failed to set search_path to %s: %w", schema, err)
+		}
+		return nil
+	}
+
 	return dsql.NewPool(ctx, dsql.Config{
 		Host: clusterEndpoint,
+		User: clusterUser,
 	}, poolCfg)
 }
 
@@ -51,10 +72,14 @@ func Example() error {
 	if clusterEndpoint == "" {
 		return fmt.Errorf("CLUSTER_ENDPOINT environment variable is not set")
 	}
+	clusterUser := os.Getenv("CLUSTER_USER")
+	if clusterUser == "" {
+		clusterUser = "admin"
+	}
 
 	ctx := context.Background()
 
-	pool, err := createPool(ctx, clusterEndpoint)
+	pool, err := createPool(ctx, clusterEndpoint, clusterUser)
 	if err != nil {
 		return fmt.Errorf("failed to create pool: %w", err)
 	}
