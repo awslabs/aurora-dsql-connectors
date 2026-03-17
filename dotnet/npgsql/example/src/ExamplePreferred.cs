@@ -9,20 +9,30 @@ namespace Amazon.AuroraDsql.Npgsql.Examples;
 /// <summary>
 /// Preferred example: demonstrates pool creation, concurrent reads,
 /// transactional writes, and cleanup using the DSQL connector.
+///
+/// Works with both admin and non-admin users:
+/// - Admin users operate in the default "public" schema
+/// - Non-admin users operate in a custom "myschema" schema
 /// </summary>
 public static class ExamplePreferred
 {
     private const int NumConcurrentQueries = 8;
 
-    public static async Task RunAsync(string clusterEndpoint)
+    public static async Task RunAsync(string clusterEndpoint, string clusterUser = "admin")
     {
+        // Determine schema based on user type
+        var schema = clusterUser == "admin" ? "public" : "myschema";
+
         // Create a connection pool via the connector
         await using var ds = await AuroraDsql.CreateDataSourceAsync(new DsqlConfig
         {
             Host = clusterEndpoint,
+            User = clusterUser,
             MaxPoolSize = 10,
             MinPoolSize = 2,
             OccMaxRetries = 3,
+            // Set search_path so all connections from the pool use the correct schema
+            ConfigureConnectionString = csb => csb.SearchPath = schema,
         });
 
         // Verify connectivity
