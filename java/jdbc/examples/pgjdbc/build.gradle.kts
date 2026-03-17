@@ -21,7 +21,7 @@ repositories {
 
 dependencies {
     implementation("com.zaxxer:HikariCP:5.1.0")
-    implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:1.2.0")
+    implementation("software.amazon.dsql:aurora-dsql-jdbc-connector:1.4.0")
 
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
