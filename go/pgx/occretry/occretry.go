@@ -26,13 +26,17 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"strings"
 	"time"
 
-	"github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// Beginner is an interface for types that can begin a database transaction.
+// *pgxpool.Pool satisfies this interface.
+type Beginner interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
 
 // OCC error codes for Aurora DSQL optimistic concurrency control conflicts.
 const (
@@ -72,21 +76,15 @@ func DefaultConfig() Config {
 }
 
 // IsOCCError checks if an error is a DSQL OCC conflict error.
-// Returns true for both OC000 (mutation conflict) and OC001 (schema conflict) errors.
-// DSQL returns these as SQLSTATE 40001 (serialization_failure) with OC000/OC001 in the message.
+// Returns true for OC000 (mutation conflict), OC001 (schema conflict),
+// and 40001 (serialization failure) errors.
 func IsOCCError(err error) bool {
 	if err == nil {
 		return false
 	}
-	// Check error message for OCC codes (DSQL includes OC000/OC001 in the message)
-	errStr := err.Error()
-	if strings.Contains(errStr, ErrorCodeMutation) || strings.Contains(errStr, ErrorCodeSchema) {
-		return true
-	}
-	// Also check for SQLSTATE 40001 (serialization_failure) which DSQL uses
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		return pgErr.Code == "40001"
+		return pgErr.Code == ErrorCodeMutation || pgErr.Code == ErrorCodeSchema || pgErr.Code == "40001"
 	}
 	return false
 }
@@ -111,10 +109,50 @@ func backoffWait(ctx context.Context, wait time.Duration, config Config) (time.D
 	return nextWait, nil
 }
 
+// Retry executes fn with automatic retry on OCC conflicts.
+// This is the core retry primitive — fn can be any operation that may encounter
+// OCC errors. If fn returns an OCC error, it is retried with exponential backoff.
+// Non-OCC errors are returned immediately.
+//
+// Example:
+//
+//	err := occretry.Retry(ctx, occretry.DefaultConfig(), func() error {
+//	    _, err := pool.Exec(ctx, "INSERT INTO users (id, name) VALUES ($1, $2)", id, name)
+//	    return err
+//	})
+func Retry(ctx context.Context, config Config, fn func() error) error {
+	var lastErr error
+	wait := config.InitialWait
+
+	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
+		err := fn()
+		if err == nil {
+			return nil
+		}
+
+		if !IsOCCError(err) {
+			return err
+		}
+
+		lastErr = err
+
+		// Wait before next retry (skip on last attempt)
+		if attempt < config.MaxRetries {
+			var waitErr error
+			wait, waitErr = backoffWait(ctx, wait, config)
+			if waitErr != nil {
+				return waitErr
+			}
+		}
+	}
+
+	return fmt.Errorf("max retries (%d) exceeded, last error: %w", config.MaxRetries, lastErr)
+}
+
 // WithRetry executes a transactional function with automatic retry on OCC conflicts.
-// The function fn receives a transaction and should perform all database operations
-// within that transaction. If an OCC error occurs, the transaction is rolled back
-// and retried with exponential backoff.
+// It begins a transaction, calls fn with the transaction, and commits on success.
+// If an OCC error occurs at any point, the transaction is rolled back and retried
+// with exponential backoff.
 //
 // Example:
 //
@@ -134,93 +172,18 @@ func backoffWait(ctx context.Context, wait time.Duration, config Config) (time.D
 //	    return tx.QueryRow(ctx, "SELECT balance FROM accounts WHERE id = $1", id).Scan(&balance)
 //	})
 //	// balance is now set if err == nil
-func WithRetry(ctx context.Context, pool *dsql.Pool, config Config, fn func(tx pgx.Tx) error) error {
-	var lastErr error
-	wait := config.InitialWait
-
-	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
-		err, shouldRetry := executeTransaction(ctx, pool, fn)
-		if err == nil {
-			return nil // success
+func WithRetry(ctx context.Context, pool Beginner, config Config, fn func(tx pgx.Tx) error) error {
+	return Retry(ctx, config, func() error {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			return fmt.Errorf("begin transaction: %w", err)
 		}
+		defer tx.Rollback(ctx) // No-op if committed
 
-		if !shouldRetry {
+		if err := fn(tx); err != nil {
 			return err
 		}
 
-		lastErr = err
-
-		// Wait after error, before next retry (skip on last attempt)
-		if attempt < config.MaxRetries {
-			var waitErr error
-			wait, waitErr = backoffWait(ctx, wait, config)
-			if waitErr != nil {
-				return waitErr
-			}
-		}
-	}
-
-	return fmt.Errorf("max retries (%d) exceeded, last error: %w", config.MaxRetries, lastErr)
-}
-
-// executeTransaction runs a single transaction attempt.
-// Returns (error, shouldRetry) where shouldRetry indicates if the error is an OCC conflict.
-func executeTransaction(ctx context.Context, pool *dsql.Pool, fn func(tx pgx.Tx) error) (error, bool) {
-	tx, err := pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err), false
-	}
-	defer tx.Rollback(ctx) // No-op if committed
-
-	if err := fn(tx); err != nil {
-		if IsOCCError(err) {
-			return err, true
-		}
-		return err, false
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		if IsOCCError(err) {
-			return err, true
-		}
-		return fmt.Errorf("commit transaction: %w", err), false
-	}
-
-	return nil, false
-}
-
-// ExecWithRetry executes a SQL statement with automatic retry on OCC conflicts.
-// This is useful for DDL statements and simple DML that don't need explicit transactions.
-//
-// Example:
-//
-//	err := occretry.ExecWithRetry(ctx, pool, "CREATE TABLE users (id UUID PRIMARY KEY)", 5)
-func ExecWithRetry(ctx context.Context, pool *dsql.Pool, sql string, maxRetries int) error {
-	config := DefaultConfig()
-	config.MaxRetries = maxRetries
-
-	var lastErr error
-	wait := config.InitialWait
-
-	for attempt := 0; attempt <= config.MaxRetries; attempt++ {
-		if attempt > 0 {
-			var err error
-			wait, err = backoffWait(ctx, wait, config)
-			if err != nil {
-				return err
-			}
-		}
-
-		_, err := pool.Exec(ctx, sql)
-		if err == nil {
-			return nil
-		}
-		if IsOCCError(err) {
-			lastErr = err
-			continue
-		}
-		return err
-	}
-
-	return fmt.Errorf("exec failed after %d retries: %w", config.MaxRetries, lastErr)
+		return tx.Commit(ctx)
+	})
 }

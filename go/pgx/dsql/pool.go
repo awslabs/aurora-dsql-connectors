@@ -13,12 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Pool wraps pgxpool.Pool with Aurora DSQL IAM authentication.
-type Pool struct {
-	*pgxpool.Pool
-	config *resolvedConfig
-}
-
 // NewPool creates a new connection pool to Aurora DSQL.
 //
 // The config parameter can be a Config struct, *Config, or a connection string.
@@ -28,7 +22,7 @@ type Pool struct {
 // (MaxConnLifetime: 55min, MaxConnIdleTime: 10min). Any BeforeConnect callback set on
 // poolConfig will be chained with the connector's IAM token generation (user callback
 // runs first).
-func NewPool(ctx context.Context, config any, poolConfig ...*pgxpool.Config) (*Pool, error) {
+func NewPool(ctx context.Context, config any, poolConfig ...*pgxpool.Config) (*pgxpool.Pool, error) {
 	var cfg *Config
 
 	switch c := config.(type) {
@@ -62,7 +56,7 @@ func NewPool(ctx context.Context, config any, poolConfig ...*pgxpool.Config) (*P
 	return newPoolFromResolved(ctx, resolved, pc)
 }
 
-func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig, poolConfig *pgxpool.Config) (*Pool, error) {
+func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig, poolConfig *pgxpool.Config) (*pgxpool.Pool, error) {
 	credentialsProvider, err := resolveCredentialsProvider(ctx, resolved)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve credentials provider: %w", err)
@@ -111,8 +105,5 @@ func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig, poolConf
 		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}
 
-	return &Pool{
-		Pool:   pool,
-		config: resolved,
-	}, nil
+	return pool, nil
 }
