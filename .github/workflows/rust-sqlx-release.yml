@@ -27,11 +27,31 @@ jobs:
     needs: wait-for-ci
     runs-on: ubuntu-latest
     environment: rust
+    permissions:
+      id-token: write # required for requesting the JWT
+      contents: read # required for actions/checkout
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust toolchain
         run: rustup update stable && rustup default stable
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        with:
+          role-to-assume: ${{ secrets.CRATES_PUBLISH_IAM_ROLE }}
+          role-session-name: rust-sqlx-crates-publish
+          aws-region: us-east-1
+
+      - name: Get crates.io API Key
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "prod/cratesio/account-credentials" \
+            --query 'SecretString' \
+            --output text)
+          CRATES_IO_KEY=$(echo "$SECRET_JSON" | jq -r '.["Github API Key"]')
+          echo "::add-mask::$CRATES_IO_KEY"
+          echo "CRATES_IO_KEY=$CRATES_IO_KEY" >> "$GITHUB_ENV"
 
       - name: Set version from tag
         run: |
@@ -42,7 +62,7 @@ jobs:
       - name: Publish to crates.io
         run: cargo publish
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_KEY }}
+          CARGO_REGISTRY_TOKEN: ${{ env.CRATES_IO_KEY }}
 
   update-changelog:
     needs: publish
