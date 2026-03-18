@@ -5,7 +5,7 @@
 
 // Package dsql provides a connector for Aurora DSQL using pgx with IAM authentication.
 //
-// The connector provides wrapper types around pgx that automatically handle
+// The connector wraps pgx pool and connection creation with automatic
 // IAM token generation for Aurora DSQL connections.
 //
 // Basic usage with a connection pool:

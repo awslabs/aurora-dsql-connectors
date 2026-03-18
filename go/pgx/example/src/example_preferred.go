@@ -24,7 +24,7 @@ import (
 
 const numConcurrentQueries = 8
 
-func createPool(ctx context.Context, clusterEndpoint, clusterUser string) (*dsql.Pool, error) {
+func createPool(ctx context.Context, clusterEndpoint, clusterUser string) (*pgxpool.Pool, error) {
 	poolCfg, _ := pgxpool.ParseConfig("")
 	poolCfg.MaxConns = 10
 	poolCfg.MinConns = 2
@@ -57,7 +57,7 @@ type workerResult struct {
 	err      error
 }
 
-func worker(ctx context.Context, pool *dsql.Pool, workerID int) workerResult {
+func worker(ctx context.Context, pool *pgxpool.Pool, workerID int) workerResult {
 	var result int
 	err := pool.QueryRow(ctx, "SELECT $1::int as worker_id", workerID).Scan(&result)
 	if err != nil {

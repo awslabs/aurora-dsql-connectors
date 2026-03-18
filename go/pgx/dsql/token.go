@@ -130,7 +130,7 @@ func NewAssumeRoleCredentialsProvider(ctx context.Context, roleARN, region strin
 }
 
 // GenerateTokenConnString generates an IAM authentication token from a DSQL connection string.
-// This is useful for use with database/sql drivers that don't support the Pool/Conn wrappers.
+// This is useful for use with database/sql drivers that don't use the dsql.NewPool or dsql.Connect helpers.
 // The connection string should be in the format: dsql://user@host/database or postgres://user@host/database
 //
 // Example usage:
