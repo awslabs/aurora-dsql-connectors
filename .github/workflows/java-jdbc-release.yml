@@ -49,11 +49,11 @@ jobs:
       - name: Get Maven Central Credentials
         run: |
           SECRET_JSON=$(aws secretsmanager get-secret-value \
-            --secret-id "prod/maven/account-credentials" \
+            --secret-id "prod/maven/publishing-credentials" \
             --query 'SecretString' \
             --output text)
-          USERNAME=$(echo "$SECRET_JSON" | jq -r '.username')
-          PASSWORD=$(echo "$SECRET_JSON" | jq -r '.password')
+          USERNAME=$(echo "$SECRET_JSON" | jq -r '.publish_username')
+          PASSWORD=$(echo "$SECRET_JSON" | jq -r '.publish_password')
           echo "::add-mask::$USERNAME"
           echo "::add-mask::$PASSWORD"
           echo "SONATYPE_USERNAME=$USERNAME" >> "$GITHUB_ENV"
@@ -93,7 +93,7 @@ jobs:
         run: |
           ./gradlew build
           ./gradlew publish
-          ./gradlew jreleaserDeploy --no-configuration-cache
+          ./gradlew jreleaserDeploy --no-configuration-cache --stacktrace
         env:
           JRELEASER_MAVENCENTRAL_STAGE: "UPLOAD"
           JRELEASER_GPG_PUBLIC_KEY: ${{ env.GPG_PUBLIC_KEY }}
