@@ -104,6 +104,9 @@ jobs:
 
   update-changelog:
     needs: deploy
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/update-changelog.yml
     with:
       tag: ${{ github.ref_name }}
