@@ -22,6 +22,7 @@ jobs:
           running-workflow-name: "Wait for CI to pass"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 30
+          check-regexp: "Unit Tests|Gradle Integration Tests|Integration Tests \\(Java"
 
   deploy:
     needs: wait-for-ci
