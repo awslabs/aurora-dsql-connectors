@@ -18,6 +18,7 @@ jobs:
           running-workflow-name: "Wait for CI to pass"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 30
+          check-regexp: "^build$"
 
   update-changelog:
     needs: wait-for-ci
