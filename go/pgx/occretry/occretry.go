@@ -149,6 +149,27 @@ func Retry(ctx context.Context, config Config, fn func() error) error {
 	return fmt.Errorf("max retries (%d) exceeded, last error: %w", config.MaxRetries, lastErr)
 }
 
+// Execer is an interface for types that can execute SQL statements.
+// *pgxpool.Pool and *pgx.Conn satisfy this interface.
+type Execer interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+// ExecWithRetry executes a single SQL statement with automatic retry on OCC conflicts.
+// Unlike WithRetry, this does NOT wrap in an explicit transaction, making it suitable
+// for both DDL (CREATE TABLE, CREATE INDEX ASYNC, etc.) and single DML statements.
+//
+// Example:
+//
+//	err := occretry.ExecWithRetry(ctx, pool, occretry.DefaultConfig(),
+//	    "CREATE INDEX ASYNC ON users (email)")
+func ExecWithRetry(ctx context.Context, execer Execer, config Config, sql string, arguments ...any) error {
+	return Retry(ctx, config, func() error {
+		_, err := execer.Exec(ctx, sql, arguments...)
+		return err
+	})
+}
+
 // WithRetry executes a transactional function with automatic retry on OCC conflicts.
 // It begins a transaction, calls fn with the transaction, and commits on success.
 // If an OCC error occurs at any point, the transaction is rolled back and retried
