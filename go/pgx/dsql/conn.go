@@ -12,15 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Conn wraps pgx.Conn with Aurora DSQL IAM authentication.
-type Conn struct {
-	*pgx.Conn
-	config *resolvedConfig
-}
-
 // Connect creates a single connection to Aurora DSQL.
 // The config parameter can be a Config struct, *Config, or a connection string.
-func Connect(ctx context.Context, config any) (*Conn, error) {
+func Connect(ctx context.Context, config any) (*pgx.Conn, error) {
 	var cfg *Config
 
 	switch c := config.(type) {
@@ -49,7 +43,7 @@ func Connect(ctx context.Context, config any) (*Conn, error) {
 	return connectWithResolved(ctx, resolved)
 }
 
-func connectWithResolved(ctx context.Context, resolved *resolvedConfig) (*Conn, error) {
+func connectWithResolved(ctx context.Context, resolved *resolvedConfig) (*pgx.Conn, error) {
 	credentialsProvider, err := resolveCredentialsProvider(ctx, resolved)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve credentials provider: %w", err)
@@ -73,8 +67,5 @@ func connectWithResolved(ctx context.Context, resolved *resolvedConfig) (*Conn, 
 		return nil, fmt.Errorf("unable to connect: %w", err)
 	}
 
-	return &Conn{
-		Conn:   conn,
-		config: resolved,
-	}, nil
+	return conn, nil
 }

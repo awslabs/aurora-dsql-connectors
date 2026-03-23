@@ -13,15 +13,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Pool wraps pgxpool.Pool with Aurora DSQL IAM authentication.
-type Pool struct {
-	*pgxpool.Pool
-	config *resolvedConfig
-}
-
 // NewPool creates a new connection pool to Aurora DSQL.
+//
 // The config parameter can be a Config struct, *Config, or a connection string.
-func NewPool(ctx context.Context, config any) (*Pool, error) {
+//
+// The optional poolConfig parameter allows direct configuration of the underlying pgxpool.
+// It must be created via [pgxpool.ParseConfig]. If omitted, sensible defaults are applied
+// (MaxConnLifetime: 55min, MaxConnIdleTime: 10min). Any BeforeConnect callback set on
+// poolConfig will be chained with the connector's IAM token generation (user callback
+// runs first).
+func NewPool(ctx context.Context, config any, poolConfig ...*pgxpool.Config) (*pgxpool.Pool, error) {
 	var cfg *Config
 
 	switch c := config.(type) {
@@ -47,22 +48,50 @@ func NewPool(ctx context.Context, config any) (*Pool, error) {
 		return nil, err
 	}
 
-	return newPoolFromResolved(ctx, resolved)
+	var pc *pgxpool.Config
+	if len(poolConfig) > 0 {
+		pc = poolConfig[0]
+	}
+
+	return newPoolFromResolved(ctx, resolved, pc)
 }
 
-func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig) (*Pool, error) {
+func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig, poolConfig *pgxpool.Config) (*pgxpool.Pool, error) {
 	credentialsProvider, err := resolveCredentialsProvider(ctx, resolved)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve credentials provider: %w", err)
 	}
 
-	poolConfig, err := pgxpool.ParseConfig("")
-	if err != nil {
-		return nil, fmt.Errorf("unable to create pool config: %w", err)
+	applyDSQLDefaults := poolConfig == nil
+	if poolConfig == nil {
+		poolConfig, err = pgxpool.ParseConfig("")
+		if err != nil {
+			return nil, fmt.Errorf("unable to create pool config: %w", err)
+		}
 	}
 
 	resolved.configureConnConfig(poolConfig.ConnConfig)
+
+	// Apply DSQL-optimized defaults. When no pool config was provided,
+	// always override pgxpool defaults. When the user provides their own
+	// config, only fill in zero values so that users who don't explicitly
+	// set lifetimes still get safe connection recycling on DSQL (where
+	// connections timeout server-side after 60 minutes).
+	if applyDSQLDefaults || poolConfig.MaxConnLifetime == 0 {
+		poolConfig.MaxConnLifetime = DefaultMaxConnLifetime
+	}
+	if applyDSQLDefaults || poolConfig.MaxConnIdleTime == 0 {
+		poolConfig.MaxConnIdleTime = DefaultMaxConnIdleTime
+	}
+
+	// Chain with any user-provided BeforeConnect callback
+	userBeforeConnect := poolConfig.BeforeConnect
 	poolConfig.BeforeConnect = func(ctx context.Context, cfg *pgx.ConnConfig) error {
+		if userBeforeConnect != nil {
+			if err := userBeforeConnect(ctx, cfg); err != nil {
+				return err
+			}
+		}
 		token, err := GenerateToken(ctx, resolved.Host, resolved.Region, resolved.User, credentialsProvider, resolved.TokenDuration)
 		if err != nil {
 			return err
@@ -71,30 +100,10 @@ func newPoolFromResolved(ctx context.Context, resolved *resolvedConfig) (*Pool, 
 		return nil
 	}
 
-	// Apply pool configuration
-	if resolved.MaxConns > 0 {
-		poolConfig.MaxConns = resolved.MaxConns
-	}
-	if resolved.MinConns > 0 {
-		poolConfig.MinConns = resolved.MinConns
-	}
-	if resolved.MaxConnLifetime > 0 {
-		poolConfig.MaxConnLifetime = resolved.MaxConnLifetime
-	}
-	if resolved.MaxConnIdleTime > 0 {
-		poolConfig.MaxConnIdleTime = resolved.MaxConnIdleTime
-	}
-	if resolved.HealthCheckPeriod > 0 {
-		poolConfig.HealthCheckPeriod = resolved.HealthCheckPeriod
-	}
-
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create connection pool: %w", err)
 	}
 
-	return &Pool{
-		Pool:   pool,
-		config: resolved,
-	}, nil
+	return pool, nil
 }

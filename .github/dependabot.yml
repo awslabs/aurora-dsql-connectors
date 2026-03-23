@@ -44,7 +44,9 @@ updates:
 
   # Java connector
   - package-ecosystem: "gradle"
-    directory: "/java/jdbc"
+    directories:
+      - "/java/jdbc"
+      - "/java/jdbc/examples/pgjdbc"
     schedule:
       interval: "weekly"
     ignore:
@@ -81,12 +83,18 @@ updates:
       interval: "weekly"
 
   # Rust connector
-  # Use 'directories' (plural) so the connector and its example are
-  # updated in the same PR, keeping Cargo.lock files consistent.
   - package-ecosystem: "cargo"
     directories:
       - "/rust/sqlx"
       - "/rust/sqlx/example"
+    schedule:
+      interval: "weekly"
+
+  # .NET connector
+  - package-ecosystem: "nuget"
+    directories:
+      - "/dotnet/npgsql/src/Amazon.AuroraDsql.Npgsql"
+      - "/dotnet/npgsql/example"
     schedule:
       interval: "weekly"
 
@@ -95,5 +103,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      - dependency-name: "gitleaks/gitleaks-action"
