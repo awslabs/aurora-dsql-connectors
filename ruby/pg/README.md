@@ -119,7 +119,7 @@ conn.exec("SELECT 1")
 conn.close
 ```
 
-`connect` returns a standard `PG::Connection` — no wrapper. All `PG::Connection` methods work as expected, and `conn.is_a?(PG::Connection)` returns `true`.
+`connect` returns a standard `PG::Connection`.
 
 ## OCC Retry
 
