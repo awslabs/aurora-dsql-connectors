@@ -71,8 +71,8 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {
         var csb = BuildBaseConnectionStringBuilder(config);
-        csb.Pooling = false;
         ApplyCallbackAndSecurityInvariants(csb, config);
+        csb.Pooling = false; // DsqlConnection is always unpooled — not overridable
         return csb;
     }
 
