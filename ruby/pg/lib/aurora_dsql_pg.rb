@@ -13,7 +13,7 @@ module AuroraDsql
     class Error < StandardError; end
 
     # Create a single connection to Aurora DSQL.
-    # Returns a raw PG::Connection — no wrapper.
+    # Returns a PG::Connection.
     def self.connect(config = nil, **options)
       resolved = Config.from(config, **options).resolve
       token = Token.generate(
