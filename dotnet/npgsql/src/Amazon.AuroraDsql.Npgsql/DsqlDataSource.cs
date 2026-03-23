@@ -71,14 +71,7 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
         csb.ConnectionIdleLifetime = 600; // 10 min
         csb.NoResetOnClose = true; // DSQL manages session state automatically
 
-        // User callback overrides pool/Npgsql settings
-        config.ConfigureConnectionString?.Invoke(csb);
-
-        // DSQL security invariants — not overridable
-        csb.SslMode = SslMode.VerifyFull;
-        csb.SslNegotiation = SslNegotiation.Direct;
-        csb.Enlist = false;
-
+        DsqlConnection.ApplyCallbackAndSecurityInvariants(csb, config);
         return csb;
     }
 
