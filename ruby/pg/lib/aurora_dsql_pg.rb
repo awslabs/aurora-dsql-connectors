@@ -25,8 +25,9 @@ module AuroraDsql
     end
 
     # Create a connection pool for Aurora DSQL.
-    def self.create_pool(config = nil, **options)
-      Pool.create(config, **options)
+    # Pass pool: { size: N, timeout: N } to configure ConnectionPool.
+    def self.create_pool(config = nil, pool: {}, **options)
+      Pool.create(config, pool: pool, **options)
     end
   end
 end
