@@ -24,8 +24,17 @@ internal static class Token
         string host,
         string user,
         AWSCredentials credentials,
-        RegionEndpoint region)
+        RegionEndpoint region,
+        int? tokenDurationSecs = null)
     {
+        if (tokenDurationSecs.HasValue)
+        {
+            var expiresIn = TimeSpan.FromSeconds(tokenDurationSecs.Value);
+            return IsAdminUser(user)
+                ? DSQLAuthTokenGenerator.GenerateDbConnectAdminAuthToken(credentials, region, host, expiresIn)
+                : DSQLAuthTokenGenerator.GenerateDbConnectAuthToken(credentials, region, host, expiresIn);
+        }
+
         return IsAdminUser(user)
             ? DSQLAuthTokenGenerator.GenerateDbConnectAdminAuthToken(credentials, region, host)
             : DSQLAuthTokenGenerator.GenerateDbConnectAuthToken(credentials, region, host);

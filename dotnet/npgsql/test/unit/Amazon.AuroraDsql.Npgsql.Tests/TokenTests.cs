@@ -35,8 +35,7 @@ public class TokenTests
             User: "admin", Database: "postgres", Port: 5432,
             Profile: null,
             CustomCredentialsProvider: customCreds,
-            MaxPoolSize: 10, MinPoolSize: 0,
-            ConnectionLifetime: 3300, ConnectionIdleLifetime: 600,
+            TokenDurationSecs: null,
             OccMaxRetries: null, OrmPrefix: null,
             ApplicationName: "test", LoggerFactory: null,
             ConfigureConnectionString: null);

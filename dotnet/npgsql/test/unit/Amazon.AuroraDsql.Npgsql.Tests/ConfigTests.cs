@@ -19,10 +19,7 @@ public class ConfigTests
         Assert.Equal("admin", resolved.User);
         Assert.Equal("postgres", resolved.Database);
         Assert.Equal(5432, resolved.Port);
-        Assert.Equal(10, resolved.MaxPoolSize);
-        Assert.Equal(0, resolved.MinPoolSize);
-        Assert.Equal(3300, resolved.ConnectionLifetime);
-        Assert.Equal(600, resolved.ConnectionIdleLifetime);
+        Assert.Null(resolved.TokenDurationSecs);
         Assert.Null(resolved.OccMaxRetries);
     }
 
@@ -76,74 +73,6 @@ public class ConfigTests
     }
 
     [Fact]
-    public void Validate_InvalidPort_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig { Host = "cluster.dsql.us-east-1.on.aws", Port = 0 };
-        Assert.Throws<DsqlException>(() => config.Validate());
-    }
-
-    [Fact]
-    public void Validate_MinPoolSizeExceedsMax_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            MinPoolSize = 50,
-            MaxPoolSize = 10
-        };
-        var ex = Assert.Throws<DsqlException>(() => config.Validate());
-        Assert.Contains("MinPoolSize", ex.Message);
-    }
-
-    [Fact]
-    public void Validate_MaxPoolSizeZero_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            MaxPoolSize = 0
-        };
-        var ex = Assert.Throws<DsqlException>(() => config.Validate());
-        Assert.Contains("MaxPoolSize", ex.Message);
-    }
-
-    [Fact]
-    public void Validate_NegativeMinPoolSize_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            MinPoolSize = -1
-        };
-        var ex = Assert.Throws<DsqlException>(() => config.Validate());
-        Assert.Contains("MinPoolSize", ex.Message);
-    }
-
-    [Fact]
-    public void Validate_NegativeConnectionLifetime_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            ConnectionLifetime = -1
-        };
-        var ex = Assert.Throws<DsqlException>(() => config.Validate());
-        Assert.Contains("ConnectionLifetime", ex.Message);
-    }
-
-    [Fact]
-    public void Validate_NegativeConnectionIdleLifetime_ThrowsDsqlException()
-    {
-        var config = new DsqlConfig
-        {
-            Host = "cluster.dsql.us-east-1.on.aws",
-            ConnectionIdleLifetime = -1
-        };
-        var ex = Assert.Throws<DsqlException>(() => config.Validate());
-        Assert.Contains("ConnectionIdleLifetime", ex.Message);
-    }
-
-    [Fact]
     public void Validate_NegativeOccMaxRetries_ThrowsDsqlException()
     {
         var config = new DsqlConfig
@@ -168,22 +97,16 @@ public class ConfigTests
     }
 
     [Fact]
-    public void Resolve_CustomPoolSettings_Preserved()
+    public void Resolve_TokenDurationSecs_Preserved()
     {
         var config = new DsqlConfig
         {
             Host = "cluster.dsql.us-east-1.on.aws",
-            MaxPoolSize = 50,
-            MinPoolSize = 5,
-            ConnectionLifetime = 1800,
-            ConnectionIdleLifetime = 300,
+            TokenDurationSecs = 450,
             OccMaxRetries = 5
         };
         var resolved = config.ResolveInternal();
-        Assert.Equal(50, resolved.MaxPoolSize);
-        Assert.Equal(5, resolved.MinPoolSize);
-        Assert.Equal(1800, resolved.ConnectionLifetime);
-        Assert.Equal(300, resolved.ConnectionIdleLifetime);
+        Assert.Equal(450, resolved.TokenDurationSecs);
         Assert.Equal(5, resolved.OccMaxRetries);
     }
 

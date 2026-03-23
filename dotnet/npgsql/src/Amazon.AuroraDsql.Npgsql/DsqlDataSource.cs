@@ -63,11 +63,22 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {
         var csb = DsqlConnection.BuildBaseConnectionStringBuilder(config);
-        csb.MaxPoolSize = config.MaxPoolSize;
-        csb.MinPoolSize = config.MinPoolSize;
-        csb.ConnectionLifetime = config.ConnectionLifetime;
-        csb.ConnectionIdleLifetime = config.ConnectionIdleLifetime;
+
+        // DSQL pool defaults
+        csb.MaxPoolSize = 10;
+        csb.MinPoolSize = 0;
+        csb.ConnectionLifetime = 3300; // 55 min — DSQL kills connections at 60 min
+        csb.ConnectionIdleLifetime = 600; // 10 min
         csb.NoResetOnClose = true; // DSQL manages session state automatically
+
+        // User callback overrides pool/Npgsql settings
+        config.ConfigureConnectionString?.Invoke(csb);
+
+        // DSQL security invariants — not overridable
+        csb.SslMode = SslMode.VerifyFull;
+        csb.SslNegotiation = SslNegotiation.Direct;
+        csb.Enlist = false;
+
         return csb;
     }
 
@@ -83,10 +94,10 @@ public sealed class DsqlDataSource : IAsyncDisposable, IDisposable
     {
         builder.UsePasswordProvider(
             passwordProvider: (_) =>
-                Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint),
+                Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint, resolved.TokenDurationSecs),
             passwordProviderAsync: (_, _) =>
                 new ValueTask<string>(
-                    Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint)));
+                    Token.GenerateToken(resolved.Host, resolved.User, credentials, regionEndpoint, resolved.TokenDurationSecs)));
 
         // Defense-in-depth: .NET 8+ defaults to TLS 1.2+, but we pin explicitly
         // in case the connector is used in an environment with a weaker default.

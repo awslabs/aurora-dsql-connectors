@@ -28,11 +28,13 @@ public static class ExamplePreferred
         {
             Host = clusterEndpoint,
             User = clusterUser,
-            MaxPoolSize = 10,
-            MinPoolSize = 2,
             OccMaxRetries = 3,
-            // Set search_path so all connections from the pool use the correct schema
-            ConfigureConnectionString = csb => csb.SearchPath = schema,
+            // Set search_path and pool settings via the callback
+            ConfigureConnectionString = csb =>
+            {
+                csb.SearchPath = schema;
+                csb.MinPoolSize = 2;
+            },
         });
 
         // Verify connectivity

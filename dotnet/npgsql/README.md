@@ -82,10 +82,7 @@ await ds.WithTransactionRetryAsync(async conn =>
 | `Port` | `int` | `5432` | Database port |
 | `Profile` | `string?` | `null` | AWS profile name for credentials |
 | `CustomCredentialsProvider` | `AWSCredentials?` | `null` | Custom AWS credentials provider |
-| `MaxPoolSize` | `int` | `10` | Maximum pool connections |
-| `MinPoolSize` | `int` | `0` | Minimum pool connections |
-| `ConnectionLifetime` | `int` | `3300` (55 min) | Max connection lifetime in seconds |
-| `ConnectionIdleLifetime` | `int` | `600` (10 min) | Max idle time before connection is closed |
+| `TokenDurationSecs` | `int?` | `null` (SDK default, 900s) | Token validity duration in seconds |
 | `OccMaxRetries` | `int?` | `null` (disabled) | Default max OCC retries for retry methods on the data source |
 | `OrmPrefix` | `string?` | `null` | ORM prefix prepended to `application_name` (e.g., `"efcore"`) |
 | `LoggerFactory` | `ILoggerFactory?` | `null` | Logger factory for retry warnings and diagnostics |

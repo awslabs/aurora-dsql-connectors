@@ -72,27 +72,8 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     {
         var csb = BuildBaseConnectionStringBuilder(config);
         csb.Pooling = false;
-        return csb;
-    }
 
-    /// <summary>
-    /// Builds the shared base connection string properties used by both
-    /// DsqlDataSource (pooled) and DsqlConnection (unpooled).
-    /// </summary>
-    internal static NpgsqlConnectionStringBuilder BuildBaseConnectionStringBuilder(ResolvedConfig config)
-    {
-        var csb = new NpgsqlConnectionStringBuilder
-        {
-            Host = config.Host,
-            Port = config.Port,
-            Database = config.Database,
-            Username = config.User,
-            SslMode = SslMode.VerifyFull,
-            SslNegotiation = SslNegotiation.Direct,
-            ApplicationName = config.ApplicationName,
-            Enlist = false, // DSQL does not support PREPARE TRANSACTION
-        };
-
+        // User callback customizes connection settings
         config.ConfigureConnectionString?.Invoke(csb);
 
         // DSQL security invariants — not overridable
@@ -101,6 +82,25 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
         csb.Enlist = false;
 
         return csb;
+    }
+
+    /// <summary>
+    /// Builds the shared base connection string properties (host, port, db, user, ssl, app_name).
+    /// Does NOT invoke the callback — caller is responsible for callback and security invariants.
+    /// </summary>
+    internal static NpgsqlConnectionStringBuilder BuildBaseConnectionStringBuilder(ResolvedConfig config)
+    {
+        return new NpgsqlConnectionStringBuilder
+        {
+            Host = config.Host,
+            Port = config.Port,
+            Database = config.Database,
+            Username = config.User,
+            SslMode = SslMode.VerifyFull,
+            SslNegotiation = SslNegotiation.Direct,
+            ApplicationName = config.ApplicationName,
+            Enlist = false,
+        };
     }
 
     // --- Delegation of common NpgsqlConnection methods ---

@@ -87,9 +87,8 @@ pool.shutdown
 | `profile` | `String` | `nil` | AWS profile name |
 | `token_duration` | `Integer` | `900` (15 min) | Token validity in seconds |
 | `credentials_provider` | `Aws::Credentials` | `nil` | Custom credentials |
-| `pool_size` | `Integer` | `5` | Connection pool size |
-| `checkout_timeout` | `Integer` | `5` | Seconds to wait for a pool connection |
 | `max_lifetime` | `Integer` | `3300` (55 min) | Max connection lifetime in seconds |
+| `pool` | `Hash` | `{size: 5, timeout: 5}` | Native ConnectionPool options passed directly to `ConnectionPool.new` |
 | `application_name` | `String` | `nil` | ORM prefix for application_name |
 | `logger` | `Logger` | `nil` | Logger for OCC retry warnings |
 | `occ_max_retries` | `Integer` | `nil` (disabled) | Max OCC retries on `pool.with`; enables retry when set |
@@ -110,7 +109,7 @@ conn.exec("SELECT 1")
 conn.close
 ```
 
-The `Connection` wrapper delegates common methods (`exec_params`, `query`, `transaction`, `close`, `finished?`) directly. All other `PG::Connection` methods (e.g., `exec`, `prepare`, `exec_prepared`, `copy_data`) are also available via delegation. The underlying `PG::Connection` can be accessed directly via `conn.pg_conn` if needed.
+`connect` returns a standard `PG::Connection` — no wrapper. All `PG::Connection` methods work as expected, and `conn.is_a?(PG::Connection)` returns `true`.
 
 ## OCC Retry
 

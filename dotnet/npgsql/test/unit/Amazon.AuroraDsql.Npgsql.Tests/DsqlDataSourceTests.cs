@@ -13,19 +13,13 @@ public class DsqlDataSourceTests
         string host = "cluster.dsql.us-east-1.on.aws",
         string region = "us-east-1",
         string user = "admin",
-        int maxPoolSize = 10,
-        int minPoolSize = 0,
-        int connectionLifetime = 3300,
-        int connectionIdleLifetime = 600,
         string? ormPrefix = null,
         Action<NpgsqlConnectionStringBuilder>? configureConnectionString = null) =>
         new(
             Host: host, Region: region, User: user,
             Database: "postgres", Port: 5432, Profile: null,
             CustomCredentialsProvider: null,
-            MaxPoolSize: maxPoolSize, MinPoolSize: minPoolSize,
-            ConnectionLifetime: connectionLifetime,
-            ConnectionIdleLifetime: connectionIdleLifetime,
+            TokenDurationSecs: null,
             OccMaxRetries: null, OrmPrefix: ormPrefix,
             ApplicationName: ConnectorVersion.BuildApplicationName(ormPrefix),
             LoggerFactory: null,
@@ -40,14 +34,46 @@ public class DsqlDataSourceTests
     }
 
     [Fact]
-    public void BuildConnectionString_PoolSettings()
+    public void BuildConnectionString_PoolDefaults()
+    {
+        var csb = DsqlDataSource.BuildConnectionStringBuilder(MakeConfig());
+        Assert.Equal(10, csb.MaxPoolSize);
+        Assert.Equal(0, csb.MinPoolSize);
+        Assert.Equal(3300, csb.ConnectionLifetime);
+        Assert.Equal(600, csb.ConnectionIdleLifetime);
+    }
+
+    [Fact]
+    public void BuildConnectionString_CallbackOverridesPoolSettings()
     {
         var csb = DsqlDataSource.BuildConnectionStringBuilder(MakeConfig(
-            maxPoolSize: 50, minPoolSize: 5, connectionLifetime: 1800, connectionIdleLifetime: 300));
+            configureConnectionString: b =>
+            {
+                b.MaxPoolSize = 50;
+                b.MinPoolSize = 5;
+                b.ConnectionLifetime = 1800;
+                b.ConnectionIdleLifetime = 300;
+            }));
         Assert.Equal(50, csb.MaxPoolSize);
         Assert.Equal(5, csb.MinPoolSize);
         Assert.Equal(1800, csb.ConnectionLifetime);
         Assert.Equal(300, csb.ConnectionIdleLifetime);
+    }
+
+    [Fact]
+    public void BuildConnectionString_CallbackCannotOverrideSslMode()
+    {
+        var csb = DsqlDataSource.BuildConnectionStringBuilder(MakeConfig(
+            configureConnectionString: b => b.SslMode = SslMode.Disable));
+        Assert.Equal(SslMode.VerifyFull, csb.SslMode);
+    }
+
+    [Fact]
+    public void BuildConnectionString_CallbackCannotOverrideEnlist()
+    {
+        var csb = DsqlDataSource.BuildConnectionStringBuilder(MakeConfig(
+            configureConnectionString: b => b.Enlist = true));
+        Assert.False(csb.Enlist);
     }
 
     [Fact]
