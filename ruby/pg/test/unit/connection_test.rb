@@ -8,22 +8,22 @@ RSpec.describe "AuroraDsql::Pg.connect" do
   before do
     allow(AuroraDsql::Pg::Token).to receive(:generate).and_return("test-token")
     stub_const("PG", Class.new do
-      @@last_params = nil
+      @last_params = nil
 
-      def self.connect(params)
-        @@last_params = params
-        Object.new.tap do |conn|
-          def conn.close; end
-          def conn.finished?; false; end
+      class << self
+        attr_accessor :last_params
+
+        def connect(params)
+          self.last_params = params
+          Object.new.tap do |conn|
+            def conn.close; end
+            def conn.finished?; false; end
+          end
         end
-      end
 
-      def self.last_params
-        @@last_params
-      end
-
-      def self.library_version
-        170000
+        def library_version
+          170000
+        end
       end
     end)
   end
