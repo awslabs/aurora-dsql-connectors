@@ -48,8 +48,10 @@ public class DsqlConfig
 
     /// <summary>
     /// Optional callback to customize the underlying <see cref="NpgsqlConnectionStringBuilder"/>
-    /// after DSQL defaults are applied. Use this to set Npgsql-specific properties not exposed
-    /// by DsqlConfig (e.g., CommandTimeout, Timeout, IncludeErrorDetail).
+    /// after DSQL defaults are applied. Use this to override pool settings
+    /// (e.g., MaxPoolSize, MinPoolSize, ConnectionLifetime, ConnectionIdleLifetime)
+    /// or set other Npgsql-specific properties (e.g., CommandTimeout, Timeout, IncludeErrorDetail).
+    /// SSL and Enlist are always re-applied after the callback and cannot be overridden.
     /// </summary>
     public Action<NpgsqlConnectionStringBuilder>? ConfigureConnectionString { get; set; }
 

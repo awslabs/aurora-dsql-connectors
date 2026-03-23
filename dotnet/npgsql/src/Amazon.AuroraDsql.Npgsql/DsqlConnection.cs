@@ -77,7 +77,7 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     }
 
     /// <summary>
-    /// Builds the shared base connection string properties (host, port, db, user, ssl, app_name).
+    /// Builds the shared base connection string properties (host, port, db, user, app_name).
     /// Does NOT invoke the callback or enforce security invariants — use
     /// <see cref="ApplyCallbackAndSecurityInvariants"/> after setting any additional defaults.
     /// </summary>

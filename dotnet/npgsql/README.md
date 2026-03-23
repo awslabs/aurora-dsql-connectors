@@ -86,7 +86,23 @@ await ds.WithTransactionRetryAsync(async conn =>
 | `OccMaxRetries` | `int?` | `null` (disabled) | Default max OCC retries for retry methods on the data source |
 | `OrmPrefix` | `string?` | `null` | ORM prefix prepended to `application_name` (e.g., `"efcore"`) |
 | `LoggerFactory` | `ILoggerFactory?` | `null` | Logger factory for retry warnings and diagnostics |
-| `ConfigureConnectionString` | `Action<NpgsqlConnectionStringBuilder>?` | `null` | Callback to set additional Npgsql connection string properties after defaults |
+| `ConfigureConnectionString` | `Action<NpgsqlConnectionStringBuilder>?` | `null` | Callback to customize Npgsql connection string properties (see below) |
+
+### Pool and Connection Settings
+
+The connector applies sensible DSQL defaults for pool settings (`MaxPoolSize=10`, `MinPoolSize=0`, `ConnectionLifetime=3300`, `ConnectionIdleLifetime=600`, `NoResetOnClose=true`). Use `ConfigureConnectionString` to override these or set any other [Npgsql connection string property](https://www.npgsql.org/doc/connection-string-parameters.html):
+
+```csharp
+ConfigureConnectionString = csb =>
+{
+    csb.MaxPoolSize = 20;
+    csb.MinPoolSize = 2;
+    csb.CommandTimeout = 60;
+    csb.SearchPath = "myschema";
+}
+```
+
+SSL (`SslMode=VerifyFull`, `SslNegotiation=Direct`) and `Enlist=false` are security invariants that cannot be overridden.
 
 ## Connection String Format
 
