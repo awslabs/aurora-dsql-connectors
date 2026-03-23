@@ -28,6 +28,9 @@ jobs:
     needs: wait-for-ci
     runs-on: ubuntu-latest
     environment: ruby
+    permissions:
+      id-token: write # required for requesting the JWT
+      contents: read # required for actions/checkout
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -36,6 +39,23 @@ jobs:
         with:
           ruby-version: "3.3"
           working-directory: ruby/pg
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        with:
+          role-to-assume: ${{ secrets.RUBYGEMS_PUBLISH_IAM_ROLE }}
+          role-session-name: ruby-pg-rubygems-publish
+          aws-region: us-east-1
+
+      - name: Get RubyGems API Key
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "prod/rubygems/account-credentials" \
+            --query 'SecretString' \
+            --output text)
+          RUBYGEMS_API_KEY=$(echo "$SECRET_JSON" | jq -r '.["API Key for Github Publish"]')
+          echo "::add-mask::$RUBYGEMS_API_KEY"
+          echo "GEM_HOST_API_KEY=$RUBYGEMS_API_KEY" >> "$GITHUB_ENV"
 
       - name: Set version from tag
         run: |
@@ -48,8 +68,6 @@ jobs:
 
       - name: Publish to RubyGems
         run: gem push aurora-dsql-ruby-pg-*.gem
-        env:
-          GEM_HOST_API_KEY: ${{ secrets.RUBYGEMS_API_KEY }}
 
   update-changelog:
     needs: publish
