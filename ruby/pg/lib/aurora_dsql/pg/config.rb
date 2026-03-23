@@ -12,15 +12,12 @@ module AuroraDsql
         database: "postgres",
         port: 5432,
         max_lifetime: 55 * 60,      # 55 minutes in seconds
-        token_duration: 15 * 60,    # 15 minutes in seconds
-        pool_size: 5,
-        checkout_timeout: 5         # seconds to wait for a pool connection
+        token_duration: 15 * 60    # 15 minutes in seconds
       }.freeze
 
       attr_accessor :host, :region, :user, :database, :port,
                     :profile, :token_duration, :credentials_provider,
-                    :max_lifetime, :pool_size, :checkout_timeout,
-                    :application_name, :logger, :occ_max_retries
+                    :max_lifetime, :application_name, :logger, :occ_max_retries
 
       def initialize(**options)
         @host = options[:host]
@@ -32,8 +29,6 @@ module AuroraDsql
         @token_duration = options[:token_duration]
         @credentials_provider = options[:credentials_provider]
         @max_lifetime = options[:max_lifetime]
-        @pool_size = options[:pool_size]
-        @checkout_timeout = options[:checkout_timeout]
         @application_name = options[:application_name]
         @logger = options[:logger]
         @occ_max_retries = options[:occ_max_retries]
@@ -100,8 +95,6 @@ module AuroraDsql
           token_duration: @token_duration || DEFAULTS[:token_duration],
           credentials_provider: @credentials_provider,
           max_lifetime: @max_lifetime || DEFAULTS[:max_lifetime],
-          pool_size: @pool_size || DEFAULTS[:pool_size],
-          checkout_timeout: @checkout_timeout || DEFAULTS[:checkout_timeout],
           application_name: @application_name,
           logger: @logger,
           occ_max_retries: @occ_max_retries
@@ -132,11 +125,6 @@ module AuroraDsql
       def validate!
         raise Error, "host is required" if @host.nil? || @host.empty?
 
-        if @port
-          raise Error, "port must be an integer, got #{@port.class}" unless @port.is_a?(Integer)
-          raise Error, "port must be between 1 and 65535, got #{@port}" if @port < 1 || @port > 65_535
-        end
-
         if @occ_max_retries
           unless @occ_max_retries.is_a?(Integer) && @occ_max_retries > 0
             raise Error, "occ_max_retries must be a positive integer, got #{@occ_max_retries.inspect}"
@@ -149,8 +137,7 @@ module AuroraDsql
     ResolvedConfig = Struct.new(
       :host, :region, :user, :database, :port,
       :profile, :token_duration, :credentials_provider,
-      :max_lifetime, :pool_size, :checkout_timeout,
-      :application_name, :logger, :occ_max_retries,
+      :max_lifetime, :application_name, :logger, :occ_max_retries,
       keyword_init: true
     ) do
       # Convert to pg connection parameters hash.

@@ -20,7 +20,7 @@ def example
   pool = AuroraDsql::Pg.create_pool(
     host: cluster_endpoint,
     user: cluster_user,
-    pool_size: 10,
+    pool: { size: 10 },
     occ_max_retries: 3
   )
 

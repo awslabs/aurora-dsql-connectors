@@ -71,36 +71,40 @@ public sealed class DsqlConnection : IAsyncDisposable, IDisposable
     internal static NpgsqlConnectionStringBuilder BuildConnectionStringBuilder(ResolvedConfig config)
     {
         var csb = BuildBaseConnectionStringBuilder(config);
-        csb.Pooling = false;
+        ApplyCallbackAndSecurityInvariants(csb, config);
+        csb.Pooling = false; // DsqlConnection is always unpooled — not overridable
         return csb;
     }
 
     /// <summary>
-    /// Builds the shared base connection string properties used by both
-    /// DsqlDataSource (pooled) and DsqlConnection (unpooled).
+    /// Builds the shared base connection string properties (host, port, db, user, app_name).
+    /// Does NOT invoke the callback or enforce security invariants — use
+    /// <see cref="ApplyCallbackAndSecurityInvariants"/> after setting any additional defaults.
     /// </summary>
     internal static NpgsqlConnectionStringBuilder BuildBaseConnectionStringBuilder(ResolvedConfig config)
     {
-        var csb = new NpgsqlConnectionStringBuilder
+        return new NpgsqlConnectionStringBuilder
         {
             Host = config.Host,
             Port = config.Port,
             Database = config.Database,
             Username = config.User,
-            SslMode = SslMode.VerifyFull,
-            SslNegotiation = SslNegotiation.Direct,
             ApplicationName = config.ApplicationName,
-            Enlist = false, // DSQL does not support PREPARE TRANSACTION
         };
+    }
 
+    /// <summary>
+    /// Invokes the user callback then re-applies DSQL security invariants.
+    /// Must be called as the final step after all defaults are set.
+    /// </summary>
+    internal static void ApplyCallbackAndSecurityInvariants(NpgsqlConnectionStringBuilder csb, ResolvedConfig config)
+    {
         config.ConfigureConnectionString?.Invoke(csb);
 
         // DSQL security invariants — not overridable
         csb.SslMode = SslMode.VerifyFull;
         csb.SslNegotiation = SslNegotiation.Direct;
-        csb.Enlist = false;
-
-        return csb;
+        csb.Enlist = false; // DSQL does not support PREPARE TRANSACTION
     }
 
     // --- Delegation of common NpgsqlConnection methods ---

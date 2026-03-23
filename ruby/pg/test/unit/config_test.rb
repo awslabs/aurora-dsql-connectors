@@ -15,8 +15,6 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(AuroraDsql::Pg::Config::DEFAULTS[:port]).to eq(5432)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:max_lifetime]).to eq(55 * 60)
       expect(AuroraDsql::Pg::Config::DEFAULTS[:token_duration]).to eq(15 * 60)
-      expect(AuroraDsql::Pg::Config::DEFAULTS[:pool_size]).to eq(5)
-      expect(AuroraDsql::Pg::Config::DEFAULTS[:checkout_timeout]).to eq(5)
     end
   end
 
@@ -31,7 +29,6 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(resolved.database).to eq("postgres")
       expect(resolved.port).to eq(5432)
       expect(resolved.token_duration).to eq(15 * 60)
-      expect(resolved.checkout_timeout).to eq(5)
     end
 
     it "expands cluster ID to full hostname" do
@@ -69,24 +66,6 @@ RSpec.describe AuroraDsql::Pg::Config do
       config = described_class.new
 
       expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /host is required/)
-    end
-
-    it "raises error for invalid port" do
-      config = described_class.new(
-        host: "mycluster.dsql.us-east-1.on.aws",
-        port: 70000
-      )
-
-      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /port must be between/)
-    end
-
-    it "raises error for non-integer port" do
-      config = described_class.new(
-        host: "mycluster.dsql.us-east-1.on.aws",
-        port: "5432"
-      )
-
-      expect { config.resolve }.to raise_error(AuroraDsql::Pg::Error, /port must be an integer/)
     end
 
     it "raises error for non-integer occ_max_retries" do
@@ -143,8 +122,6 @@ RSpec.describe AuroraDsql::Pg::Config do
         port: 5433,
         profile: "myprofile",
         token_duration: 300,
-        pool_size: 10,
-        checkout_timeout: 10,
         application_name: "rails",
         occ_max_retries: 5
       )
@@ -155,8 +132,6 @@ RSpec.describe AuroraDsql::Pg::Config do
       expect(resolved.port).to eq(5433)
       expect(resolved.profile).to eq("myprofile")
       expect(resolved.token_duration).to eq(300)
-      expect(resolved.pool_size).to eq(10)
-      expect(resolved.checkout_timeout).to eq(10)
       expect(resolved.application_name).to eq("rails")
       expect(resolved.occ_max_retries).to eq(5)
     end
@@ -262,7 +237,6 @@ RSpec.describe AuroraDsql::Pg::ResolvedConfig do
       token_duration: 900,
       credentials_provider: nil,
       max_lifetime: 3300,
-      pool_size: 5,
       application_name: nil
     )
   end
@@ -328,7 +302,6 @@ RSpec.describe AuroraDsql::Pg::ResolvedConfig do
         token_duration: 900,
         credentials_provider: nil,
         max_lifetime: 3300,
-        pool_size: 5,
         application_name: "rails"
       )
 

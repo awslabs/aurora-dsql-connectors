@@ -11,18 +11,18 @@ module AuroraDsql
       # Wrapper to track connection creation time for max_lifetime enforcement.
       PooledConnection = Struct.new(:conn, :created_at, keyword_init: true)
 
+      POOL_DEFAULTS = { size: 5, timeout: 5 }.freeze
+
       # Create a new connection pool.
-      def self.create(config = nil, **options)
-        new(Config.from(config, **options).resolve)
+      def self.create(config = nil, pool: {}, **options)
+        new(Config.from(config, **options).resolve, pool)
       end
 
-      def initialize(resolved_config)
+      def initialize(resolved_config, pool_options = {})
         @config = resolved_config
 
-        @pool = ConnectionPool.new(
-          size: resolved_config.pool_size,
-          timeout: resolved_config.checkout_timeout
-        ) { create_connection }
+        effective_pool = POOL_DEFAULTS.merge(pool_options)
+        @pool = ConnectionPool.new(**effective_pool) { create_connection }
       end
 
       # Maximum stale connection discards before giving up.

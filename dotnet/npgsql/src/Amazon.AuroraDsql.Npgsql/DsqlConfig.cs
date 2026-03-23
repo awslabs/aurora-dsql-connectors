@@ -34,17 +34,8 @@ public class DsqlConfig
     /// <summary>Explicit AWS credentials for cross-account or assume-role scenarios.</summary>
     public AWSCredentials? CustomCredentialsProvider { get; set; }
 
-    /// <summary>Maximum pool size. Default: 10.</summary>
-    public int MaxPoolSize { get; set; } = 10;
-
-    /// <summary>Minimum pool size. Default: 0.</summary>
-    public int MinPoolSize { get; set; } = 0;
-
-    /// <summary>Max connection lifetime in seconds. Default: 3300 (55 min).</summary>
-    public int ConnectionLifetime { get; set; } = 3300;
-
-    /// <summary>Max idle time in seconds. Default: 600 (10 min).</summary>
-    public int ConnectionIdleLifetime { get; set; } = 600;
+    /// <summary>Token validity duration in seconds. Default: null (SDK default, 900s).</summary>
+    public int? TokenDurationSecs { get; set; }
 
     /// <summary>Default max OCC retries for retry methods on the data source. Default: null (disabled).</summary>
     public int? OccMaxRetries { get; set; }
@@ -57,8 +48,10 @@ public class DsqlConfig
 
     /// <summary>
     /// Optional callback to customize the underlying <see cref="NpgsqlConnectionStringBuilder"/>
-    /// after DSQL defaults are applied. Use this to set Npgsql-specific properties not exposed
-    /// by DsqlConfig (e.g., CommandTimeout, Timeout, IncludeErrorDetail).
+    /// after DSQL defaults are applied. Use this to override pool settings
+    /// (e.g., MaxPoolSize, MinPoolSize, ConnectionLifetime, ConnectionIdleLifetime)
+    /// or set other Npgsql-specific properties (e.g., CommandTimeout, Timeout, IncludeErrorDetail).
+    /// SSL and Enlist are always re-applied after the callback and cannot be overridden.
     /// </summary>
     public Action<NpgsqlConnectionStringBuilder>? ConfigureConnectionString { get; set; }
 
@@ -81,24 +74,6 @@ public class DsqlConfig
     {
         if (string.IsNullOrWhiteSpace(Host))
             throw new DsqlException("Host is required. Provide a full DSQL endpoint or a 26-character cluster ID.");
-
-        if (Port < 1 || Port > 65535)
-            throw new DsqlException($"Port must be between 1 and 65535, got {Port}.");
-
-        if (MaxPoolSize < 1)
-            throw new DsqlException($"MaxPoolSize must be at least 1, got {MaxPoolSize}.");
-
-        if (MinPoolSize < 0)
-            throw new DsqlException($"MinPoolSize must be non-negative, got {MinPoolSize}.");
-
-        if (MinPoolSize > MaxPoolSize)
-            throw new DsqlException($"MinPoolSize ({MinPoolSize}) must not exceed MaxPoolSize ({MaxPoolSize}).");
-
-        if (ConnectionLifetime < 1)
-            throw new DsqlException($"ConnectionLifetime must be at least 1 second, got {ConnectionLifetime}.");
-
-        if (ConnectionIdleLifetime < 0)
-            throw new DsqlException($"ConnectionIdleLifetime must be non-negative, got {ConnectionIdleLifetime}.");
 
         if (OccMaxRetries.HasValue && OccMaxRetries.Value < 0)
             throw new DsqlException($"OccMaxRetries must be null, 0, or positive, got {OccMaxRetries}.");
@@ -133,10 +108,7 @@ public class DsqlConfig
             Port: Port,
             Profile: Profile,
             CustomCredentialsProvider: CustomCredentialsProvider,
-            MaxPoolSize: MaxPoolSize,
-            MinPoolSize: MinPoolSize,
-            ConnectionLifetime: ConnectionLifetime,
-            ConnectionIdleLifetime: ConnectionIdleLifetime,
+            TokenDurationSecs: TokenDurationSecs,
             OccMaxRetries: OccMaxRetries,
             OrmPrefix: OrmPrefix,
             ApplicationName: ConnectorVersion.BuildApplicationName(OrmPrefix),
@@ -238,10 +210,7 @@ internal sealed record ResolvedConfig(
     int Port,
     string? Profile,
     AWSCredentials? CustomCredentialsProvider,
-    int MaxPoolSize,
-    int MinPoolSize,
-    int ConnectionLifetime,
-    int ConnectionIdleLifetime,
+    int? TokenDurationSecs,
     int? OccMaxRetries,
     string? OrmPrefix,
     string ApplicationName,
