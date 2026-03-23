@@ -33,6 +33,7 @@ public static class ExamplePreferred
             ConfigureConnectionString = csb =>
             {
                 csb.SearchPath = schema;
+                csb.MaxPoolSize = 10;
                 csb.MinPoolSize = 2;
             },
         });
