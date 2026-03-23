@@ -17,6 +17,7 @@ build/
 
 # Rust
 target/
+Cargo.lock
 
 # IDE
 .idea/

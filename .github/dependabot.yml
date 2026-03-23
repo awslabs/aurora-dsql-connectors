@@ -80,6 +80,16 @@ updates:
     schedule:
       interval: "weekly"
 
+  # Rust connector
+  # Use 'directories' (plural) so the connector and its example are
+  # updated in the same PR, keeping Cargo.lock files consistent.
+  - package-ecosystem: "cargo"
+    directories:
+      - "/rust/sqlx"
+      - "/rust/sqlx/example"
+    schedule:
+      interval: "weekly"
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"

@@ -3,16 +3,16 @@
 Initial release of Aurora DSQL SQLx Connector for Rust
 
 ### Features
-- Automatic IAM token generation (fresh token per connection)
-- Connection pooling via bb8 (opt-in with `pool` feature flag)
-- Single connection support via `dsql_connect`
+- `DsqlConnectOptions` wrapping `PgConnectOptions` with builder pattern via `derive_builder`
+- Automatic IAM token generation (admin and regular user tokens)
+- Reusable `AuthTokenGenerator` signer — built once per pool, reused across token refreshes
+- Connection pooling with background token refresh at 80% of token duration (opt-in `pool` feature)
+- Single connection support via `connection::connect()` / `connection::connect_with()`
 - Region auto-detection from endpoint hostname or AWS SDK defaults
 - Cluster ID shorthand expansion (e.g. `postgres://admin@<cluster_id>/postgres?region=us-east-1`)
 - Support for AWS profiles
 - SSL always enabled with `verify-full` mode
 - Connection string parsing with configurable query parameters
-- Builder pattern for `DsqlConfig` and `OCCRetryConfig` via `derive_builder`
-- Custom `PgConnectOptions` passthrough for driver-level settings
-- OCC retry helpers (`retry_on_occ`, `with_retry`) with exponential backoff and jitter
-- Strong types for domain values (`Host`, `Region`, `User`, `ClusterId`)
+- OCC retry helpers (`retry_on_occ`, `is_occ_error`) with SQLSTATE-based detection and exponential backoff (opt-in `occ` feature)
 - `DsqlError` enum with `#[non_exhaustive]` and proper error source chaining via `thiserror`
+- No default features — `occ` and `pool` are opt-in to minimize dependency footprint

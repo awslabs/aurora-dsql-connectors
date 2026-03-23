@@ -1,7 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::dsql_connect;
 use sqlx::{Executor, Row};
 
 #[tokio::main]
@@ -12,7 +11,7 @@ async fn main() -> anyhow::Result<()> {
 
     let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
 
-    let mut conn = dsql_connect(&conn_str).await?;
+    let mut conn = aurora_dsql_sqlx_connector::connection::connect(&conn_str).await?;
 
     // Create table
     conn.execute(

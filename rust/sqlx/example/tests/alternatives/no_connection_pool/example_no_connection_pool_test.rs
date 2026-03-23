@@ -4,7 +4,6 @@
 use std::process::Command;
 
 #[test]
-#[ignore = "requires a live DSQL cluster"]
 fn test_no_connection_pool_example() {
     let output = Command::new("cargo")
         .args(["run", "--bin", "example_no_connection_pool"])

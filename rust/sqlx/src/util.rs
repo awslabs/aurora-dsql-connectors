@@ -5,94 +5,6 @@ use regex::Regex;
 use std::fmt;
 use std::sync::LazyLock;
 
-// Strong types for common domain values to prevent accidental misuse.
-
-/// AWS region identifier (e.g. "us-east-1").
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Region(String);
-
-impl Region {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl fmt::Display for Region {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl AsRef<str> for Region {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Database hostname (e.g. "cluster123.dsql.us-east-1.on.aws").
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Host(String);
-
-impl Host {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-impl fmt::Display for Host {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl AsRef<str> for Host {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Database user (e.g. "admin").
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct User(String);
-
-impl User {
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-
-    pub fn is_admin(&self) -> bool {
-        self.0 == "admin"
-    }
-}
-
-impl fmt::Display for User {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-impl AsRef<str> for User {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
 /// DSQL cluster ID (26 lowercase alphanumeric characters).
 /// Validated on construction via `ClusterId::new`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -106,10 +18,6 @@ impl ClusterId {
         } else {
             None
         }
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
     }
 }
 
@@ -128,11 +36,13 @@ impl AsRef<str> for ClusterId {
 /// Parse the AWS region from a DSQL hostname.
 /// Matches pattern: {cluster}.dsql{suffix?}.{region}.on.aws
 /// e.g. "cluster123.dsql.us-east-1.on.aws" → Some(Region("us-east-1"))
-pub fn parse_region(host: &Host) -> Option<Region> {
+pub fn parse_region(host: &str) -> Option<aws_config::Region> {
     static RE: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^[^.]+\.dsql[^.]*\.([a-z0-9-]+)\.on\.aws$").unwrap());
-    RE.captures(host.as_str())
-        .and_then(|caps| caps.get(1).map(|m| Region::new(m.as_str())))
+    RE.captures(host).and_then(|caps| {
+        caps.get(1)
+            .map(|m| aws_config::Region::new(m.as_str().to_owned()))
+    })
 }
 
 /// Check if a string looks like a bare DSQL cluster ID
@@ -148,8 +58,19 @@ pub fn is_cluster_id(input: &str) -> bool {
 
 /// Build a full DSQL hostname from a cluster ID and region.
 /// e.g. ("abc123...", "us-east-1") → "abc123....dsql.us-east-1.on.aws"
-pub fn build_hostname(cluster_id: &ClusterId, region: &Region) -> Host {
-    Host::new(format!("{}.dsql.{}.on.aws", cluster_id, region))
+pub fn build_hostname(cluster_id: &ClusterId, region: &aws_config::Region) -> String {
+    format!("{}.dsql.{}.on.aws", cluster_id, region)
+}
+
+// --- Shared validation helpers ---
+// Used by both `from_connection_string` and `DsqlConnectOptionsBuilder::validate`.
+
+/// Validate that a host string is non-empty.
+pub(crate) fn validate_host(host: &str) -> std::result::Result<(), String> {
+    if host.is_empty() {
+        return Err("Host is required".into());
+    }
+    Ok(())
 }
 
 /// Build the application_name string for the Postgres startup packet.
@@ -167,31 +88,37 @@ mod tests {
 
     #[test]
     fn test_parse_region_standard_hostname() {
-        let region = parse_region(&Host::new("abc123.dsql.us-east-1.on.aws"));
-        assert_eq!(region, Some(Region::new("us-east-1")));
+        let region = parse_region("abc123.dsql.us-east-1.on.aws");
+        assert_eq!(region.as_ref().map(|r| r.as_ref()), Some("us-east-1"));
     }
 
     #[test]
     fn test_parse_region_other_regions() {
         assert_eq!(
-            parse_region(&Host::new("abc123.dsql.us-west-2.on.aws")),
-            Some(Region::new("us-west-2"))
+            parse_region("abc123.dsql.us-west-2.on.aws")
+                .as_ref()
+                .map(|r| r.as_ref()),
+            Some("us-west-2")
         );
         assert_eq!(
-            parse_region(&Host::new("abc123.dsql.eu-west-1.on.aws")),
-            Some(Region::new("eu-west-1"))
+            parse_region("abc123.dsql.eu-west-1.on.aws")
+                .as_ref()
+                .map(|r| r.as_ref()),
+            Some("eu-west-1")
         );
         assert_eq!(
-            parse_region(&Host::new("abc123.dsql.ap-southeast-1.on.aws")),
-            Some(Region::new("ap-southeast-1"))
+            parse_region("abc123.dsql.ap-southeast-1.on.aws")
+                .as_ref()
+                .map(|r| r.as_ref()),
+            Some("ap-southeast-1")
         );
     }
 
     #[test]
     fn test_parse_region_invalid_hostname() {
-        assert_eq!(parse_region(&Host::new("localhost")), None);
-        assert_eq!(parse_region(&Host::new("example.com")), None);
-        assert_eq!(parse_region(&Host::new("")), None);
+        assert!(parse_region("localhost").is_none());
+        assert!(parse_region("example.com").is_none());
+        assert!(parse_region("").is_none());
     }
 
     #[test]
@@ -213,10 +140,10 @@ mod tests {
     #[test]
     fn test_build_hostname() {
         let cluster = ClusterId::new("abcdefghijklmnopqrstuvwxyz").unwrap();
-        let region = Region::new("us-east-1");
+        let region = aws_config::Region::new("us-east-1");
         assert_eq!(
             build_hostname(&cluster, &region),
-            Host::new("abcdefghijklmnopqrstuvwxyz.dsql.us-east-1.on.aws")
+            "abcdefghijklmnopqrstuvwxyz.dsql.us-east-1.on.aws"
         );
     }
 
@@ -236,5 +163,17 @@ mod tests {
     fn test_build_application_name_empty_prefix() {
         let name = build_application_name(Some(""));
         assert!(name.starts_with("aurora-dsql-rust-sqlx/"));
+    }
+
+    // --- shared validation helper tests ---
+
+    #[test]
+    fn test_validate_host_ok() {
+        assert!(validate_host("example.dsql.us-east-1.on.aws").is_ok());
+    }
+
+    #[test]
+    fn test_validate_host_empty() {
+        assert!(validate_host("").is_err());
     }
 }

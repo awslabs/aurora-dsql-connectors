@@ -1,10 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{
-    DsqlConfigBuilder, DsqlError, DsqlPool, DsqlPoolConfigBuilder, Host, User,
-};
-use sqlx::{Executor, Row};
+use aurora_dsql_sqlx_connector::{retry_on_occ, DsqlConnectOptions, OCCRetryConfig};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{Connection, Executor, Row};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -12,28 +11,25 @@ async fn main() -> anyhow::Result<()> {
         .expect("CLUSTER_ENDPOINT environment variable is not set");
     let cluster_user = std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
 
-    // Build pool config with automatic OCC retry (3 attempts)
-    let connection = DsqlConfigBuilder::default()
-        .host(Host::new(&cluster_endpoint))
-        .user(User::new(&cluster_user))
-        .build()?;
+    let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
 
-    let pool_config = DsqlPoolConfigBuilder::default()
-        .connection(connection)
-        .occ_max_retries(Some(3))
-        .build()?;
-
-    let pool = DsqlPool::from_config(pool_config).await?;
+    // Build config and create a pool with custom options.
+    // connect_with() verifies connectivity and spawns a background token refresh task.
+    let config = DsqlConnectOptions::from_connection_string(&conn_str)?;
+    let pool = aurora_dsql_sqlx_connector::pool::connect_with(
+        &config,
+        PgPoolOptions::new().max_connections(10),
+    )
+    .await?;
 
     // -- Concurrent read queries --
     let mut handles = Vec::new();
     for i in 0..5 {
         let pool = pool.clone();
         handles.push(tokio::spawn(async move {
-            let mut conn = pool.get().await?;
             let row = sqlx::query("SELECT $1::int as value")
                 .bind(i)
-                .fetch_one(&mut *conn)
+                .fetch_one(&pool)
                 .await?;
             Ok::<i32, anyhow::Error>(row.get("value"))
         }));
@@ -47,35 +43,36 @@ async fn main() -> anyhow::Result<()> {
     println!("Concurrent pool operations completed successfully");
 
     // -- Setup table --
-    pool.get()
-        .await?
-        .execute(
-            "CREATE TABLE IF NOT EXISTS owner(
-                id uuid NOT NULL DEFAULT gen_random_uuid(),
-                name varchar(30) NOT NULL,
-                city varchar(80) NOT NULL,
-                PRIMARY KEY (id))",
-        )
-        .await?;
+    pool.execute(
+        "CREATE TABLE IF NOT EXISTS owner(
+            id uuid NOT NULL DEFAULT gen_random_uuid(),
+            name varchar(30) NOT NULL,
+            city varchar(80) NOT NULL,
+            PRIMARY KEY (id))",
+    )
+    .await?;
 
-    // -- Transactional write with automatic OCC retry via pool.with() --
-    pool.with(|conn| {
-        Box::pin(async move {
-            sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
-                .bind("John Doe")
-                .bind("Anytown")
-                .execute(conn)
-                .await
-                .map_err(DsqlError::DatabaseError)?;
-            Ok(())
-        })
+    // -- Transactional write with OCC retry --
+    let occ_config = OCCRetryConfig::default();
+    retry_on_occ(&occ_config, || async {
+        let mut conn = pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+
+        sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
+            .bind("John Doe")
+            .bind("Anytown")
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
     })
     .await?;
 
     // Verify the write
     let row = sqlx::query("SELECT name, city FROM owner WHERE name = $1")
         .bind("John Doe")
-        .fetch_one(&mut *pool.get().await?)
+        .fetch_one(&pool)
         .await?;
 
     let name: &str = row.get("name");
@@ -83,11 +80,24 @@ async fn main() -> anyhow::Result<()> {
     println!("Inserted: name={}, city={}", name, city);
 
     // Clean up
-    sqlx::query("DELETE FROM owner WHERE name = $1")
-        .bind("John Doe")
-        .execute(&mut *pool.get().await?)
-        .await?;
+    retry_on_occ(&occ_config, || async {
+        let mut conn = pool.acquire().await?;
+        let mut tx = conn.begin().await?;
+
+        sqlx::query("DELETE FROM owner WHERE name = $1")
+            .bind("John Doe")
+            .execute(&mut *tx)
+            .await?;
+
+        tx.commit().await?;
+        Ok(())
+    })
+    .await?;
 
     println!("Transactional write completed successfully");
+
+    // Closing the pool stops the background refresh task.
+    pool.close().await;
+
     Ok(())
 }

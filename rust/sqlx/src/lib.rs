@@ -4,24 +4,17 @@
 //! Aurora DSQL connector for SQLx.
 
 mod config;
-mod connection;
+pub mod connection;
 mod error;
 #[cfg(feature = "occ")]
 mod occ_retry;
 #[cfg(feature = "pool")]
-mod pool;
+pub mod pool;
 mod token;
 pub(crate) mod util;
 
-pub use config::{DsqlConfig, DsqlConfigBuilder};
-#[cfg(feature = "pool")]
-pub use config::{DsqlPoolConfig, DsqlPoolConfigBuilder};
-pub use connection::dsql_connect;
+pub use aws_config::Region;
+pub use config::{DsqlConnectOptions, DsqlConnectOptionsBuilder};
 pub use error::{DsqlError, Result};
-#[cfg(all(feature = "occ", feature = "pool"))]
-pub use occ_retry::with_retry;
 #[cfg(feature = "occ")]
 pub use occ_retry::{is_occ_error, retry_on_occ, OCCRetryConfig, OCCRetryConfigBuilder};
-#[cfg(feature = "pool")]
-pub use pool::DsqlPool;
-pub use util::{ClusterId, Host, Region, User};
