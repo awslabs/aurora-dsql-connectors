@@ -20,6 +20,8 @@ internal static class Token
     /// Generates a fresh IAM auth token for the given host and user.
     /// This is a local SigV4 presigning operation — no network calls.
     /// </summary>
+    private static readonly TimeSpan DefaultTokenDuration = TimeSpan.FromMinutes(15);
+
     internal static string GenerateToken(
         string host,
         string user,
@@ -27,17 +29,13 @@ internal static class Token
         RegionEndpoint region,
         int? tokenDurationSecs = null)
     {
-        if (tokenDurationSecs.HasValue)
-        {
-            var expiresIn = TimeSpan.FromSeconds(tokenDurationSecs.Value);
-            return IsAdminUser(user)
-                ? DSQLAuthTokenGenerator.GenerateDbConnectAdminAuthToken(credentials, region, host, expiresIn)
-                : DSQLAuthTokenGenerator.GenerateDbConnectAuthToken(credentials, region, host, expiresIn);
-        }
+        var expiresIn = tokenDurationSecs.HasValue
+            ? TimeSpan.FromSeconds(tokenDurationSecs.Value)
+            : DefaultTokenDuration;
 
         return IsAdminUser(user)
-            ? DSQLAuthTokenGenerator.GenerateDbConnectAdminAuthToken(credentials, region, host)
-            : DSQLAuthTokenGenerator.GenerateDbConnectAuthToken(credentials, region, host);
+            ? DSQLAuthTokenGenerator.GenerateDbConnectAdminAuthToken(credentials, region, host, expiresIn)
+            : DSQLAuthTokenGenerator.GenerateDbConnectAuthToken(credentials, region, host, expiresIn);
     }
 
     /// <summary>
