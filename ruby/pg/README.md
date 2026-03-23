@@ -88,10 +88,20 @@ pool.shutdown
 | `token_duration` | `Integer` | `900` (15 min) | Token validity in seconds |
 | `credentials_provider` | `Aws::Credentials` | `nil` | Custom credentials |
 | `max_lifetime` | `Integer` | `3300` (55 min) | Max connection lifetime in seconds |
-| `pool` | `Hash` | `{size: 5, timeout: 5}` | Native ConnectionPool options passed directly to `ConnectionPool.new` |
 | `application_name` | `String` | `nil` | ORM prefix for application_name |
 | `logger` | `Logger` | `nil` | Logger for OCC retry warnings |
 | `occ_max_retries` | `Integer` | `nil` (disabled) | Max OCC retries on `pool.with`; enables retry when set |
+
+### Pool Options
+
+`create_pool` accepts a `pool:` keyword with a hash of options passed directly to [`ConnectionPool.new`](https://github.com/mperham/connection_pool). Defaults: `{size: 5, timeout: 5}`.
+
+```ruby
+pool = AuroraDsql::Pg.create_pool(
+  host: "your-cluster.dsql.us-east-1.on.aws",
+  pool: { size: 10, timeout: 10 }
+)
+```
 
 ## Connection String Format
 
