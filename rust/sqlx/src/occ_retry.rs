@@ -27,24 +27,6 @@ impl OCCRetryConfigBuilder {
     }
 }
 
-impl OCCRetryConfig {
-    pub(crate) fn max_attempts(&self) -> u32 {
-        self.max_attempts
-    }
-
-    pub(crate) fn base_delay_ms(&self) -> u64 {
-        self.base_delay_ms
-    }
-
-    pub(crate) fn max_delay_ms(&self) -> u64 {
-        self.max_delay_ms
-    }
-
-    pub(crate) fn jitter_factor(&self) -> f64 {
-        self.jitter_factor
-    }
-}
-
 impl Default for OCCRetryConfig {
     fn default() -> Self {
         OCCRetryConfigBuilder::default()
@@ -252,10 +234,10 @@ mod tests {
     #[test]
     fn test_builder_defaults() {
         let config = OCCRetryConfigBuilder::default().build().unwrap();
-        assert_eq!(config.max_attempts(), 3);
-        assert_eq!(config.base_delay_ms(), 100);
-        assert_eq!(config.max_delay_ms(), 5000);
-        assert!((config.jitter_factor() - 0.25).abs() < f64::EPSILON);
+        assert_eq!(config.max_attempts, 3);
+        assert_eq!(config.base_delay_ms, 100);
+        assert_eq!(config.max_delay_ms, 5000);
+        assert!((config.jitter_factor - 0.25).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -265,9 +247,9 @@ mod tests {
             .base_delay_ms(200u64)
             .build()
             .unwrap();
-        assert_eq!(config.max_attempts(), 5);
-        assert_eq!(config.base_delay_ms(), 200);
-        assert_eq!(config.max_delay_ms(), 5000); // default
+        assert_eq!(config.max_attempts, 5);
+        assert_eq!(config.base_delay_ms, 200);
+        assert_eq!(config.max_delay_ms, 5000); // default
     }
 
     #[test]

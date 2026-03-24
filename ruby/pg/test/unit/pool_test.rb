@@ -44,6 +44,16 @@ RSpec.describe AuroraDsql::Pg::Pool do
     end
   end
 
+  describe "custom pool options" do
+    it "accepts pool options hash" do
+      pool = described_class.create(
+        host: "cluster.dsql.us-east-1.on.aws",
+        pool: { size: 10, timeout: 10 }
+      )
+      expect(pool).to be_a(described_class)
+    end
+  end
+
   describe "#with" do
     it "yields a connection from the pool" do
       pool = described_class.create(host: "cluster.dsql.us-east-1.on.aws")

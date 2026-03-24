@@ -18,9 +18,17 @@ build/
 # Rust
 target/
 Cargo.lock
+# .NET
+bin/
+obj/
 
 # IDE
 .idea/
 *.iml
 
 target/
+# Secrets & credentials
+.env
+*.pem
+*.key
+*.p12

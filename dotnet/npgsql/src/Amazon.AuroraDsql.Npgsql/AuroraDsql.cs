@@ -4,9 +4,31 @@
 namespace Amazon.AuroraDsql.Npgsql;
 
 /// <summary>
-/// Aurora DSQL connector for Npgsql.
-/// This package is under active development.
+/// Entry point for the Aurora DSQL .NET Npgsql connector.
 /// </summary>
 public static class AuroraDsql
 {
+    /// <summary>
+    /// Creates a connection pool (DsqlDataSource) with IAM token injection and DSQL defaults.
+    /// </summary>
+    public static Task<DsqlDataSource> CreateDataSourceAsync(DsqlConfig config)
+        => DsqlDataSource.CreateAsync(config);
+
+    /// <summary>
+    /// Creates a connection pool from a connection string.
+    /// </summary>
+    public static Task<DsqlDataSource> CreateDataSourceAsync(string connectionString)
+        => DsqlDataSource.CreateAsync(connectionString);
+
+    /// <summary>
+    /// Creates and opens a single (unpooled) DSQL connection.
+    /// </summary>
+    public static Task<DsqlConnection> ConnectAsync(DsqlConfig config, CancellationToken ct = default)
+        => DsqlConnection.ConnectAsync(config, ct);
+
+    /// <summary>
+    /// Creates and opens a single connection from a connection string.
+    /// </summary>
+    public static Task<DsqlConnection> ConnectAsync(string connectionString, CancellationToken ct = default)
+        => DsqlConnection.ConnectAsync(connectionString, ct);
 }

@@ -44,7 +44,9 @@ updates:
 
   # Java connector
   - package-ecosystem: "gradle"
-    directory: "/java/jdbc"
+    directories:
+      - "/java/jdbc"
+      - "/java/jdbc/examples/pgjdbc"
     schedule:
       interval: "weekly"
     ignore:
@@ -97,5 +99,3 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    ignore:
-      - dependency-name: "gitleaks/gitleaks-action"

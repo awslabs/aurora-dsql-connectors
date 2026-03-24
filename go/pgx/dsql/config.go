@@ -39,7 +39,6 @@ const (
 	// DefaultMaxConnIdleTime is the default maximum idle time (10 minutes)
 	DefaultMaxConnIdleTime = 10 * time.Minute
 	// DefaultTokenDuration is the default token validity duration (15 minutes)
-	// This is the maximum allowed by Aurora DSQL
 	DefaultTokenDuration = 15 * time.Minute
 )
 
@@ -68,13 +67,6 @@ type Config struct {
 
 	// CustomCredentialsProvider is a custom AWS credentials provider. Optional.
 	CustomCredentialsProvider aws.CredentialsProvider
-
-	// Pool configuration options (passed through to pgxpool)
-	MaxConns          int32
-	MinConns          int32
-	MaxConnLifetime   time.Duration
-	MaxConnIdleTime   time.Duration
-	HealthCheckPeriod time.Duration
 }
 
 // resolvedConfig holds the validated and resolved configuration with all
@@ -88,11 +80,6 @@ type resolvedConfig struct {
 	Profile                   string
 	TokenDuration             time.Duration
 	CustomCredentialsProvider aws.CredentialsProvider
-	MaxConns                  int32
-	MinConns                  int32
-	MaxConnLifetime           time.Duration
-	MaxConnIdleTime           time.Duration
-	HealthCheckPeriod         time.Duration
 }
 
 // resolve validates the configuration, applies defaults, and resolves the
@@ -110,11 +97,6 @@ func (c *Config) resolve() (*resolvedConfig, error) {
 		Port:                      c.Port,
 		Profile:                   c.Profile,
 		CustomCredentialsProvider: c.CustomCredentialsProvider,
-		MaxConns:                  c.MaxConns,
-		MinConns:                  c.MinConns,
-		MaxConnLifetime:           c.MaxConnLifetime,
-		MaxConnIdleTime:           c.MaxConnIdleTime,
-		HealthCheckPeriod:         c.HealthCheckPeriod,
 	}
 
 	// Apply defaults
@@ -129,12 +111,6 @@ func (c *Config) resolve() (*resolvedConfig, error) {
 	}
 	if resolved.Port < 1 || resolved.Port > 65535 {
 		return nil, fmt.Errorf("port must be between 1 and 65535, got %d", resolved.Port)
-	}
-	if resolved.MaxConnLifetime == 0 {
-		resolved.MaxConnLifetime = DefaultMaxConnLifetime
-	}
-	if resolved.MaxConnIdleTime == 0 {
-		resolved.MaxConnIdleTime = DefaultMaxConnIdleTime
 	}
 
 	// Convert token duration with default

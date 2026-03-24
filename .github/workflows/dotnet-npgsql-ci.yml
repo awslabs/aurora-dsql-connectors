@@ -1,0 +1,104 @@
+name: .NET Npgsql CI
+
+permissions: {}
+
+on:
+  workflow_call: {}
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "dotnet/npgsql/**"
+
+defaults:
+  run:
+    working-directory: dotnet/npgsql
+
+jobs:
+  create-cluster:
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: dotnet-npgsql
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+  build:
+    needs: create-cluster
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore connector
+        run: dotnet restore src/Amazon.AuroraDsql.Npgsql
+
+      - name: Restore unit tests
+        run: dotnet restore test/unit/Amazon.AuroraDsql.Npgsql.Tests
+
+      - name: Restore integration tests
+        run: dotnet restore test/integration/Amazon.AuroraDsql.Npgsql.IntegrationTests
+
+      - name: Restore examples
+        run: dotnet restore example
+
+      - name: Build connector
+        run: dotnet build src/Amazon.AuroraDsql.Npgsql --no-restore
+
+      - name: Build unit tests
+        run: dotnet build test/unit/Amazon.AuroraDsql.Npgsql.Tests --no-restore
+
+      - name: Build integration tests
+        run: dotnet build test/integration/Amazon.AuroraDsql.Npgsql.IntegrationTests --no-restore
+
+      - name: Build examples
+        run: dotnet build example --no-restore
+
+      - name: Check formatting
+        run: dotnet format src/Amazon.AuroraDsql.Npgsql --verify-no-changes
+
+      - name: Run unit tests
+        run: dotnet test test/unit/Amazon.AuroraDsql.Npgsql.Tests --no-build
+
+      - name: Download Amazon root certificate
+        run: curl -o /tmp/global-bundle.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
+
+      - name: Run integration tests
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: "admin"
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: dotnet test test/integration/Amazon.AuroraDsql.Npgsql.IntegrationTests --no-build
+
+      - name: Run example tests
+        env:
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          CLUSTER_USER: "admin"
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: dotnet test example --no-build
+
+  delete-cluster:
+    if: always() && needs.create-cluster.result == 'success'
+    needs: [create-cluster, build]
+    uses: ./.github/workflows/dsql-cluster-delete.yml
+    with:
+      cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
+      region: ${{ needs.create-cluster.outputs.region }}
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
