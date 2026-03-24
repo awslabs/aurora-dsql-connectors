@@ -1,0 +1,23 @@
+{
+    "name": "aws/aurora-dsql-pdo-pgsql",
+    "description": "Aurora DSQL connector for PDO_PGSQL",
+    "type": "library",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Amazon Web Services"
+        }
+    ],
+    "homepage": "https://github.com/awslabs/aurora-dsql-connectors/tree/main/php/pdo_pgsql",
+    "keywords": ["aws", "aurora", "dsql", "postgres", "pdo", "pdo_pgsql"],
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo_pgsql": "*",
+        "aws/aws-sdk-php": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Aws\\AuroraDsql\\PdoPgsql\\": "src/"
+        }
+    }
+}
