@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/ruby/pg"
 
-  spec.files = Dir.glob("lib/**/*") + %w[README.md NOTICE LICENSE]
+  spec.files = Dir.glob("lib/**/*") + %w[README.md]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "pg", "~> 1.5"
