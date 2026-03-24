@@ -80,13 +80,15 @@ updates:
     schedule:
       interval: "weekly"
 
-  # Rust connector
-  # Use 'directories' (plural) so the connector and its example are
+  # Rust connectors
+  # Use 'directories' (plural) so the connectors and their examples are
   # updated in the same PR, keeping Cargo.lock files consistent.
   - package-ecosystem: "cargo"
     directories:
       - "/rust/sqlx"
       - "/rust/sqlx/example"
+      - "/rust/bb8"
+      - "/rust/bb8/example"
     schedule:
       interval: "weekly"
 

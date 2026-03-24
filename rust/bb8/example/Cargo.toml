@@ -1,0 +1,21 @@
+[package]
+name = "aurora-dsql-bb8-example"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "example_preferred"
+path = "src/example_preferred.rs"
+
+[[test]]
+name = "example_preferred_test"
+path = "tests/example_preferred_test.rs"
+
+[dependencies]
+aurora-dsql-bb8 = { path = ".." }
+aurora-dsql-sqlx-connector = { path = "../../sqlx", features = ["occ"] }
+bb8 = "0.9"
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }

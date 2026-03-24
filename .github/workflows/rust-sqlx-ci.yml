@@ -1,4 +1,4 @@
-name: Rust sqlx CI
+name: Rust CI
 
 permissions: {}
 
@@ -7,10 +7,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-
-defaults:
-  run:
-    working-directory: rust/sqlx
 
 jobs:
   create-cluster:
@@ -43,16 +39,38 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/sqlx/target
-          key: rust-sqlx-${{ runner.os }}-${{ hashFiles('rust/sqlx/Cargo.lock') }}
+            rust/bb8/target
+          key: rust-${{ runner.os }}-${{ hashFiles('rust/sqlx/Cargo.toml', 'rust/bb8/Cargo.toml') }}
 
-      - name: Check formatting
+      # --- sqlx connector ---
+
+      - name: "sqlx: Check formatting"
+        working-directory: rust/sqlx
         run: cargo fmt --check
 
-      - name: Run clippy
+      - name: "sqlx: Run clippy"
+        working-directory: rust/sqlx
         run: cargo clippy --features pool -- -D warnings
 
-      - name: Run connector unit tests
-        run: "cargo test --features pool --lib"
+      - name: "sqlx: Run unit tests"
+        working-directory: rust/sqlx
+        run: cargo test --features pool --lib
+
+      # --- bb8 connector ---
+
+      - name: "bb8: Check formatting"
+        working-directory: rust/bb8
+        run: cargo fmt --check
+
+      - name: "bb8: Run clippy"
+        working-directory: rust/bb8
+        run: cargo clippy -- -D warnings
+
+      - name: "bb8: Run unit tests"
+        working-directory: rust/bb8
+        run: cargo test --lib
+
+      # --- Integration tests (shared cluster) ---
 
       - name: Download Amazon root certificate
         run: |
@@ -65,19 +83,40 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
 
-      - name: Run connector integration tests
+      - name: "sqlx: Run integration tests"
+        working-directory: rust/sqlx
         env:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           REGION: ${{ needs.create-cluster.outputs.region }}
-        run: "cargo test --features pool --test tests"
+        run: cargo test --features pool --test tests
 
-      - name: Build examples
+      - name: "sqlx: Build examples"
         working-directory: rust/sqlx/example
         run: cargo build
 
-      - name: Run example integration tests
+      - name: "sqlx: Run example integration tests"
         working-directory: rust/sqlx/example
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: cargo test
+
+      - name: "bb8: Run integration tests"
+        working-directory: rust/bb8
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: cargo test --test tests
+
+      - name: "bb8: Build examples"
+        working-directory: rust/bb8/example
+        run: cargo build
+
+      - name: "bb8: Run example integration tests"
+        working-directory: rust/bb8/example
         env:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}

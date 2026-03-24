@@ -32,7 +32,7 @@ jobs:
               'node-postgres': ['node/node-postgres/', '.github/workflows/node-postgres-ci.yml'],
               'postgres-js': ['node/postgres-js/', '.github/workflows/postgres-js-ci.yml'],
               'ruby-pg': ['ruby/pg/', '.github/workflows/ruby-pg-ci.yml'],
-              'rust-sqlx': ['rust/sqlx/', '.github/workflows/rust-sqlx-ci.yml'],
+              'rust-sqlx': ['rust/sqlx/', 'rust/bb8/', '.github/workflows/rust-sqlx-ci.yml'],
             };
             const runAllPaths = [
               '.github/workflows/ci-gate.yml',

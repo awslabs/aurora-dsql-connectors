@@ -1,0 +1,21 @@
+[package]
+name = "aurora-dsql-bb8"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.80"
+description = "bb8 connection pool integration for Aurora DSQL"
+authors = ["Amazon Web Services"]
+license = "Apache-2.0"
+repository = "https://github.com/awslabs/aurora-dsql-connectors"
+homepage = "https://github.com/awslabs/aurora-dsql-connectors/tree/main/rust/bb8"
+readme = "README.md"
+keywords = ["aws", "aurora", "dsql", "postgres", "bb8"]
+categories = ["database", "authentication"]
+
+[dependencies]
+aurora-dsql-sqlx-connector = { path = "../sqlx" }
+bb8 = "0.9"
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt"] }
