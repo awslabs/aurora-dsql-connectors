@@ -29,7 +29,7 @@ jobs:
       id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -37,7 +37,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Cache cargo registry & build
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.cargo/registry
@@ -49,10 +49,10 @@ jobs:
         run: cargo fmt --check
 
       - name: Run clippy
-        run: cargo clippy --features pool -- -D warnings
+        run: cargo clippy --features pool,occ -- -D warnings
 
       - name: Run connector unit tests
-        run: "cargo test --features pool --lib"
+        run: "cargo test --features pool,occ --lib"
 
       - name: Download Amazon root certificate
         run: |
@@ -60,7 +60,7 @@ jobs:
           wget -q https://www.amazontrust.com/repository/AmazonRootCA1.pem -O ~/.postgresql/root.crt
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
         with:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
@@ -70,7 +70,7 @@ jobs:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           REGION: ${{ needs.create-cluster.outputs.region }}
-        run: "cargo test --features pool --test tests"
+        run: "cargo test --features pool,occ --test tests"
 
       - name: Build examples
         working-directory: rust/sqlx/example

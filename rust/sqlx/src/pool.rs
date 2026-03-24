@@ -72,8 +72,8 @@ async fn refresh_token(
 ) -> Result<()> {
     let user = config.pg_connect_options().get_username();
     let token = crate::token::generate_token(signer, user, sdk_config).await?;
-    let host = config.pg_connect_options().get_host();
-    pool.set_connect_options(config.build_connect_options(host, &token));
+    let host = config.resolve_host(sdk_config)?;
+    pool.set_connect_options(config.build_connect_options(&host, &token));
     Ok(())
 }
 

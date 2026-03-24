@@ -4,5 +4,5 @@
 mod test_util;
 
 mod connection_integration_test;
-#[cfg(feature = "pool")]
+#[cfg(all(feature = "pool", feature = "occ"))]
 mod pool_integration_test;

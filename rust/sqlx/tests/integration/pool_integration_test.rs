@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{DsqlConnectOptions, DsqlError, Result};
+use aurora_dsql_sqlx_connector::{DsqlConnectOptions, DsqlError, OCCRetryConfig, Result};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, Row};
 use std::sync::Arc;
@@ -17,30 +17,42 @@ async fn test_pool_transactional_write() -> Result<()> {
     let opts = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let pool = aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
 
-    // Setup
-    sqlx::query(&format!(
-        "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, name TEXT)",
-        table_name
-    ))
-    .execute(&pool)
-    .await
-    .unwrap();
+    let occ_config = OCCRetryConfig::default();
 
-    // Manual transaction
-    {
-        let mut conn = pool.acquire().await.map_err(DsqlError::ConnectionError)?;
-        let mut tx = conn.begin().await.map_err(DsqlError::DatabaseError)?;
+    // Setup: create table with OCC retry
+    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
+        let p = pool.clone();
+        let t = table_name.clone();
+        async move {
+            let mut conn = p.acquire().await?;
+            let mut tx = conn.begin().await?;
+            sqlx::query(&format!(
+                "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, name TEXT)",
+                t
+            ))
+            .execute(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    })
+    .await?;
 
-        sqlx::query(&format!(
-            "INSERT INTO {} (id, name) VALUES (1, 'alice')",
-            table_name
-        ))
-        .execute(&mut *tx)
-        .await
-        .unwrap();
-
-        tx.commit().await.map_err(DsqlError::DatabaseError)?;
-    }
+    // Transactional write with OCC retry
+    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
+        let p = pool.clone();
+        let t = table_name.clone();
+        async move {
+            let mut conn = p.acquire().await?;
+            let mut tx = conn.begin().await?;
+            sqlx::query(&format!("INSERT INTO {} (id, name) VALUES (1, 'alice')", t))
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    })
+    .await?;
 
     // Verify the write persisted
     let row = sqlx::query(&format!("SELECT name FROM {} WHERE id = 1", table_name))
@@ -106,22 +118,39 @@ async fn test_pool_occ_concurrent_conflict() -> Result<()> {
         .build()
         .unwrap();
 
-    // Setup: create table and seed a row
-    sqlx::query(&format!(
-        "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, counter INT NOT NULL)",
-        table_name
-    ))
-    .execute(&*pool)
-    .await
-    .map_err(DsqlError::DatabaseError)?;
+    // Setup: create table and seed a row with OCC retry
+    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
+        let p = pool.clone();
+        let t = table_name.clone();
+        async move {
+            let mut conn = p.acquire().await?;
+            let mut tx = conn.begin().await?;
+            sqlx::query(&format!(
+                "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, counter INT NOT NULL)",
+                t
+            ))
+            .execute(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    })
+    .await?;
 
-    sqlx::query(&format!(
-        "INSERT INTO {} (id, counter) VALUES (1, 0)",
-        table_name
-    ))
-    .execute(&*pool)
-    .await
-    .map_err(DsqlError::DatabaseError)?;
+    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
+        let p = pool.clone();
+        let t = table_name.clone();
+        async move {
+            let mut conn = p.acquire().await?;
+            let mut tx = conn.begin().await?;
+            sqlx::query(&format!("INSERT INTO {} (id, counter) VALUES (1, 0)", t))
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    })
+    .await?;
 
     // Spawn two tasks that both UPDATE the same row concurrently
     // with OCC retry via retry_on_occ.

@@ -132,6 +132,10 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust-sqlx == 'true'
     uses: ./.github/workflows/rust-sqlx-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
   dotnet-npgsql:
     needs: changes
     if: needs.changes.outputs.dotnet-npgsql == 'true'
