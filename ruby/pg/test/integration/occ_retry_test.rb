@@ -8,15 +8,13 @@ TABLE_NAME = "occ_retry_test_#{Process.pid}"
 
 RSpec.describe "OCC retry integration", order: :defined do
   before(:all) do
-    skip "CLUSTER_ENDPOINT required for integration test" unless ENV["CLUSTER_ENDPOINT"]
-
     @pool = AuroraDsql::Pg.create_pool(
       host: ENV.fetch("CLUSTER_ENDPOINT"),
       user: ENV.fetch("CLUSTER_USER", "admin"),
       region: ENV.fetch("REGION", nil),
-      pool_size: 5,
       occ_max_retries: 3,
-      logger: Logger.new($stdout)
+      logger: Logger.new($stdout),
+      pool: { size: 5 }
     )
 
     # Retry initial connection to handle DNS propagation delay
