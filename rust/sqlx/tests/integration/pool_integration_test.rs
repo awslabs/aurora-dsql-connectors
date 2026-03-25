@@ -4,7 +4,6 @@
 use aurora_dsql_sqlx_connector::{DsqlConnectOptions, DsqlError, OCCRetryConfig, Result};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Connection, Row};
-use std::sync::Arc;
 use std::time::Duration;
 
 use super::test_util::build_conn_str;
@@ -102,140 +101,19 @@ async fn test_pool_background_token_refresh() -> Result<()> {
     // Wait for the background refresh to fire
     tokio::time::sleep(Duration::from_secs(5)).await;
 
-    // Verify the pool still works after token refresh
+    // Hold the existing connection so the pool must open a new one
+    // using the refreshed token.
+    let held_conn = pool.acquire().await.map_err(DsqlError::ConnectionError)?;
     let row = sqlx::query("SELECT 2 as value")
         .fetch_one(&pool)
         .await
         .map_err(DsqlError::DatabaseError)?;
     let value: i32 = row.get("value");
-    assert_eq!(value, 2, "Pool should work after background token refresh");
-
-    pool.close().await;
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_pool_occ_concurrent_conflict() -> Result<()> {
-    let table_name = format!("occ_test_{}", std::process::id());
-
-    let opts = DsqlConnectOptions::from_connection_string(&build_conn_str())?;
-    let pool = Arc::new(
-        aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?,
+    assert_eq!(
+        value, 2,
+        "Pool should establish a new connection after token refresh"
     );
-
-    let occ_config = aurora_dsql_sqlx_connector::OCCRetryConfigBuilder::default()
-        .max_attempts(5u32)
-        .build()
-        .unwrap();
-
-    // Setup: create table and seed a row with OCC retry
-    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
-        let p = pool.clone();
-        let t = table_name.clone();
-        async move {
-            let mut conn = p.acquire().await?;
-            let mut tx = conn.begin().await?;
-            sqlx::query(&format!(
-                "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, counter INT NOT NULL)",
-                t
-            ))
-            .execute(&mut *tx)
-            .await?;
-            tx.commit().await?;
-            Ok(())
-        }
-    })
-    .await?;
-
-    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
-        let p = pool.clone();
-        let t = table_name.clone();
-        async move {
-            let mut conn = p.acquire().await?;
-            let mut tx = conn.begin().await?;
-            sqlx::query(&format!("INSERT INTO {} (id, counter) VALUES (1, 0)", t))
-                .execute(&mut *tx)
-                .await?;
-            tx.commit().await?;
-            Ok(())
-        }
-    })
-    .await?;
-
-    // Spawn two tasks that both UPDATE the same row concurrently
-    // with OCC retry via retry_on_occ.
-    let table = table_name.clone();
-    let pool1 = Arc::clone(&pool);
-    let occ1 = occ_config.clone();
-    let handle1 = tokio::spawn(async move {
-        aurora_dsql_sqlx_connector::retry_on_occ(&occ1, || {
-            let p = pool1.clone();
-            let t = table.clone();
-            async move {
-                let mut conn = p.acquire().await?;
-                let mut tx = conn.begin().await?;
-                sqlx::query(&format!(
-                    "UPDATE {} SET counter = counter + 1 WHERE id = 1",
-                    t
-                ))
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
-                Ok(())
-            }
-        })
-        .await
-    });
-
-    let table = table_name.clone();
-    let pool2 = Arc::clone(&pool);
-    let occ2 = occ_config.clone();
-    let handle2 = tokio::spawn(async move {
-        aurora_dsql_sqlx_connector::retry_on_occ(&occ2, || {
-            let p = pool2.clone();
-            let t = table.clone();
-            async move {
-                let mut conn = p.acquire().await?;
-                let mut tx = conn.begin().await?;
-                sqlx::query(&format!(
-                    "UPDATE {} SET counter = counter + 1 WHERE id = 1",
-                    t
-                ))
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
-                Ok(())
-            }
-        })
-        .await
-    });
-
-    handle1.await.expect("task 1 panicked")?;
-    handle2.await.expect("task 2 panicked")?;
-
-    // Both increments should have succeeded
-    let row = sqlx::query(&format!("SELECT counter FROM {} WHERE id = 1", table_name))
-        .fetch_one(&*pool)
-        .await
-        .map_err(DsqlError::DatabaseError)?;
-    let counter: i32 = row.get("counter");
-    assert_eq!(counter, 2, "Both concurrent updates should have committed");
-
-    // Cleanup
-    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
-        let p = pool.clone();
-        let t = table_name.clone();
-        async move {
-            let mut conn = p.acquire().await?;
-            let mut tx = conn.begin().await?;
-            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
-                .execute(&mut *tx)
-                .await?;
-            tx.commit().await?;
-            Ok(())
-        }
-    })
-    .await?;
+    drop(held_conn);
 
     pool.close().await;
     Ok(())

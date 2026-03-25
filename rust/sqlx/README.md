@@ -9,10 +9,6 @@ A Rust connector for Amazon Aurora DSQL that wraps [SQLx](https://github.com/lau
 - Automatic IAM token generation
 - Connection pooling with background token refresh (opt-in `pool` feature)
 - Single connection support for simpler use cases
-- Flexible host configuration (full endpoint or cluster ID)
-- Region auto-detection from endpoint hostname
-- Support for AWS profiles
-- SSL always enabled with `verify-full` mode
 - Connection string parsing support
 - OCC retry helpers with exponential backoff and jitter
 
@@ -83,7 +79,7 @@ use sqlx::Row;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let pool = aurora_dsql_sqlx_connector::pool::connect(
-        "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
+        "postgres://admin@foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws/postgres"
     ).await?;
 
     let row = sqlx::query("SELECT 'Hello, DSQL!' as greeting")
@@ -132,7 +128,7 @@ postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?region=us-east-1
 postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?profile=dev
 
 # Cluster ID (region required)
-postgres://admin@your-cluster-id/postgres?region=us-east-1
+postgres://admin@foo0bar1baz2quux3quuux4/postgres?region=us-east-1
 ```
 
 ## Advanced Usage
@@ -144,14 +140,14 @@ The connector supports two host formats:
 **Full endpoint** (region auto-detected):
 ```rust
 let opts = DsqlConnectOptions::from_connection_string(
-    "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
+    "postgres://admin@foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws/postgres"
 )?;
 ```
 
 **Cluster ID** (region required):
 ```rust
 let opts = DsqlConnectOptions::from_connection_string(
-    "postgres://admin@your-cluster-id/postgres?region=us-east-1"
+    "postgres://admin@foo0bar1baz2quux3quuux4/postgres?region=us-east-1"
 )?;
 ```
 
@@ -165,7 +161,7 @@ use sqlx::Row;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let mut conn = aurora_dsql_sqlx_connector::connection::connect(
-        "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
+        "postgres://admin@foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws/postgres"
     ).await?;
 
     let row = sqlx::query("SELECT 1 as value")
@@ -191,7 +187,7 @@ use aurora_dsql_sqlx_connector::DsqlConnectOptions;
 use sqlx::postgres::PgPoolOptions;
 
 let config = DsqlConnectOptions::from_connection_string(
-    "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
+    "postgres://admin@foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws/postgres"
 )?;
 
 let pool = aurora_dsql_sqlx_connector::pool::connect_with(
@@ -204,7 +200,7 @@ Or use `connect()` for defaults:
 
 ```rust
 let pool = aurora_dsql_sqlx_connector::pool::connect(
-    "postgres://admin@your-cluster.dsql.us-east-1.on.aws/postgres"
+    "postgres://admin@foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws/postgres"
 ).await?;
 ```
 
@@ -217,7 +213,7 @@ use aurora_dsql_sqlx_connector::{DsqlConnectOptionsBuilder, Region};
 use sqlx::postgres::PgConnectOptions;
 
 let pg = PgConnectOptions::new()
-    .host("your-cluster.dsql.us-east-1.on.aws")
+    .host("foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws")
     .username("admin")
     .database("postgres");
 
@@ -284,7 +280,7 @@ The `example/` directory contains runnable examples with a standalone Cargo proj
 ### Running Examples
 
 ```bash
-export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
+export CLUSTER_ENDPOINT=foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws
 cd example
 
 # Run the preferred example (pool-based)
@@ -292,39 +288,6 @@ cargo run --bin example_preferred
 
 # Run the no-pool example
 cargo run --bin example_no_connection_pool
-```
-
-## Development
-
-### Build
-
-```bash
-# Minimal (no optional features)
-cargo build
-
-# With OCC retry helpers
-cargo build --features occ
-
-# With pool
-cargo build --features pool
-
-# All features
-cargo build --all-features
-```
-
-### Run Tests
-
-Unit tests (no cluster required):
-
-```bash
-cargo test --features pool --lib
-```
-
-Integration tests (requires a live DSQL cluster):
-
-```bash
-export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
-cargo test --features pool --test tests
 ```
 
 ## Additional Resources

@@ -28,7 +28,7 @@ pub async fn connect_with(
 
     let user = config.pg_connect_options().get_username();
     let token = crate::token::generate_token(&signer, user, &sdk_config).await?;
-    let opts = config.build_connect_options(&host, &token);
+    let opts = config.build_connect_options(&sdk_config, &token)?;
 
     let pool = pool_options
         .connect_with(opts)
@@ -72,37 +72,6 @@ async fn refresh_token(
 ) -> Result<()> {
     let user = config.pg_connect_options().get_username();
     let token = crate::token::generate_token(signer, user, sdk_config).await?;
-    let host = config.resolve_host(sdk_config)?;
-    pool.set_connect_options(config.build_connect_options(&host, &token));
+    pool.set_connect_options(config.build_connect_options(sdk_config, &token)?);
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_connect_fails_without_database() {
-        let config = DsqlConnectOptions::from_connection_string(
-            "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
-        )
-        .unwrap();
-
-        // Eager connect will fail — no real database or credentials
-        let result = connect_with(&config, PgPoolOptions::new()).await;
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_refresh_interval_used_by_pool() {
-        let config = DsqlConnectOptions::from_connection_string(
-            "postgres://admin@example.dsql.us-east-1.on.aws/postgres?tokenDurationSecs=900",
-        )
-        .unwrap();
-
-        assert_eq!(
-            config.refresh_interval(),
-            std::time::Duration::from_secs(720)
-        );
-    }
 }

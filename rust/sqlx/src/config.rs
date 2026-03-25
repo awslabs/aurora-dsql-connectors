@@ -5,6 +5,7 @@ use crate::{util::ClusterId, DsqlError, Result};
 use aws_config::{Region, SdkConfig};
 use derive_builder::Builder;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
+#[cfg(feature = "pool")]
 use std::time::Duration;
 use url::Url;
 
@@ -41,8 +42,7 @@ impl DsqlConnectOptions {
     }
 
     fn parse_url(conn_str: &str) -> Result<Url> {
-        let url = Url::parse(conn_str)
-            .map_err(|e| DsqlError::ConfigError(format!("Invalid connection string: {:?}", e)))?;
+        let url = Url::parse(conn_str).map_err(|e| DsqlError::ConfigError(e.into()))?;
 
         match url.scheme() {
             "postgres" | "postgresql" => {}
@@ -61,7 +61,7 @@ impl DsqlConnectOptions {
             .host_str()
             .ok_or_else(|| DsqlError::ConfigError("Host is required".into()))?;
 
-        crate::util::validate_host(host).map_err(DsqlError::ConfigError)?;
+        crate::util::validate_host(host).map_err(|e| DsqlError::ConfigError(e.into()))?;
 
         let port = url.port().unwrap_or(DEFAULT_PORT);
 
@@ -92,9 +92,9 @@ impl DsqlConnectOptions {
                 }
                 "profile" => profile = Some(value.to_string()),
                 "tokenDurationSecs" => {
-                    let secs: u64 = value.parse().map_err(|_| {
-                        DsqlError::ConfigError(format!("invalid tokenDurationSecs: '{}'", value))
-                    })?;
+                    let secs: u64 = value
+                        .parse()
+                        .map_err(|e: std::num::ParseIntError| DsqlError::ConfigError(e.into()))?;
                     token_duration_secs = secs;
                 }
                 "applicationName" => application_name = Some(value.to_string()),
@@ -138,21 +138,28 @@ impl DsqlConnectOptions {
             crate::token::build_signer(&host, &region, &sdk_config, Some(self.token_duration()))?;
         let user = self.pg_connect_options.get_username();
         let token = crate::token::generate_token(&signer, user, &sdk_config).await?;
-        Ok(self.build_connect_options(&host, &token))
+        self.build_connect_options(&sdk_config, &token)
     }
 
-    /// Clone the inner PgConnectOptions with the given token as password.
-    /// The caller must pass a resolved hostname (not a bare cluster ID).
+    /// Clone the inner PgConnectOptions with the resolved host and token as password.
+    /// If the host is a bare cluster ID, it is expanded to a full DSQL hostname.
     /// Always enforces `SslMode::VerifyFull` regardless of how the config was constructed.
-    pub(crate) fn build_connect_options(&self, host: &str, token: &str) -> PgConnectOptions {
-        self.pg_connect_options
+    pub(crate) fn build_connect_options(
+        &self,
+        sdk_config: &SdkConfig,
+        token: &str,
+    ) -> Result<PgConnectOptions> {
+        let host = self.resolve_host(sdk_config)?;
+        Ok(self
+            .pg_connect_options
             .clone()
-            .host(host)
+            .host(&host)
             .password(token)
-            .ssl_mode(PgSslMode::VerifyFull)
+            .ssl_mode(PgSslMode::VerifyFull))
     }
 
     /// Read access to the inner PgConnectOptions.
+    #[cfg(feature = "pool")]
     pub(crate) fn pg_connect_options(&self) -> &PgConnectOptions {
         &self.pg_connect_options
     }
@@ -169,6 +176,7 @@ impl DsqlConnectOptions {
 
     /// How often the background refresh task should rotate tokens.
     /// Returns `token_duration * 4/5` (80%).
+    #[cfg(feature = "pool")]
     pub(crate) fn refresh_interval(&self) -> Duration {
         Duration::from_secs((self.token_duration() * 4 / 5).max(1))
     }
@@ -406,63 +414,66 @@ mod tests {
 
     // --- build_connect_options tests ---
 
-    #[test]
-    fn test_build_connect_options() {
+    #[tokio::test]
+    async fn test_build_connect_options() -> Result<()> {
         let config = DsqlConnectOptions::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
-        )
-        .unwrap();
+        )?;
 
-        let opts = config.build_connect_options("example.dsql.us-east-1.on.aws", "test-token");
+        let sdk_config = load_aws_config(config.profile()).await;
+        let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert_eq!(opts.get_host(), "example.dsql.us-east-1.on.aws");
         assert_eq!(opts.get_port(), 5432);
         assert_eq!(opts.get_username(), "admin");
         assert_eq!(opts.get_database().unwrap(), "postgres");
         assert!(matches!(opts.get_ssl_mode(), PgSslMode::VerifyFull));
+        Ok(())
     }
 
-    #[test]
-    fn test_build_connect_options_with_resolved_cluster_id() {
+    #[tokio::test]
+    async fn test_build_connect_options_with_cluster_id() -> Result<()> {
         let config = DsqlConnectOptions::from_connection_string(
             "postgres://admin@abcdefghijklmnopqrstuvwxyz/postgres?region=us-east-1",
-        )
-        .unwrap();
+        )?;
 
-        let resolved_host = "abcdefghijklmnopqrstuvwxyz.dsql.us-east-1.on.aws";
-        let opts = config.build_connect_options(resolved_host, "test-token");
+        let sdk_config = load_aws_config(config.profile()).await;
+        let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert_eq!(
             opts.get_host(),
             "abcdefghijklmnopqrstuvwxyz.dsql.us-east-1.on.aws",
         );
+        Ok(())
     }
 
-    #[test]
-    fn test_connect_options_default_application_name() {
+    #[tokio::test]
+    async fn test_connect_options_default_application_name() -> Result<()> {
         let config = DsqlConnectOptions::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
-        )
-        .unwrap();
+        )?;
 
-        let opts = config.build_connect_options("example.dsql.us-east-1.on.aws", "test-token");
+        let sdk_config = load_aws_config(config.profile()).await;
+        let opts = config.build_connect_options(&sdk_config, "test-token")?;
         let app_name = opts
             .get_application_name()
             .expect("application_name should be set");
         assert!(app_name.starts_with("aurora-dsql-rust-sqlx/"));
+        Ok(())
     }
 
-    #[test]
-    fn test_connect_options_custom_application_name() {
+    #[tokio::test]
+    async fn test_connect_options_custom_application_name() -> Result<()> {
         let config = DsqlConnectOptions::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?applicationName=my-service",
-        )
-        .unwrap();
+        )?;
 
-        let opts = config.build_connect_options("example.dsql.us-east-1.on.aws", "test-token");
+        let sdk_config = load_aws_config(config.profile()).await;
+        let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert_eq!(
             opts.get_application_name().unwrap(),
             "my-service",
             "Custom application_name should override the default"
         );
+        Ok(())
     }
 
     #[test]
@@ -478,8 +489,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn test_ssl_mode_enforced_via_builder() {
+    #[tokio::test]
+    async fn test_ssl_mode_enforced_via_builder() -> Result<()> {
         let pg = PgConnectOptions::new()
             .host("example.dsql.us-east-1.on.aws")
             .username("admin")
@@ -491,16 +502,19 @@ mod tests {
             .build()
             .unwrap();
 
-        let opts = config.build_connect_options("example.dsql.us-east-1.on.aws", "test-token");
+        let sdk_config = load_aws_config(config.profile()).await;
+        let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert!(
             matches!(opts.get_ssl_mode(), PgSslMode::VerifyFull),
             "SSL must be VerifyFull regardless of builder input"
         );
+        Ok(())
     }
 
     // --- refresh_interval tests ---
 
     #[test]
+    #[cfg(feature = "pool")]
     fn test_refresh_interval_default() {
         let config = DsqlConnectOptions::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
@@ -511,6 +525,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "pool")]
     fn test_refresh_interval_floors_to_one_second() {
         let pg = PgConnectOptions::new()
             .host("example.dsql.us-east-1.on.aws")

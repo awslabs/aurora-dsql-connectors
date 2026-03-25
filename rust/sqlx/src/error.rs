@@ -9,10 +9,10 @@ pub type Result<T> = std::result::Result<T, DsqlError>;
 #[non_exhaustive]
 pub enum DsqlError {
     #[error("configuration error: {0}")]
-    ConfigError(String),
+    ConfigError(#[source] Box<dyn std::error::Error + Send + Sync>),
 
     #[error("token error: {0}")]
-    TokenError(String),
+    TokenError(#[source] Box<dyn std::error::Error + Send + Sync>),
 
     #[error("connection error: {0}")]
     ConnectionError(#[source] sqlx::Error),

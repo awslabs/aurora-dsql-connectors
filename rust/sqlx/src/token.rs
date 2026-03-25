@@ -27,9 +27,9 @@ pub(crate) fn build_signer(
         builder = builder.expires_in(duration);
     }
 
-    Ok(AuthTokenGenerator::new(builder.build().map_err(|e| {
-        DsqlError::TokenError(format!("Failed to build auth token config: {:?}", e))
-    })?))
+    Ok(AuthTokenGenerator::new(
+        builder.build().map_err(DsqlError::TokenError)?,
+    ))
 }
 
 /// Generate an IAM auth token using a pre-built signer.
@@ -43,7 +43,7 @@ pub(crate) async fn generate_token(
     } else {
         signer.db_connect_auth_token(sdk_config).await
     }
-    .map_err(|e| DsqlError::TokenError(format!("Failed to generate auth token: {:?}", e)))?;
+    .map_err(DsqlError::TokenError)?;
 
     Ok(token.to_string())
 }

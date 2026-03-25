@@ -98,19 +98,10 @@ async fn main() -> anyhow::Result<()> {
     println!("Inserted: name={}, city={}", name, city);
 
     // Clean up
-    retry_on_occ(&occ_config, || async {
-        let mut conn = pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-
-        sqlx::query("DELETE FROM owner WHERE name = $1")
-            .bind("John Doe")
-            .execute(&mut *tx)
-            .await?;
-
-        tx.commit().await?;
-        Ok(())
-    })
-    .await?;
+    sqlx::query("DELETE FROM owner WHERE name = $1")
+        .bind("John Doe")
+        .execute(&pool)
+        .await?;
 
     println!("Transactional write completed successfully");
 
