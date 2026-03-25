@@ -13,12 +13,30 @@ async fn main() -> anyhow::Result<()> {
 
     let conn_str = format!("postgres://{}@{}/postgres", cluster_user, cluster_endpoint);
 
+    // Admin users operate in the default "public" schema.
+    // Non-admin users operate in a custom "myschema" schema.
+    let schema = if cluster_user == "admin" {
+        "public"
+    } else {
+        "myschema"
+    };
+
     // Build config and create a pool with custom options.
     // connect_with() verifies connectivity and spawns a background token refresh task.
     let config = DsqlConnectOptions::from_connection_string(&conn_str)?;
+    let schema_owned = schema.to_string();
     let pool = aurora_dsql_sqlx_connector::pool::connect_with(
         &config,
-        PgPoolOptions::new().max_connections(10),
+        PgPoolOptions::new()
+            .max_connections(10)
+            .after_connect(move |conn, _meta| {
+                let schema = schema_owned.clone();
+                Box::pin(async move {
+                    conn.execute(format!("SET search_path = '{}'", schema).as_str())
+                        .await?;
+                    Ok(())
+                })
+            }),
     )
     .await?;
 

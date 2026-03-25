@@ -58,15 +58,25 @@ async fn test_pool_transactional_write() -> Result<()> {
     let row = sqlx::query(&format!("SELECT name FROM {} WHERE id = 1", table_name))
         .fetch_one(&pool)
         .await
-        .unwrap();
+        .map_err(DsqlError::DatabaseError)?;
     let name: String = row.get("name");
     assert_eq!(name, "alice");
 
     // Cleanup
-    sqlx::query(&format!("DROP TABLE {}", table_name))
-        .execute(&pool)
-        .await
-        .unwrap();
+    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
+        let p = pool.clone();
+        let t = table_name.clone();
+        async move {
+            let mut conn = p.acquire().await?;
+            let mut tx = conn.begin().await?;
+            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    })
+    .await?;
 
     pool.close().await;
     Ok(())
@@ -207,15 +217,25 @@ async fn test_pool_occ_concurrent_conflict() -> Result<()> {
     let row = sqlx::query(&format!("SELECT counter FROM {} WHERE id = 1", table_name))
         .fetch_one(&*pool)
         .await
-        .unwrap();
+        .map_err(DsqlError::DatabaseError)?;
     let counter: i32 = row.get("counter");
     assert_eq!(counter, 2, "Both concurrent updates should have committed");
 
     // Cleanup
-    sqlx::query(&format!("DROP TABLE {}", table_name))
-        .execute(&*pool)
-        .await
-        .map_err(DsqlError::DatabaseError)?;
+    aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {
+        let p = pool.clone();
+        let t = table_name.clone();
+        async move {
+            let mut conn = p.acquire().await?;
+            let mut tx = conn.begin().await?;
+            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
+                .execute(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            Ok(())
+        }
+    })
+    .await?;
 
     pool.close().await;
     Ok(())
