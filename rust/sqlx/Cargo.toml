@@ -18,7 +18,7 @@ occ = ["dep:rand", "dep:tokio", "tokio/time"]
 
 [dependencies]
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
-aws-config = { version = "1.5", features = ["credentials-login"] }
+aws-config = { version = "1.8", features = ["credentials-login"] }
 aws-sdk-dsql = "1.0"
 tokio = { version = "1", optional = true }
 thiserror = "2.0"
