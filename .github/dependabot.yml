@@ -84,7 +84,9 @@ updates:
 
   # Rust connector
   - package-ecosystem: "cargo"
-    directory: "/rust/sqlx"
+    directories:
+      - "/rust/sqlx"
+      - "/rust/sqlx/example"
     schedule:
       interval: "weekly"
 

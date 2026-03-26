@@ -15,6 +15,9 @@ _version.py
 build/
 .gradle/
 
+# Rust
+target/
+Cargo.lock
 # .NET
 bin/
 obj/
@@ -23,6 +26,7 @@ obj/
 .idea/
 *.iml
 
+target/
 # Secrets & credentials
 .env
 *.pem
