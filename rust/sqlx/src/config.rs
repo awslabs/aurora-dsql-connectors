@@ -24,6 +24,8 @@ pub struct DsqlConnectOptions {
     profile: Option<String>,
     #[builder(default = "DEFAULT_TOKEN_DURATION_SECS")]
     token_duration_secs: u64,
+    #[builder(default)]
+    orm_prefix: Option<String>,
 }
 
 impl DsqlConnectOptionsBuilder {
@@ -83,7 +85,7 @@ impl DsqlConnectOptions {
         let mut region = None;
         let mut profile = None;
         let mut token_duration_secs = DEFAULT_TOKEN_DURATION_SECS;
-        let mut application_name = None;
+        let mut orm_prefix = None;
 
         for (key, value) in url.query_pairs() {
             match key.as_ref() {
@@ -97,7 +99,7 @@ impl DsqlConnectOptions {
                         .map_err(|e: std::num::ParseIntError| DsqlError::ConfigError(e.into()))?;
                     token_duration_secs = secs;
                 }
-                "applicationName" => application_name = Some(value.to_string()),
+                "ormPrefix" => orm_prefix = Some(value.to_string()),
                 other => {
                     tracing::warn!(
                         param = other,
@@ -107,8 +109,7 @@ impl DsqlConnectOptions {
             }
         }
 
-        let app_name =
-            application_name.unwrap_or_else(|| crate::util::build_application_name(None));
+        let app_name = crate::util::build_application_name(orm_prefix.as_deref());
 
         let pg = PgConnectOptions::new()
             .host(host)
@@ -123,6 +124,7 @@ impl DsqlConnectOptions {
             region,
             profile,
             token_duration_secs,
+            orm_prefix,
         })
     }
 
@@ -150,12 +152,14 @@ impl DsqlConnectOptions {
         token: &str,
     ) -> Result<PgConnectOptions> {
         let host = self.resolve_host(sdk_config)?;
+        let app_name = crate::util::build_application_name(self.orm_prefix.as_deref());
         Ok(self
             .pg_connect_options
             .clone()
             .host(&host)
             .password(token)
-            .ssl_mode(PgSslMode::VerifyFull))
+            .ssl_mode(PgSslMode::VerifyFull)
+            .application_name(&app_name))
     }
 
     /// Read access to the inner PgConnectOptions.
@@ -312,13 +316,17 @@ mod tests {
     fn test_parse_query_params() -> Result<()> {
         let config = DsqlConnectOptions::from_connection_string(
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?\
-             tokenDurationSecs=900&applicationName=myapp",
+             tokenDurationSecs=900&ormPrefix=myapp",
         )?;
 
         assert_eq!(config.token_duration_secs, 900);
-        assert_eq!(
-            config.pg_connect_options.get_application_name().unwrap(),
-            "myapp"
+        assert!(
+            config
+                .pg_connect_options
+                .get_application_name()
+                .unwrap()
+                .starts_with("myapp:aurora-dsql-rust-sqlx/"),
+            "ormPrefix should be prepended to application_name"
         );
         Ok(())
     }
@@ -461,17 +469,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_connect_options_custom_application_name() -> Result<()> {
+    async fn test_connect_options_with_orm_prefix() -> Result<()> {
         let config = DsqlConnectOptions::from_connection_string(
-            "postgres://admin@example.dsql.us-east-1.on.aws/postgres?applicationName=my-service",
+            "postgres://admin@example.dsql.us-east-1.on.aws/postgres?ormPrefix=my-service",
         )?;
 
         let sdk_config = load_aws_config(config.profile()).await;
         let opts = config.build_connect_options(&sdk_config, "test-token")?;
-        assert_eq!(
-            opts.get_application_name().unwrap(),
-            "my-service",
-            "Custom application_name should override the default"
+        assert!(
+            opts.get_application_name()
+                .unwrap()
+                .starts_with("my-service:aurora-dsql-rust-sqlx/"),
+            "ormPrefix should be prepended to application_name"
         );
         Ok(())
     }
