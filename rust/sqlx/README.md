@@ -67,7 +67,7 @@ These options are parsed from the connection string or set via the builder:
 | `port` | `u16` | `5432` | Database port |
 | `profile` | `Option<String>` | `None` | AWS profile name for credentials |
 | `tokenDurationSecs` | `u64` | `900` (15 minutes) | Token validity duration in seconds |
-| `applicationName` | `Option<String>` | `"aurora-dsql-rust-sqlx/{version}"` | Application name sent to Postgres |
+| `ormPrefix` | `Option<String>` | `None` | ORM prefix for application_name (e.g. `"diesel"` → `"diesel:aurora-dsql-rust-sqlx/{version}"`) |
 
 ## Quick Start
 
@@ -108,7 +108,7 @@ Both `postgres://` and `postgresql://` schemes are supported.
 - `region` — AWS region
 - `profile` — AWS profile name
 - `tokenDurationSecs` — Token validity duration in seconds
-- `applicationName` — Application name sent to Postgres
+- `ormPrefix` — ORM prefix for application_name
 
 **Region Resolution Priority:**
 1. Parse from hostname (e.g., `cluster.dsql.us-east-1.on.aws`)

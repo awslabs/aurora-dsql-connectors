@@ -26,7 +26,6 @@ obj/
 .idea/
 *.iml
 
-target/
 # Secrets & credentials
 .env
 *.pem
