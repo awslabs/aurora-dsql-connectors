@@ -37,7 +37,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-aurora-dsql-sqlx-connector = "0.0.1"
+aurora-dsql-sqlx-connector = "0.1.2"
 ```
 
 ### Feature Flags
@@ -51,7 +51,7 @@ For most applications, enable both features:
 
 ```toml
 [dependencies]
-aurora-dsql-sqlx-connector = { version = "0.0.1", features = ["pool", "occ"] }
+aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
 ```
 
 ## Configuration Options
