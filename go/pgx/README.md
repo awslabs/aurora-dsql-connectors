@@ -72,7 +72,7 @@ func main() {
 
     // Create a connection pool
     pool, err := dsql.NewPool(ctx, dsql.Config{
-        Host: "your-cluster.dsql.us-east-1.on.aws",
+        Host: "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
     })
     if err != nil {
         log.Fatal(err)
@@ -124,14 +124,14 @@ The connector supports two host formats:
 **Full endpoint** (region auto-detected):
 ```go
 pool, _ := dsql.NewPool(ctx, dsql.Config{
-    Host: "your-cluster.dsql.us-east-1.on.aws",
+    Host: "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
 })
 ```
 
 **Cluster ID** (region required):
 ```go
 pool, _ := dsql.NewPool(ctx, dsql.Config{
-    Host:   "your-cluster-id",
+    Host:   "a1b2c3d4e5f6g7h8i9j0klmnop",
     Region: "us-east-1",
 })
 ```
@@ -154,7 +154,7 @@ if err != nil {
 }
 
 pool, err := dsql.NewPool(ctx, dsql.Config{
-    Host:                      "your-cluster.dsql.us-east-1.on.aws",
+    Host:                      "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
     CustomCredentialsProvider: credsProvider,
 })
 ```
@@ -179,7 +179,7 @@ poolCfg.MaxConnLifetimeJitter = 5 * time.Minute
 poolCfg.HealthCheckPeriod = time.Minute
 
 pool, err := dsql.NewPool(ctx, dsql.Config{
-    Host: "your-cluster.dsql.us-east-1.on.aws",
+    Host: "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
 }, poolCfg)
 ```
 
@@ -193,7 +193,7 @@ For simple scripts or when connection pooling is not needed:
 
 ```go
 conn, err := dsql.Connect(ctx, dsql.Config{
-    Host: "your-cluster.dsql.us-east-1.on.aws",
+    Host: "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
 })
 if err != nil {
     log.Fatal(err)
@@ -210,7 +210,7 @@ Specify an AWS profile for credentials:
 
 ```go
 pool, err := dsql.NewPool(ctx, dsql.Config{
-    Host:    "your-cluster.dsql.us-east-1.on.aws",
+    Host:    "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
     Profile: "production",
 })
 ```
@@ -226,6 +226,100 @@ The connector automatically generates IAM authentication tokens:
 For the `admin` user, the connector generates admin tokens using `GenerateDBConnectAdminAuthToken`. For other users, it generates standard tokens using `GenerateDbConnectAuthToken`.
 
 Token duration defaults to 15 minutes (recommended). The maximum allowed token lifetime is 1 week.
+
+## OCC Retry
+
+Aurora DSQL uses optimistic concurrency control (OCC). When two transactions
+modify the same data, the first to commit wins and the second receives an OCC
+error (codes `OC000`, `OC001`, or `40001`). The `occretry` package provides
+two ways to handle these conflicts.
+
+### Installation
+
+```bash
+go get github.com/awslabs/aurora-dsql-connectors/go/pgx/occretry
+```
+
+### Option 1: DB Interface (Pool-Level Retry)
+
+Wrap your pool with `occretry.New` to get a `DB` that automatically retries
+`Exec` and `Query` calls on OCC conflicts. On OCC conflict the entire
+operation is re-executed, so callbacks passed to `WithTransaction` should
+contain only database operations and be safe to retry.
+
+```go
+pool, _ := dsql.NewPool(ctx, dsql.Config{
+    Host: "a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws",
+})
+defer pool.Close()
+
+// Opt in to automatic OCC retry
+db := occretry.New(pool, occretry.DefaultConfig())
+
+// DDL — automatically retried on OCC conflict
+db.Exec(ctx, "CREATE TABLE users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT)")
+
+// Transactions — entire transaction retried on OCC conflict
+db.WithTransaction(ctx, func(tx pgx.Tx) error {
+    _, err := tx.Exec(ctx, "UPDATE accounts SET balance = balance - $1 WHERE id = $2", amount, fromID)
+    if err != nil {
+        return err
+    }
+    _, err = tx.Exec(ctx, "UPDATE accounts SET balance = balance + $1 WHERE id = $2", amount, toID)
+    return err
+})
+
+// Opt out for a single call
+db.Exec(occretry.NoRetry(ctx), "SELECT 1")
+
+// Or use the pool directly for operations that don't need retry
+pool.QueryRow(ctx, "SELECT balance FROM accounts WHERE id = $1", id).Scan(&balance)
+```
+
+### Option 2: Helper Functions (Per-Call Retry)
+
+Use the standalone helpers for explicit per-call retry control:
+
+```go
+// Retry any operation
+err := occretry.Retry(ctx, occretry.DefaultConfig(), func() error {
+    _, err := pool.Exec(ctx, "CREATE TABLE t (id UUID PRIMARY KEY)")
+    return err
+})
+
+// Retry a single SQL statement
+err = occretry.ExecWithRetry(ctx, pool, occretry.DefaultConfig(),
+    "CREATE INDEX ASYNC ON users (email)")
+
+// Retry a transaction
+err = occretry.WithRetry(ctx, pool, occretry.DefaultConfig(), func(tx pgx.Tx) error {
+    _, err := tx.Exec(ctx, "UPDATE accounts SET balance = balance - $1 WHERE id = $2", amount, fromID)
+    if err != nil {
+        return err
+    }
+    _, err = tx.Exec(ctx, "UPDATE accounts SET balance = balance + $1 WHERE id = $2", amount, toID)
+    return err
+})
+```
+
+### Custom Retry Configuration
+
+```go
+cfg := occretry.DefaultConfig()
+cfg.MaxRetries = 5                        // default: 3
+cfg.InitialWait = 200 * time.Millisecond  // default: 100ms
+cfg.MaxWait = 10 * time.Second            // default: 5s
+
+db := occretry.New(pool, cfg)
+```
+
+### Detecting OCC Errors
+
+```go
+if occretry.IsOCCError(err) {
+    // Handle OCC conflict manually if needed
+}
+```
 
 ## Development
 
@@ -247,7 +341,7 @@ go test ./dsql/...
 Integration tests (requires a DSQL cluster):
 
 ```bash
-export CLUSTER_ENDPOINT="your-cluster.dsql.us-east-1.on.aws"
+export CLUSTER_ENDPOINT="a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws"
 go test ./example/test/...
 ```
 
@@ -265,14 +359,14 @@ The `example/` directory contains runnable examples demonstrating various patter
 |---------|-------------|
 | [example_preferred](example/src/example_preferred.go) | Recommended: Connection pool with concurrent queries |
 | [transaction](example/src/transaction/) | Transaction handling with BEGIN/COMMIT/ROLLBACK |
-| [occ_retry](example/src/occ_retry/) | Handling OCC conflicts with exponential backoff |
+| [occ_retry](example/src/occ_retry/) | Handling OCC conflicts with helper functions and DB interface |
 | [connection_string](example/src/connection_string/) | Using connection strings for configuration |
 | [manual_token](example/src/alternatives/manual_token/) | Manual IAM token generation without the connector |
 
 ### Running examples
 
 ```bash
-export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
+export CLUSTER_ENDPOINT=a1b2c3d4e5f6g7h8i9j0klmnop.dsql.us-east-1.on.aws
 cd example
 
 # Run the preferred example
