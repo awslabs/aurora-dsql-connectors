@@ -41,6 +41,12 @@ This monorepo contains database driver connectors for [Amazon Aurora DSQL](https
 |---------|-------------|----------|---------|
 | [aurora-dsql-ruby-pg](./ruby/pg/) | pg connector for Aurora DSQL | [![Gem Version](https://img.shields.io/gem/v/aurora-dsql-ruby-pg)](https://rubygems.org/gems/aurora-dsql-ruby-pg) | ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) |
 
+### Rust
+
+| Package | Description | crates.io | License |
+|---------|-------------|-----------|---------|
+| [aurora-dsql-sqlx-connector](./rust/sqlx/) | SQLx connector for Aurora DSQL | [![crates.io](https://img.shields.io/crates/v/aurora-dsql-sqlx-connector)](https://crates.io/crates/aurora-dsql-sqlx-connector) | ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) |
+
 ## Installation
 
 Each connector is published as an independent package. Install the one you need:
@@ -66,6 +72,9 @@ pip install aurora-dsql-python-connector[asyncpg]
 
 # Ruby
 gem install aurora-dsql-ruby-pg
+
+# Rust
+cargo add aurora-dsql-sqlx-connector
 ```
 
 For Java connectors, see the [Java JDBC connector documentation](./java/jdbc/README.md) for Maven/Gradle installation instructions.
@@ -81,6 +90,7 @@ See the README in each connector's directory for detailed usage instructions:
 - [Node.js postgres.js connector documentation](./node/postgres-js/README.md)
 - [Python connector documentation](./python/connector/README.md)
 - [Ruby pg connector documentation](./ruby/pg/README.md)
+- [Rust SQLx connector documentation](./rust/sqlx/README.md)
 
 ## Versioning
 
