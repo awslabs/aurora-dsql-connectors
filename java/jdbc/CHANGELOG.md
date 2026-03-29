@@ -1,3 +1,29 @@
+<a id="java/jdbc/v1.4.1"></a>
+# [Aurora DSQL Connector for JDBC v1.4.1 (java/jdbc/v1.4.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/java/jdbc/v1.4.1) - 2026-03-19
+
+## What's Changed
+
+### Improvements
+- Removed token caching for simplified credential handling ([#155](https://github.com/awslabs/aurora-dsql-connectors/issues/155))
+- Added example READMEs and admin/non-admin support ([#252](https://github.com/awslabs/aurora-dsql-connectors/issues/252))
+- Added Dependabot coverage for Java example project ([#240](https://github.com/awslabs/aurora-dsql-connectors/issues/240))
+
+### Dependency Updates
+- Bumped AWS SDK (dsql, regions) to 2.42.15
+- Bumped PostgreSQL JDBC driver to 42.7.10
+- Bumped JReleaser to 1.23.0
+- Bumped Gradle wrapper to 9.4.0
+- Bumped Mockito to 5.23.0
+- Bumped Spotless to 8.3.0
+- Bumped JUnit Jupiter to 5.14.3
+- Bumped SpotBugs annotations to 4.9.8
+
+### Full Changelog
+https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.0...java/jdbc/v1.4.1
+
+[Changes][java/jdbc/v1.4.1]
+
+
 <a id="java/jdbc/v1.4.0"></a>
 # [Aurora DSQL Connector for JDBC v1.4.0 (java/jdbc/v1.4.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/java/jdbc/v1.4.0) - 2026-02-05
 
@@ -163,6 +189,7 @@ Initial release of Aurora DSQL JDBC Connector
 [Changes][java/jdbc/v1.0.0]
 
 
+[java/jdbc/v1.4.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.0...java/jdbc/v1.4.1
 [java/jdbc/v1.4.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.3.0...java/jdbc/v1.4.0
 [java/jdbc/v1.3.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.2.0...java/jdbc/v1.3.0
 [java/jdbc/v1.2.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.1.2...java/jdbc/v1.2.0
