@@ -1,9 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{DsqlConnectOptions, DsqlError, OCCRetryConfig, Result};
+use aurora_dsql_sqlx_connector::{DsqlConnectOptions, DsqlError, OCCRetryConfigBuilder, Result};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Connection, Row};
+use sqlx::{Acquire, Row};
 use std::time::Duration;
 
 use super::test_util::build_conn_str;
@@ -16,7 +16,11 @@ async fn test_pool_transactional_write() -> Result<()> {
     let opts = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let pool = aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
 
-    let occ_config = OCCRetryConfig::default();
+    let occ_config = OCCRetryConfigBuilder::default()
+        .max_attempts(10)
+        .base_delay_ms(100)
+        .build()
+        .unwrap();
 
     // Setup: create table with OCC retry
     aurora_dsql_sqlx_connector::retry_on_occ(&occ_config, || {

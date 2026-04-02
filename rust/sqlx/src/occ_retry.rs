@@ -18,6 +18,28 @@ pub struct OCCRetryConfig {
     jitter_factor: f64,
 }
 
+impl OCCRetryConfig {
+    /// Maximum number of retry attempts.
+    pub fn max_attempts(&self) -> u32 {
+        self.max_attempts
+    }
+
+    /// Base delay in milliseconds for exponential backoff.
+    pub fn base_delay_ms(&self) -> u64 {
+        self.base_delay_ms
+    }
+
+    /// Maximum delay in milliseconds.
+    pub fn max_delay_ms(&self) -> u64 {
+        self.max_delay_ms
+    }
+
+    /// Jitter factor (0.0 to 1.0) applied to backoff delays.
+    pub fn jitter_factor(&self) -> f64 {
+        self.jitter_factor
+    }
+}
+
 impl OCCRetryConfigBuilder {
     fn validate(&self) -> std::result::Result<(), String> {
         if let Some(0) = self.max_attempts {
@@ -44,7 +66,7 @@ pub fn is_occ_error(err: &sqlx::Error) -> bool {
     }
 }
 
-pub(crate) fn calculate_backoff(config: &OCCRetryConfig, attempt: u32) -> Duration {
+fn calculate_backoff(config: &OCCRetryConfig, attempt: u32) -> Duration {
     let base = config.base_delay_ms as f64;
     let delay = (base * 2_f64.powi((attempt - 1) as i32)).min(config.max_delay_ms as f64);
     let jitter = delay * rand::random::<f64>() * config.jitter_factor;
@@ -67,9 +89,9 @@ pub(crate) fn calculate_backoff(config: &OCCRetryConfig, attempt: u32) -> Durati
 ///
 /// Returns `DsqlError::OCCRetryExhausted` with the last OCC error
 /// preserved as the cause when max attempts are exceeded.
-pub async fn retry_on_occ<F, Fut, T>(config: &OCCRetryConfig, mut f: F) -> Result<T>
+pub async fn retry_on_occ<F, Fut, T>(config: &OCCRetryConfig, f: F) -> Result<T>
 where
-    F: FnMut() -> Fut,
+    F: Fn() -> Fut,
     Fut: std::future::Future<Output = std::result::Result<T, sqlx::Error>>,
 {
     let max_attempts = config.max_attempts;

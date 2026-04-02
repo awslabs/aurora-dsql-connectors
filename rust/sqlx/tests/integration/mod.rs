@@ -5,4 +5,6 @@ mod test_util;
 
 mod connection_integration_test;
 #[cfg(all(feature = "pool", feature = "occ"))]
+mod occ_trait_integration_test;
+#[cfg(all(feature = "pool", feature = "occ"))]
 mod pool_integration_test;

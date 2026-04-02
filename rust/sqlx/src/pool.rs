@@ -75,3 +75,26 @@ async fn refresh_token(
     pool.set_connect_options(config.build_connect_options(sdk_config, &token)?);
     Ok(())
 }
+
+/// Parse a connection string, create a PgPool with retry, verify connectivity,
+/// and spawn a background token refresh task.
+#[cfg(feature = "occ")]
+pub async fn connect_with_retry(
+    url: &str,
+    retry_config: crate::occ_retry::OCCRetryConfig,
+) -> Result<crate::occ_trait::RetryPool<PgPool>> {
+    let config = DsqlConnectOptions::from_connection_string(url)?;
+    connect_with_retry_opts(&config, PgPoolOptions::new(), retry_config).await
+}
+
+/// Create a PgPool with retry from pre-built options, verify connectivity,
+/// and spawn a background token refresh task.
+#[cfg(feature = "occ")]
+pub async fn connect_with_retry_opts(
+    config: &DsqlConnectOptions,
+    pool_options: PgPoolOptions,
+    retry_config: crate::occ_retry::OCCRetryConfig,
+) -> Result<crate::occ_trait::RetryPool<PgPool>> {
+    let pool = connect_with(config, pool_options).await?;
+    Ok(crate::occ_trait::RetryPool::new(pool, retry_config))
+}
