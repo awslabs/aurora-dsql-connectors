@@ -44,7 +44,7 @@ aurora-dsql-sqlx-connector = "0.1.2"
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`, `OCCRetryExt` trait) |
+| `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`); `OCCRetryExt` trait requires both `occ` and `pool` |
 | `pool` | No | sqlx pool helper with background token refresh |
 | `occ-tracing` | No | Optional logging for OCC retry attempts (requires `occ`) |
 

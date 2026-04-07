@@ -234,7 +234,7 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                     }
                 }
                 Err(e) => {
-                    // Rollback happens via Drop
+                    // Explicitly roll back the transaction before handling the error.
                     let _ = tx.rollback().await;
 
                     // Check if this is an OCC error from the closure execution
@@ -546,5 +546,116 @@ mod tests {
             "Expected max_attempts error, got: {}",
             err
         );
+    }
+
+    #[tokio::test]
+    async fn test_retry_on_occ_handles_execution_errors() {
+        // Tests that OCC errors during closure execution (not just commit) are retried
+        let config = OCCRetryConfigBuilder::default()
+            .max_attempts(3u32)
+            .base_delay_ms(1u64)
+            .build()
+            .unwrap();
+        let calls = AtomicU32::new(0);
+
+        let result = retry_on_occ(&config, || async {
+            let attempt = calls.fetch_add(1, Ordering::SeqCst);
+            // Simulate OCC error during query execution on first two attempts
+            if attempt < 2 {
+                Err(make_occ_error())
+            } else {
+                Ok("success after retry")
+            }
+        })
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "success after retry");
+        assert_eq!(calls.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn test_retry_on_occ_exhausted_on_execution_error() {
+        // Tests that retry exhaustion works for OCC errors during execution
+        let config = OCCRetryConfigBuilder::default()
+            .max_attempts(2u32)
+            .base_delay_ms(1u64)
+            .build()
+            .unwrap();
+        let calls = AtomicU32::new(0);
+
+        let result: Result<()> = retry_on_occ(&config, || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            // Always return OCC error during execution
+            Err::<(), sqlx::Error>(make_occ_error())
+        })
+        .await;
+
+        assert!(result.is_err());
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        match result.unwrap_err() {
+            DsqlError::OCCRetryExhausted { attempts, .. } => assert_eq!(attempts, 2),
+            other => panic!("Expected OCCRetryExhausted, got: {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retry_respects_custom_config() {
+        // Tests that custom retry config is respected
+        let config = OCCRetryConfigBuilder::default()
+            .max_attempts(5u32)
+            .base_delay_ms(1u64)
+            .build()
+            .unwrap();
+        let calls = AtomicU32::new(0);
+
+        let result = retry_on_occ(&config, || async {
+            let attempt = calls.fetch_add(1, Ordering::SeqCst);
+            if attempt < 4 {
+                Err(make_occ_error())
+            } else {
+                Ok("recovered on attempt 5")
+            }
+        })
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "recovered on attempt 5");
+        assert_eq!(calls.load(Ordering::SeqCst), 5);
+    }
+
+    #[tokio::test]
+    async fn test_retry_with_different_occ_codes() {
+        // Tests that all OCC error codes are recognized
+        let config = OCCRetryConfigBuilder::default()
+            .max_attempts(4u32)
+            .base_delay_ms(1u64)
+            .build()
+            .unwrap();
+        let calls = AtomicU32::new(0);
+
+        let result = retry_on_occ(&config, || async {
+            let attempt = calls.fetch_add(1, Ordering::SeqCst);
+            match attempt {
+                0 => Err(sqlx::Error::Database(Box::new(MockDbError {
+                    code: Some("40001".to_string()),
+                    message: "serialization failure".to_string(),
+                }))),
+                1 => Err(sqlx::Error::Database(Box::new(MockDbError {
+                    code: Some("OC000".to_string()),
+                    message: "data conflict".to_string(),
+                }))),
+                2 => Err(sqlx::Error::Database(Box::new(MockDbError {
+                    code: Some("OC001".to_string()),
+                    message: "schema conflict".to_string(),
+                }))),
+                _ => Ok("all occ codes handled"),
+            }
+        })
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "all occ codes handled");
+        assert_eq!(calls.load(Ordering::SeqCst), 4);
     }
 }
