@@ -44,14 +44,23 @@ aurora-dsql-sqlx-connector = "0.1.2"
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`) |
+| `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`, `OCCRetryExt` trait) |
 | `pool` | No | sqlx pool helper with background token refresh |
+| `occ-tracing` | No | Optional logging for OCC retry attempts (requires `occ`) |
 
 For most applications, enable both features:
 
 ```toml
 [dependencies]
 aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
+```
+
+Enable `occ-tracing` for debugging retry behavior:
+
+```toml
+[dependencies]
+aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ", "occ-tracing"] }
+tracing-subscriber = "0.3"
 ```
 
 ## Configuration Options
@@ -239,34 +248,117 @@ Token duration defaults to 900 seconds. This can be customized via `tokenDuratio
 
 ## OCC Retry
 
-Aurora DSQL uses optimistic concurrency control. The connector provides helpers to detect and handle OCC errors (enable the `occ` feature):
+Aurora DSQL uses optimistic concurrency control (OCC). Transactions may fail with OCC errors when concurrent modifications conflict. The connector provides helpers to automatically detect and retry these operations (enable the `occ` feature).
+
+### Using the Extension Trait (Recommended)
+
+Import `OCCRetryExt` to add retry methods directly to `PgPool`:
 
 ```rust
-use aurora_dsql_sqlx_connector::{retry_on_occ, OCCRetryConfig};
+use aurora_dsql_sqlx_connector::OCCRetryExt;
 
-let config = OCCRetryConfig::default(); // max_attempts: 3, exponential backoff
-
-retry_on_occ(&config, || async {
-    let mut tx = pool.begin().await?;
-
+// With default config (3 attempts, exponential backoff)
+pool.transaction_with_retry(None, |tx| Box::pin(async move {
     sqlx::query("UPDATE accounts SET balance = balance - 100 WHERE id = $1")
         .bind(account_id)
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
+    Ok(())
+})).await?;
 
+// With custom config
+use aurora_dsql_sqlx_connector::OCCRetryConfigBuilder;
+
+let config = OCCRetryConfigBuilder::default()
+    .max_attempts(5u32)
+    .base_delay_ms(200u64)
+    .build()?;
+
+pool.transaction_with_retry(Some(&config), |tx| Box::pin(async move {
+    sqlx::query("INSERT INTO users VALUES ($1, $2)")
+        .bind(1)
+        .bind("alice")
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+})).await?;
+```
+
+**Opting Out:** For operations that don't need retry, use sqlx directly:
+
+```rust
+// Direct pool usage - no OCC retry
+let mut tx = pool.begin().await?;
+sqlx::query("SELECT * FROM users").execute(&mut *tx).await?;
+tx.commit().await?;
+```
+
+### Manual Retry (Advanced)
+
+For non-pool operations or custom retry logic:
+
+```rust
+use aurora_dsql_sqlx_connector::retry_on_occ;
+
+let config = OCCRetryConfig::default();
+retry_on_occ(&config, || async {
+    let mut conn = pool.acquire().await?;
+    let mut tx = conn.begin().await?;
+    // Custom logic with full control
     tx.commit().await?;
     Ok(())
 }).await?;
 ```
 
-**OCC Error Detection:**
-- SQLSTATE `40001` (serialization failure)
-- Error codes `OC000` (data conflict) and `OC001` (schema conflict)
+### Configuration
+
+Customize retry behavior with `OCCRetryConfigBuilder`:
+
+```rust
+use aurora_dsql_sqlx_connector::OCCRetryConfigBuilder;
+
+let config = OCCRetryConfigBuilder::default()
+    .max_attempts(5u32)          // Default: 3
+    .base_delay_ms(200u64)       // Default: 100ms
+    .max_delay_ms(10000u64)      // Default: 5000ms
+    .jitter_factor(0.25)         // Default: 0.25 (25%)
+    .build()?;
+```
 
 **Backoff Strategy:**
-- Exponential backoff: `base_delay * 2^(attempt-1)`
-- Additive jitter: 0-25% of delay
-- Max delay: 5000ms
+- Exponential: `delay = base_delay * 2^(attempt-1)`
+- Additive jitter: `jitter = delay * random(0..1) * jitter_factor`
+- Capped at `max_delay_ms`
+
+### Optional Retry Logging
+
+Enable the `occ-tracing` feature to log retry attempts:
+
+```toml
+[dependencies]
+aurora-dsql-sqlx-connector = { version = "0.1", features = ["pool", "occ", "occ-tracing"] }
+tracing-subscriber = "0.3"
+```
+
+Configure tracing in your application:
+
+```rust
+tracing_subscriber::fmt()
+    .with_env_filter("info,aurora_dsql_sqlx_connector=warn")
+    .init();
+```
+
+**Log Levels:**
+- `warn`: OCC conflict detected, retrying
+- `info`: Operation succeeded after retry
+- `error`: Max retry attempts exhausted
+
+### OCC Error Detection
+
+Automatically detects these error codes:
+- `40001`: SQLSTATE serialization failure
+- `OC000`: Data conflict
+- `OC001`: Schema conflict
 
 ## Examples
 

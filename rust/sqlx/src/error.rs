@@ -27,3 +27,10 @@ pub enum DsqlError {
         source: Box<DsqlError>,
     },
 }
+
+#[cfg(feature = "occ")]
+impl From<crate::occ_retry::OCCRetryConfigBuilderError> for DsqlError {
+    fn from(err: crate::occ_retry::OCCRetryConfigBuilderError) -> Self {
+        DsqlError::ConfigError(Box::new(err))
+    }
+}

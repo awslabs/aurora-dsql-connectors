@@ -77,13 +77,25 @@ where
 
     loop {
         match f().await {
-            Ok(val) => return Ok(val),
+            Ok(val) => {
+                #[cfg(feature = "occ-tracing")]
+                if attempt > 1 {
+                    tracing::info!(
+                        attempt = attempt,
+                        max_attempts = max_attempts,
+                        "OCC transaction succeeded after retry"
+                    );
+                }
+                return Ok(val);
+            }
             Err(e) => {
                 if !is_occ_error(&e) {
                     return Err(DsqlError::DatabaseError(e));
                 }
 
                 if attempt == max_attempts {
+                    #[cfg(feature = "occ-tracing")]
+                    tracing::error!(attempts = max_attempts, "OCC transaction retry exhausted");
                     return Err(DsqlError::OCCRetryExhausted {
                         attempts: max_attempts,
                         source: Box::new(DsqlError::DatabaseError(e)),
@@ -91,9 +103,170 @@ where
                 }
 
                 let delay = calculate_backoff(config, attempt);
+
+                #[cfg(feature = "occ-tracing")]
+                tracing::warn!(
+                    attempt = attempt + 1,
+                    max_attempts = max_attempts,
+                    delay_ms = delay.as_millis(),
+                    "OCC conflict detected, retrying after backoff"
+                );
+
                 tokio::time::sleep(delay).await;
 
                 attempt += 1;
+            }
+        }
+    }
+}
+
+/// Extension trait for `PgPool` providing ergonomic OCC retry methods.
+#[cfg(feature = "pool")]
+#[async_trait::async_trait]
+pub trait OCCRetryExt {
+    /// Execute a closure within a transaction, retrying on OCC errors.
+    ///
+    /// The transaction is automatically started before calling the closure and
+    /// committed on success. On error, the transaction is rolled back.
+    ///
+    /// Pass `None` to use default configuration (max_attempts: 3, exponential backoff),
+    /// or `Some(&config)` for custom retry behavior.
+    ///
+    /// # Idempotency Warning
+    /// The closure may be called multiple times on OCC conflicts. Ensure it
+    /// has no side effects that should not be repeated.
+    ///
+    /// # Box::pin Requirement
+    /// Due to lifetime constraints, the closure must return a pinned boxed future.
+    /// Use `Box::pin(async move { ... })` syntax.
+    async fn transaction_with_retry<F, T>(
+        &self,
+        config: Option<&OCCRetryConfig>,
+        f: F,
+    ) -> Result<T>
+    where
+        F: for<'a> FnMut(
+                &'a mut sqlx::Transaction<'_, sqlx::Postgres>,
+            ) -> std::pin::Pin<
+                Box<
+                    dyn std::future::Future<Output = std::result::Result<T, sqlx::Error>>
+                        + Send
+                        + 'a,
+                >,
+            > + Send,
+        T: Send;
+}
+
+#[cfg(feature = "pool")]
+#[async_trait::async_trait]
+impl OCCRetryExt for sqlx::postgres::PgPool {
+    async fn transaction_with_retry<F, T>(
+        &self,
+        config: Option<&OCCRetryConfig>,
+        mut f: F,
+    ) -> Result<T>
+    where
+        F: for<'a> FnMut(
+                &'a mut sqlx::Transaction<'_, sqlx::Postgres>,
+            ) -> std::pin::Pin<
+                Box<
+                    dyn std::future::Future<Output = std::result::Result<T, sqlx::Error>>
+                        + Send
+                        + 'a,
+                >,
+            > + Send,
+        T: Send,
+    {
+        let config = config.cloned().unwrap_or_default();
+        let pool = self.clone();
+        let max_attempts = config.max_attempts;
+        let mut attempt = 1;
+
+        loop {
+            // Get new connection and start fresh transaction on each retry attempt
+            let mut tx = pool.begin().await.map_err(DsqlError::DatabaseError)?;
+
+            match f(&mut tx).await {
+                Ok(val) => {
+                    // Attempt commit - OCC errors typically occur here
+                    match tx.commit().await {
+                        Ok(_) => {
+                            #[cfg(feature = "occ-tracing")]
+                            if attempt > 1 {
+                                tracing::info!(
+                                    attempt = attempt,
+                                    max_attempts = max_attempts,
+                                    "OCC transaction succeeded after retry"
+                                );
+                            }
+                            return Ok(val);
+                        }
+                        Err(e) => {
+                            if !is_occ_error(&e) {
+                                return Err(DsqlError::DatabaseError(e));
+                            }
+
+                            if attempt == max_attempts {
+                                #[cfg(feature = "occ-tracing")]
+                                tracing::error!(
+                                    attempts = max_attempts,
+                                    "OCC transaction retry exhausted on commit"
+                                );
+                                return Err(DsqlError::OCCRetryExhausted {
+                                    attempts: max_attempts,
+                                    source: Box::new(DsqlError::DatabaseError(e)),
+                                });
+                            }
+
+                            let delay = calculate_backoff(&config, attempt);
+
+                            #[cfg(feature = "occ-tracing")]
+                            tracing::warn!(
+                                attempt = attempt + 1,
+                                max_attempts = max_attempts,
+                                delay_ms = delay.as_millis(),
+                                "OCC conflict on commit, retrying transaction after backoff"
+                            );
+
+                            tokio::time::sleep(delay).await;
+                            attempt += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Rollback happens via Drop
+                    let _ = tx.rollback().await;
+
+                    // Check if this is an OCC error from the closure execution
+                    if !is_occ_error(&e) {
+                        return Err(DsqlError::DatabaseError(e));
+                    }
+
+                    if attempt == max_attempts {
+                        #[cfg(feature = "occ-tracing")]
+                        tracing::error!(
+                            attempts = max_attempts,
+                            "OCC transaction retry exhausted during execution"
+                        );
+                        return Err(DsqlError::OCCRetryExhausted {
+                            attempts: max_attempts,
+                            source: Box::new(DsqlError::DatabaseError(e)),
+                        });
+                    }
+
+                    let delay = calculate_backoff(&config, attempt);
+
+                    #[cfg(feature = "occ-tracing")]
+                    tracing::warn!(
+                        attempt = attempt + 1,
+                        max_attempts = max_attempts,
+                        delay_ms = delay.as_millis(),
+                        "OCC conflict during execution, retrying transaction after backoff"
+                    );
+
+                    tokio::time::sleep(delay).await;
+                    attempt += 1;
+                }
             }
         }
     }
