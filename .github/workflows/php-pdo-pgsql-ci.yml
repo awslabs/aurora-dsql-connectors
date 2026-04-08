@@ -1,0 +1,89 @@
+name: PHP PDO_PGSQL CI
+
+permissions: {}
+
+on:
+  workflow_call: {}
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "php/pdo_pgsql/**"
+
+defaults:
+  run:
+    working-directory: php/pdo_pgsql
+
+jobs:
+  create-cluster:
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: php-pdo-pgsql
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write
+
+  build:
+    needs: create-cluster
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@728c6c6b8cf02c2e48117716a91ee48313958a19 # v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_pgsql
+          tools: composer
+
+      - name: Install connector dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run connector unit tests
+        run: vendor/bin/phpunit --testsuite unit
+
+      - name: Download Amazon root certificate
+        run: |
+          mkdir -p ~/.postgresql
+          wget -q https://www.amazontrust.com/repository/AmazonRootCA1.pem -O ~/.postgresql/root.crt
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE }}
+          aws-region: ${{ needs.create-cluster.outputs.region }}
+
+      - name: Run connector integration tests
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: vendor/bin/phpunit --testsuite integration
+
+      - name: Install example dependencies
+        working-directory: php/pdo_pgsql/example
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run example integration tests
+        working-directory: php/pdo_pgsql/example
+        env:
+          CLUSTER_USER: "admin"
+          CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
+          REGION: ${{ needs.create-cluster.outputs.region }}
+        run: php src/example_preferred.php
+
+  delete-cluster:
+    if: always() && needs.create-cluster.result == 'success'
+    needs: [create-cluster, build]
+    uses: ./.github/workflows/dsql-cluster-delete.yml
+    with:
+      cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
+      region: ${{ needs.create-cluster.outputs.region }}
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write
