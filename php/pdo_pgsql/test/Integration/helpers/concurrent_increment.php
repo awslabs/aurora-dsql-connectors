@@ -10,13 +10,13 @@ require_once __DIR__ . '/../../../vendor/autoload.php';
 use Aws\AuroraDsql\PdoPgsql\AuroraDsql;
 use Aws\AuroraDsql\PdoPgsql\DsqlConfig;
 
-// Read arguments: tableName, rowId, workerIndex, syncFile
-if ($argc < 5) {
-    fwrite(STDERR, "Usage: {$argv[0]} <tableName> <rowId> <workerIndex> <syncFile>\n");
+// Read arguments: tableName, rowId, workerIndex
+if ($argc < 4) {
+    fwrite(STDERR, "Usage: {$argv[0]} <tableName> <rowId> <workerIndex>\n");
     exit(1);
 }
 
-[$script, $tableName, $rowId, $workerIndex, $syncFile] = $argv;
+[$script, $tableName, $rowId, $workerIndex] = $argv;
 
 $clusterEndpoint = getenv('CLUSTER_ENDPOINT');
 if (!$clusterEndpoint) {
@@ -36,31 +36,18 @@ try {
     $pdo = AuroraDsql::connect($config);
 
     // Execute concurrent increment with OCC retry
-    $pdo->transaction(function (\PDO $conn) use ($tableName, $rowId, $workerIndex, $syncFile): void {
+    $pdo->transaction(function (\PDO $conn) use ($tableName, $rowId): void {
         // Read current value
         $stmt = $conn->prepare(sprintf('SELECT value FROM %s WHERE id = ?', $tableName));
         $stmt->execute([$rowId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $currentValue = (int) $row['value'];
 
-        // Synchronization barrier: write worker readiness
-        file_put_contents($syncFile, "$workerIndex\n", FILE_APPEND | LOCK_EX);
-
-        // Wait for both workers to be ready
-        $maxWait = 10; // seconds
-        $waited = 0;
-        while (substr_count(file_get_contents($syncFile), "\n") < 2) {
-            usleep(100000); // 100ms
-            $waited += 0.1;
-            if ($waited >= $maxWait) {
-                throw new RuntimeException('Timeout waiting for workers to synchronize');
-            }
-        }
-
-        // Small additional sleep to ensure both transactions have read before either commits
+        // Sleep to increase likelihood of concurrent transaction overlap
+        // This creates the race condition that triggers OCC conflicts
         usleep(200000); // 200ms
 
-        // Increment value
+        // Increment value - one worker will get OCC error and retry
         $stmt = $conn->prepare(sprintf('UPDATE %s SET value = ? WHERE id = ?', $tableName));
         $stmt->execute([$currentValue + 1, $rowId]);
     });

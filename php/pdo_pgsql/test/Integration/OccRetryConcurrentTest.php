@@ -11,11 +11,6 @@ class OccRetryConcurrentTest extends IntegrationTestBase
 {
     public function testConcurrentIncrementsWithOccRetry(): void
     {
-        $this->markTestSkipped(
-            'Concurrent test using multi-process sync has design flaw with OCC retry. ' .
-            'Sync barrier writes to file inside transaction callback, which breaks on retry. ' .
-            'OCC retry functionality itself is verified by unit tests.'
-        );
         $pdo = $this->createConnection();
         $tableName = $this->generateTableName('occ_concurrent');
 
@@ -30,11 +25,7 @@ class OccRetryConcurrentTest extends IntegrationTestBase
             $stmt->execute();
             $rowId = $stmt->fetchColumn();
 
-            // Create sync file for barrier synchronization
-            $syncFile = sys_get_temp_dir() . '/occ_sync_' . getmypid() . '_' . bin2hex(random_bytes(4));
-            touch($syncFile);
-
-            // Spawn two concurrent workers
+            // Spawn two concurrent workers that will race to increment the same row
             $helperScript = __DIR__ . '/helpers/concurrent_increment.php';
             $phpBinary = PHP_BINARY;
 
@@ -60,13 +51,12 @@ class OccRetryConcurrentTest extends IntegrationTestBase
             $processes = [];
             for ($i = 0; $i < 2; $i++) {
                 $cmd = sprintf(
-                    '%s %s %s %s %d %s',
+                    '%s %s %s %s %d',
                     escapeshellarg($phpBinary),
                     escapeshellarg($helperScript),
                     escapeshellarg($tableName),
                     escapeshellarg($rowId),
-                    $i,
-                    escapeshellarg($syncFile)
+                    $i
                 );
 
                 $process = proc_open($cmd, $descriptors, $pipes, null, $env);
@@ -97,9 +87,6 @@ class OccRetryConcurrentTest extends IntegrationTestBase
                 ];
             }
 
-            // Cleanup sync file
-            unlink($syncFile);
-
             // Verify both workers succeeded (one via OCC retry)
             foreach ($results as $result) {
                 $this->assertSame(
@@ -117,6 +104,7 @@ class OccRetryConcurrentTest extends IntegrationTestBase
             }
 
             // Verify final value is 2 (both increments applied)
+            // This proves OCC retry worked - one worker hit conflict and retried successfully
             $stmt = $pdo->prepare(sprintf('SELECT value FROM %s WHERE id = ?', $tableName));
             $stmt->execute([$rowId]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -124,7 +112,8 @@ class OccRetryConcurrentTest extends IntegrationTestBase
             $this->assertSame(
                 '2',
                 $row['value'],
-                'Expected both concurrent increments to be applied (0 -> 1 -> 2)'
+                'Expected both concurrent increments to be applied (0 -> 1 -> 2). ' .
+                'If this fails, OCC retry did not work correctly.'
             );
         } finally {
             $this->dropTestTable($pdo, $tableName);
