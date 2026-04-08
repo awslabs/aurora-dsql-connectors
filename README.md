@@ -35,6 +35,12 @@ This monorepo contains database driver connectors for [Amazon Aurora DSQL](https
 |---------|-------------|------|---------|
 | [aurora-dsql-python-connector](./python/connector/) | Python connectors for Aurora DSQL (psycopg, psycopg2, asyncpg) | [![PyPI](https://img.shields.io/pypi/v/aurora-dsql-python-connector)](https://pypi.org/project/aurora-dsql-python-connector/) | ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) |
 
+### PHP
+
+| Package | Description | Packagist | License |
+|---------|-------------|-----------|---------|
+| [aurora-dsql-pdo-pgsql](./php/pdo_pgsql/) | PDO_PGSQL connector for Aurora DSQL | [![Packagist](https://img.shields.io/packagist/v/aws/aurora-dsql-pdo-pgsql)](https://packagist.org/packages/aws/aurora-dsql-pdo-pgsql) | ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) |
+
 ### Ruby
 
 | Package | Description | RubyGems | License |
@@ -70,6 +76,9 @@ pip install aurora-dsql-python-connector[psycopg]
 # Python (with asyncpg support)
 pip install aurora-dsql-python-connector[asyncpg]
 
+# PHP
+composer require aws/aurora-dsql-pdo-pgsql
+
 # Ruby
 gem install aurora-dsql-ruby-pg
 
@@ -88,6 +97,7 @@ See the README in each connector's directory for detailed usage instructions:
 - [Java JDBC connector documentation](./java/jdbc/README.md)
 - [Node.js node-postgres connector documentation](./node/node-postgres/README.md)
 - [Node.js postgres.js connector documentation](./node/postgres-js/README.md)
+- [PHP PDO_PGSQL connector documentation](./php/pdo_pgsql/README.md)
 - [Python connector documentation](./python/connector/README.md)
 - [Ruby pg connector documentation](./ruby/pg/README.md)
 - [Rust SQLx connector documentation](./rust/sqlx/README.md)
