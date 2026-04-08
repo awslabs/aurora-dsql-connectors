@@ -1,0 +1,55 @@
+name: Publish PHP PDO_PGSQL to Packagist
+
+permissions: {}
+
+on:
+  push:
+    tags:
+      - "php/pdo_pgsql/v*"
+
+jobs:
+  wait-for-ci:
+    name: Wait for CI to pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lewagon/wait-on-check-action@a08fbe2b86f9336198f33be6ad9c16b96f92799c # v1.6.0
+        with:
+          ref: ${{ github.sha }}
+          running-workflow-name: "Wait for CI to pass"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+          check-regexp: "PHP PDO_PGSQL"
+
+  create-release:
+    name: Create GitHub Release
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#php/pdo_pgsql/v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --title "PHP PDO_PGSQL v${{ steps.version.outputs.version }}" \
+            --notes "Release ${{ steps.version.outputs.version }} - See [CHANGELOG](https://github.com/awslabs/aurora-dsql-connectors/blob/main/php/pdo_pgsql/CHANGELOG.md)" \
+            --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  update-changelog:
+    needs: create-release
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/update-changelog.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
