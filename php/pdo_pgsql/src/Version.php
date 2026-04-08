@@ -17,7 +17,7 @@ class Version
     public static function getVersion(): string
     {
         if (class_exists(InstalledVersions::class)) {
-            $version = InstalledVersions::getVersion('aws/aurora-dsql-pdo-pgsql');
+            $version = InstalledVersions::getVersion('awslabs/aurora-dsql-pdo-pgsql');
             if ($version !== null) {
                 return $version;
             }
