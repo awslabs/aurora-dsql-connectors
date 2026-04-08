@@ -139,8 +139,13 @@ class DsqlPdo extends \PDO
             try {
                 return $fn();
             } catch (\Throwable $e) {
+                // Debug logging
+                $code = $e instanceof \PDOException ? $e->getCode() : 'N/A';
+                error_log("[AuroraDsql] Caught exception: code={$code}, message={$e->getMessage()}");
+
                 // Throw immediately if not an OCC error, or if retries are disabled (maxRetries === 0)
                 if (!OCCRetry::isOccError($e) || $maxRetries === 0) {
+                    error_log("[AuroraDsql] Not retrying: isOccError=" . (OCCRetry::isOccError($e) ? 'true' : 'false') . ", maxRetries={$maxRetries}");
                     throw $e;
                 }
 

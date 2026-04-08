@@ -55,6 +55,10 @@ try {
     echo "SUCCESS\n";
     exit(0);
 } catch (Throwable $e) {
+    // Log full exception details for debugging
+    $code = $e instanceof \PDOException ? $e->getCode() : 'N/A';
     fwrite(STDERR, "ERROR: {$e->getMessage()}\n");
+    fwrite(STDERR, "ERROR CODE: {$code}\n");
+    fwrite(STDERR, "EXCEPTION CLASS: " . get_class($e) . "\n");
     exit(1);
 }
