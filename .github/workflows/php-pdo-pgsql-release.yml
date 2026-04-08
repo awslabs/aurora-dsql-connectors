@@ -18,7 +18,6 @@ jobs:
           running-workflow-name: "Wait for CI to pass"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 30
-          check-regexp: "PHP PDO_PGSQL"
 
   create-release:
     name: Create GitHub Release
