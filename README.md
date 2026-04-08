@@ -39,7 +39,7 @@ This monorepo contains database driver connectors for [Amazon Aurora DSQL](https
 
 | Package | Description | Packagist | License |
 |---------|-------------|-----------|---------|
-| [aurora-dsql-pdo-pgsql](./php/pdo_pgsql/) | PDO_PGSQL connector for Aurora DSQL | [![Packagist](https://img.shields.io/packagist/v/aws/aurora-dsql-pdo-pgsql)](https://packagist.org/packages/aws/aurora-dsql-pdo-pgsql) | ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) |
+| [aurora-dsql-pdo-pgsql](./php/pdo_pgsql/) | PDO_PGSQL connector for Aurora DSQL | [![Packagist](https://img.shields.io/packagist/v/awslabs/aurora-dsql-pdo-pgsql)](https://packagist.org/packages/awslabs/aurora-dsql-pdo-pgsql) | ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg) |
 
 ### Ruby
 
@@ -77,7 +77,7 @@ pip install aurora-dsql-python-connector[psycopg]
 pip install aurora-dsql-python-connector[asyncpg]
 
 # PHP
-composer require aws/aurora-dsql-pdo-pgsql
+composer require awslabs/aurora-dsql-pdo-pgsql
 
 # Ruby
 gem install aurora-dsql-ruby-pg

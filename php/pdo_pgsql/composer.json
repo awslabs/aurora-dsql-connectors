@@ -1,5 +1,5 @@
 {
-    "name": "aws/aurora-dsql-pdo-pgsql",
+    "name": "awslabs/aurora-dsql-pdo-pgsql",
     "description": "Aurora DSQL connector for PDO_PGSQL",
     "type": "library",
     "license": "Apache-2.0",
