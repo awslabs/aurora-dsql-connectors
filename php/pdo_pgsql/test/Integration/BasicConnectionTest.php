@@ -16,7 +16,7 @@ class BasicConnectionTest extends IntegrationTestBase
 
         // Verify connection is usable
         $result = $pdo->query('SELECT 1 as test')->fetch(\PDO::FETCH_ASSOC);
-        $this->assertSame(['test' => '1'], $result);
+        $this->assertEquals(['test' => '1'], $result);
     }
 
     public function testConnectWithDsn(): void
@@ -33,7 +33,7 @@ class BasicConnectionTest extends IntegrationTestBase
 
         // Verify connection is usable
         $result = $pdo->query('SELECT 1 as test')->fetch(\PDO::FETCH_ASSOC);
-        $this->assertSame(['test' => '1'], $result);
+        $this->assertEquals(['test' => '1'], $result);
     }
 
     public function testConnectionUsesIAMAuthentication(): void

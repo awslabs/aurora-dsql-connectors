@@ -16,10 +16,8 @@ class ApplicationNameTest extends IntegrationTestBase
     {
         $pdo = $this->createConnection();
 
-        // Query application_name from pg_stat_activity
-        $stmt = $pdo->query(
-            "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
-        );
+        // Query application_name using current_setting
+        $stmt = $pdo->query("SELECT current_setting('application_name')");
         $appName = $stmt->fetchColumn();
 
         $this->assertNotEmpty($appName);
@@ -39,10 +37,8 @@ class ApplicationNameTest extends IntegrationTestBase
 
         $pdo = AuroraDsql::connect($config);
 
-        // Query application_name
-        $stmt = $pdo->query(
-            "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
-        );
+        // Query application_name using current_setting
+        $stmt = $pdo->query("SELECT current_setting('application_name')");
         $appName = $stmt->fetchColumn();
 
         $this->assertNotEmpty($appName);
@@ -60,10 +56,8 @@ class ApplicationNameTest extends IntegrationTestBase
 
         $pdo = AuroraDsql::connectFromDsn($dsn);
 
-        // Query application_name
-        $stmt = $pdo->query(
-            "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
-        );
+        // Query application_name using current_setting
+        $stmt = $pdo->query("SELECT current_setting('application_name')");
         $appName = $stmt->fetchColumn();
 
         $this->assertNotEmpty($appName);

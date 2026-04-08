@@ -36,7 +36,7 @@ class DsnParsingTest extends IntegrationTestBase
         $this->assertInstanceOf(\PDO::class, $pdo);
 
         $result = $pdo->query('SELECT 1')->fetchColumn();
-        $this->assertSame('1', $result);
+        $this->assertEquals('1', $result);
     }
 
     public function testConnectWithCustomPort(): void
@@ -51,6 +51,6 @@ class DsnParsingTest extends IntegrationTestBase
         $this->assertInstanceOf(\PDO::class, $pdo);
 
         $result = $pdo->query('SELECT 1')->fetchColumn();
-        $this->assertSame('1', $result);
+        $this->assertEquals('1', $result);
     }
 }

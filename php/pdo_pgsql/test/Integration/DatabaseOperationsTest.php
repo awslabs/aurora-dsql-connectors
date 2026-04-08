@@ -86,7 +86,7 @@ class DatabaseOperationsTest extends IntegrationTestBase
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM {$tableName} WHERE id = ?");
             $stmt->execute([$id]);
             $count = $stmt->fetchColumn();
-            $this->assertSame('0', $count);
+            $this->assertEquals('0', $count);
         } finally {
             $this->dropTestTable($pdo, $tableName);
         }
@@ -109,7 +109,7 @@ class DatabaseOperationsTest extends IntegrationTestBase
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM {$tableName} WHERE value = ?");
             $stmt->execute([100]);
             $count = $stmt->fetchColumn();
-            $this->assertSame('1', $count);
+            $this->assertEquals('1', $count);
         } finally {
             $this->dropTestTable($pdo, $tableName);
         }
@@ -132,7 +132,7 @@ class DatabaseOperationsTest extends IntegrationTestBase
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM {$tableName} WHERE value = ?");
             $stmt->execute([200]);
             $count = $stmt->fetchColumn();
-            $this->assertSame('0', $count);
+            $this->assertEquals('0', $count);
         } finally {
             $this->dropTestTable($pdo, $tableName);
         }

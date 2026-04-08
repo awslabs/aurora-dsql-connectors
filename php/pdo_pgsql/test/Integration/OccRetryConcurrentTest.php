@@ -39,10 +39,18 @@ class OccRetryConcurrentTest extends IntegrationTestBase
                 2 => ['pipe', 'w'], // stderr
             ];
 
+            // Pass through AWS credentials to child processes
             $env = [
                 'CLUSTER_ENDPOINT' => self::$clusterEndpoint,
                 'REGION' => self::$region ?? '',
             ];
+
+            // Pass AWS credentials if set (needed for IAM authentication)
+            foreach (['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN', 'AWS_REGION'] as $key) {
+                if ($value = getenv($key)) {
+                    $env[$key] = $value;
+                }
+            }
 
             $processes = [];
             for ($i = 0; $i < 2; $i++) {
