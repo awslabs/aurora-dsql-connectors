@@ -41,20 +41,20 @@ jobs:
           if [ -n "$EXISTING" ]; then
             echo "Webhook already exists (ID: $EXISTING), updating..."
             gh api -X PATCH "repos/awslabs/aurora-dsql-php-pdo-pgsql/hooks/$EXISTING" \
-              -f config[url]='https://packagist.org/api/github?username=dsql-devex' \
-              -f config[content_type]='json' \
-              -f config[secret]="$PACKAGIST_TOKEN" \
-              -f events[]='push' \
+              -f 'config[url]=https://packagist.org/api/github?username=dsql-devex' \
+              -f 'config[content_type]=json' \
+              -f "config[secret]=$PACKAGIST_TOKEN" \
+              -f 'events[]=push' \
               -F active=true
             echo "✓ Webhook updated"
           else
             echo "Creating new webhook..."
             gh api repos/awslabs/aurora-dsql-php-pdo-pgsql/hooks \
               -f name='web' \
-              -f config[url]='https://packagist.org/api/github?username=dsql-devex' \
-              -f config[content_type]='json' \
-              -f config[secret]="$PACKAGIST_TOKEN" \
-              -f events[]='push' \
+              -f 'config[url]=https://packagist.org/api/github?username=dsql-devex' \
+              -f 'config[content_type]=json' \
+              -f "config[secret]=$PACKAGIST_TOKEN" \
+              -f 'events[]=push' \
               -F active=true
             echo "✓ Webhook created"
           fi
