@@ -9,7 +9,6 @@ require_once __DIR__ . '/../../../vendor/autoload.php';
 
 use Aws\AuroraDsql\PdoPgsql\AuroraDsql;
 use Aws\AuroraDsql\PdoPgsql\DsqlConfig;
-use Aws\AuroraDsql\PdoPgsql\OCCRetry;
 
 // Read arguments: tableName, rowId, workerIndex, syncFile
 if ($argc < 5) {
@@ -32,13 +31,12 @@ try {
         host: $clusterEndpoint,
         region: $region,
         user: 'admin',
+        occMaxRetries: 5,
     );
     $pdo = AuroraDsql::connect($config);
 
-    // Execute concurrent increment with OCC retry via OCCRetry::withRetry
-    OCCRetry::withRetry($pdo, function (\PDO $conn) use ($tableName, $rowId, $workerIndex, $syncFile): void {
-        $conn->beginTransaction();
-
+    // Execute concurrent increment with OCC retry
+    $pdo->transaction(function (\PDO $conn) use ($tableName, $rowId, $workerIndex, $syncFile): void {
         // Read current value
         $stmt = $conn->prepare(sprintf('SELECT value FROM %s WHERE id = ?', $tableName));
         $stmt->execute([$rowId]);
@@ -65,9 +63,7 @@ try {
         // Increment value
         $stmt = $conn->prepare(sprintf('UPDATE %s SET value = ? WHERE id = ?', $tableName));
         $stmt->execute([$currentValue + 1, $rowId]);
-
-        $conn->commit();
-    }, maxRetries: 5);
+    });
 
     echo "SUCCESS\n";
     exit(0);
