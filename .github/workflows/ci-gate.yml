@@ -18,6 +18,7 @@ jobs:
       python-connector: ${{ steps.detect.outputs.python-connector }}
       node-postgres: ${{ steps.detect.outputs.node-postgres }}
       postgres-js: ${{ steps.detect.outputs.postgres-js }}
+      php-pdo-pgsql: ${{ steps.detect.outputs.php-pdo-pgsql }}
       ruby-pg: ${{ steps.detect.outputs.ruby-pg }}
       rust-sqlx: ${{ steps.detect.outputs.rust-sqlx }}
       dotnet-npgsql: ${{ steps.detect.outputs.dotnet-npgsql }}
@@ -32,6 +33,7 @@ jobs:
               'python-connector': ['python/connector/', '.github/workflows/python-connector-ci.yml'],
               'node-postgres': ['node/node-postgres/', '.github/workflows/node-postgres-ci.yml'],
               'postgres-js': ['node/postgres-js/', '.github/workflows/postgres-js-ci.yml'],
+              'php-pdo-pgsql': ['php/pdo_pgsql/', '.github/workflows/php-pdo-pgsql-ci.yml'],
               'ruby-pg': ['ruby/pg/', '.github/workflows/ruby-pg-ci.yml'],
               'rust-sqlx': ['rust/sqlx/', '.github/workflows/rust-sqlx-ci.yml'],
               'dotnet-npgsql': ['dotnet/npgsql/', '.github/workflows/dotnet-npgsql-ci.yml'],
@@ -120,6 +122,14 @@ jobs:
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
 
+  php-pdo-pgsql:
+    needs: changes
+    if: needs.changes.outputs.php-pdo-pgsql == 'true'
+    uses: ./.github/workflows/php-pdo-pgsql-ci.yml
+    secrets: inherit
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
   ruby-pg:
     needs: changes
     if: needs.changes.outputs.ruby-pg == 'true'
@@ -154,6 +164,7 @@ jobs:
       - python-connector
       - node-postgres
       - postgres-js
+      - php-pdo-pgsql
       - ruby-pg
       - rust-sqlx
       - dotnet-npgsql

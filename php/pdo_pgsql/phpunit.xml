@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         testdox="true">
+    <testsuites>
+        <testsuite name="unit">
+            <directory>test/Unit</directory>
+        </testsuite>
+        <testsuite name="integration">
+            <directory>test/Integration</directory>
+            <exclude>test/Integration/IntegrationTestBase.php</exclude>
+            <exclude>test/Integration/helpers</exclude>
+        </testsuite>
+    </testsuites>
+</phpunit>
