@@ -1,11 +1,11 @@
 {
-    "name": "aws/aurora-dsql-pdo-pgsql-example",
+    "name": "awslabs/aurora-dsql-pdo-pgsql-example",
     "description": "Examples for Aurora DSQL PDO_PGSQL connector",
     "type": "project",
     "license": "Apache-2.0",
     "require": {
         "php": ">=8.2",
-        "aws/aurora-dsql-pdo-pgsql": "*"
+        "awslabs/aurora-dsql-pdo-pgsql": "*"
     },
     "repositories": [
         {

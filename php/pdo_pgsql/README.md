@@ -39,7 +39,7 @@ The first source that provides valid credentials is used. You can override this 
 ## Installation
 
 ```bash
-composer require aws/aurora-dsql-pdo-pgsql
+composer require awslabs/aurora-dsql-pdo-pgsql
 ```
 
 ## Quick Start
