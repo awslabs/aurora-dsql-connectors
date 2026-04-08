@@ -74,10 +74,10 @@ jobs:
           git remote add mirror https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/awslabs/aurora-dsql-php-pdo-pgsql.git
 
           # Push the split branch to mirror's main
-          git push mirror $SPLIT_BRANCH:refs/heads/main --force
+          git push mirror "$SPLIT_BRANCH":refs/heads/main --force
 
           # Create and push version tag on mirror (without php/pdo_pgsql/ prefix)
-          git push mirror $SPLIT_BRANCH:refs/tags/v${{ steps.version.outputs.version }} --force
+          git push mirror "$SPLIT_BRANCH":refs/tags/v${{ steps.version.outputs.version }} --force
 
   update-changelog:
     needs: sync-to-mirror
