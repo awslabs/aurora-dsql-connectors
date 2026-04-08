@@ -6,10 +6,12 @@
          testdox="true">
     <testsuites>
         <testsuite name="unit">
-            <directory>test/unit</directory>
+            <directory>test/Unit</directory>
         </testsuite>
         <testsuite name="integration">
-            <directory>test/integration</directory>
+            <directory>test/Integration</directory>
+            <exclude>test/Integration/IntegrationTestBase.php</exclude>
+            <exclude>test/Integration/helpers</exclude>
         </testsuite>
     </testsuites>
 </phpunit>
