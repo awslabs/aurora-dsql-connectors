@@ -12,7 +12,7 @@ jobs:
     name: Wait for CI to pass
     runs-on: ubuntu-latest
     steps:
-      - uses: lewagon/wait-on-check-action@a08fbe2b86f9336198f33be6ad9c16b96f92799c # v1.6.0
+      - uses: lewagon/wait-on-check-action@78dd4dd5d9b337c14c3c81f79e53bf7d222435c1 # v1.6.1
         with:
           ref: ${{ github.sha }}
           running-workflow-name: "Wait for CI to pass"
