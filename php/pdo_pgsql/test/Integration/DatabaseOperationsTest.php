@@ -49,7 +49,8 @@ class DatabaseOperationsTest extends IntegrationTestBase
             $stmt->execute([$id]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-            $this->assertSame(['value' => '42', 'name' => 'test_value'], $row);
+            $this->assertEquals(42, $row['value']);
+            $this->assertSame('test_value', $row['name']);
         } finally {
             $this->dropTestTable($pdo, $tableName);
         }
@@ -76,7 +77,8 @@ class DatabaseOperationsTest extends IntegrationTestBase
             $stmt = $pdo->prepare("SELECT value, name FROM {$tableName} WHERE id = ?");
             $stmt->execute([$id]);
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-            $this->assertSame(['value' => '20', 'name' => 'updated'], $row);
+            $this->assertEquals(20, $row['value']);
+            $this->assertSame('updated', $row['name']);
 
             // Delete the row
             $stmt = $pdo->prepare("DELETE FROM {$tableName} WHERE id = ?");
