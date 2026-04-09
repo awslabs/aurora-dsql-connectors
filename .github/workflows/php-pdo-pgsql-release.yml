@@ -25,6 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Note: Mirror repo sync happens automatically via scheduled workflow in
+    # https://github.com/awslabs/aurora-dsql-php-pdo-pgsql (runs twice daily)
+    # For urgent releases, manually trigger the sync workflow in the mirror repo
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -43,44 +46,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  sync-to-mirror:
-    name: Sync to mirror repository
-    needs: create-release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          fetch-depth: 0
-
-      - name: Extract version from tag
-        id: version
-        run: |
-          VERSION="${GITHUB_REF_NAME#php/pdo_pgsql/v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Split subdirectory and push to mirror
-        run: |
-          # Use git subtree split to extract php/pdo_pgsql/ history
-          SPLIT_BRANCH=$(git subtree split --prefix=php/pdo_pgsql)
-
-          # Add mirror remote
-          git remote add mirror https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/awslabs/aurora-dsql-php-pdo-pgsql.git
-
-          # Push the split branch to mirror's main
-          git push mirror "$SPLIT_BRANCH":refs/heads/main --force
-
-          # Create and push version tag on mirror (without php/pdo_pgsql/ prefix)
-          git push mirror "$SPLIT_BRANCH":refs/tags/v${{ steps.version.outputs.version }} --force
-
   update-changelog:
-    needs: sync-to-mirror
+    needs: create-release
     permissions:
       contents: write
       pull-requests: write
