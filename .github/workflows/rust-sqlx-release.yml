@@ -38,7 +38,7 @@ jobs:
         run: rustup update stable && rustup default stable
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6
         with:
           role-to-assume: ${{ secrets.CRATES_PUBLISH_IAM_ROLE }}
           role-session-name: rust-sqlx-crates-publish
