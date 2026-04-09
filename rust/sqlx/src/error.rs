@@ -3,6 +3,9 @@
 
 use thiserror::Error;
 
+#[cfg(feature = "occ")]
+use crate::occ_retry::OCCType;
+
 pub type Result<T> = std::result::Result<T, DsqlError>;
 
 #[derive(Error, Debug)]
@@ -24,7 +27,7 @@ pub enum DsqlError {
     #[error("OCC retry exhausted after {attempts} attempts (type: {occ_type:?}): {source}")]
     OCCRetryExhausted {
         attempts: u32,
-        occ_type: crate::occ_retry::OCCType,
+        occ_type: OCCType,
         #[source]
         source: Box<DsqlError>,
     },

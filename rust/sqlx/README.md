@@ -45,7 +45,9 @@ aurora-dsql-sqlx-connector = "0.1.2"
 | Feature | Default | Description |
 |---------|---------|-------------|
 | `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`, `OCCType`, `OCCRetryExt` trait for `PgConnection`) |
-| `pool` | No | sqlx pool helper with background token refresh; enables `OCCRetryExt` for `PgPool` (requires both `occ` and `pool`) |
+| `pool` | No | sqlx pool helper with background token refresh |
+
+**Note:** To use `OCCRetryExt` on `PgPool`, enable both `occ` and `pool` features.
 
 For most applications, enable both features:
 
@@ -280,7 +282,8 @@ use aurora_dsql_sqlx_connector::OCCRetryConfigBuilder;
 
 let config = OCCRetryConfigBuilder::default()
     .max_attempts(5u32)
-    .base_delay_ms(200u64)
+    .base_delay_ms(10u64)
+    .max_delay_ms(50u64)
     .build()?;
 
 pool.transaction_with_retry(Some(&config), |tx| Box::pin(async move {
@@ -343,8 +346,8 @@ use aurora_dsql_sqlx_connector::OCCRetryConfigBuilder;
 
 let config = OCCRetryConfigBuilder::default()
     .max_attempts(5u32)          // Default: 3
-    .base_delay_ms(200u64)       // Default: 100ms
-    .max_delay_ms(10000u64)      // Default: 5000ms
+    .base_delay_ms(10u64)        // Default: 1ms
+    .max_delay_ms(50u64)         // Default: 100ms
     .jitter_factor(0.25)         // Default: 0.25 (25%)
     .build()?;
 ```
@@ -357,12 +360,6 @@ let config = OCCRetryConfigBuilder::default()
 ### Retry Logging
 
 The connector uses the `log` crate for retry logging. If your application uses any log implementation (e.g., `env_logger`, `tracing-subscriber`), the connector's logs will be captured automatically.
-
-**Log Levels:**
-- `warn`: OCC conflict detected (includes type: Data/Schema/Unknown), retrying
-- `info`: Operation succeeded after retry (includes type)
-- `error`: Max retry attempts exhausted (includes type)
-- `debug`: Internal details (commit failures, rollback events)
 
 ### OCC Error Types
 

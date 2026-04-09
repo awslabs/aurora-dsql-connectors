@@ -27,9 +27,9 @@ pub enum OCCType {
 pub struct OCCRetryConfig {
     #[builder(default = "3")]
     max_attempts: u32,
-    #[builder(default = "100")]
+    #[builder(default = "1")]
     base_delay_ms: u64,
-    #[builder(default = "5000")]
+    #[builder(default = "100")]
     max_delay_ms: u64,
     #[builder(default = "0.25")]
     jitter_factor: f64,
@@ -52,8 +52,8 @@ impl OCCRetryConfigBuilder {
         }
 
         if let Some(max) = self.max_delay_ms {
-            if max > 60_000 {
-                return Err("max_delay_ms exceeds 60 seconds".into());
+            if max > 100 {
+                return Err("max_delay_ms exceeds 100ms".into());
             }
         }
 
@@ -126,25 +126,16 @@ where
 {
     let max_attempts = config.max_attempts;
     let mut attempt = 1;
-    let mut last_occ_type: Option<OCCType> = None;
 
     loop {
         match f().await {
             Ok(val) => {
-                if attempt > 1 {
-                    log::info!(
-                        "OCC transaction succeeded after retry, type={:?}, attempt={}, max_attempts={}",
-                        last_occ_type, attempt, max_attempts
-                    );
-                }
                 return Ok(val);
             }
             Err(e) => {
                 let Some(occ_type) = is_occ_error(&e) else {
                     return Err(DsqlError::DatabaseError(e));
                 };
-
-                last_occ_type = Some(occ_type);
 
                 if attempt == max_attempts {
                     log::error!(
@@ -161,135 +152,13 @@ where
 
                 let delay = calculate_backoff(config, attempt);
 
-                log::warn!(
+                log::debug!(
                     "OCC conflict detected, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
                     occ_type, attempt + 1, max_attempts, delay.as_millis()
                 );
 
                 tokio::time::sleep(delay).await;
 
-                attempt += 1;
-            }
-        }
-    }
-}
-
-/// Helper for single-connection retry (reuses same connection).
-async fn transaction_with_retry_impl<F, T>(
-    conn: &mut sqlx::PgConnection,
-    config: Option<&OCCRetryConfig>,
-    f: F,
-) -> Result<T>
-where
-    F: for<'a> Fn(
-            &'a mut sqlx::Transaction<'_, sqlx::Postgres>,
-        ) -> std::pin::Pin<
-            Box<dyn std::future::Future<Output = std::result::Result<T, sqlx::Error>> + Send + 'a>,
-        > + Send,
-    T: Send,
-{
-    let config = config.cloned().unwrap_or_default();
-    let max_attempts = config.max_attempts;
-    let mut attempt = 1;
-    let mut last_occ_type: Option<OCCType> = None;
-
-    loop {
-        let mut tx = conn.begin().await.map_err(DsqlError::DatabaseError)?;
-
-        // OCC errors may occur during execution or at commit; both are retried.
-        match f(&mut tx).await {
-            Ok(val) => {
-                // Attempt commit - OCC errors occur at commit time
-                match tx.commit().await {
-                    Ok(_) => {
-                        if attempt > 1 {
-                            log::info!(
-                                "OCC transaction succeeded after retry, type={:?}, attempt={}, max_attempts={}",
-                                last_occ_type, attempt, max_attempts
-                            );
-                        }
-                        return Ok(val);
-                    }
-                    Err(e) => {
-                        log::debug!(
-                            "Commit failed: error={}, attempt={}/{}, will_retry={}",
-                            e,
-                            attempt,
-                            max_attempts,
-                            attempt < max_attempts
-                        );
-
-                        let Some(occ_type) = is_occ_error(&e) else {
-                            return Err(DsqlError::DatabaseError(e));
-                        };
-
-                        last_occ_type = Some(occ_type);
-
-                        if attempt == max_attempts {
-                            log::error!(
-                                "OCC transaction retry exhausted on commit, type={:?}, attempts={}",
-                                occ_type,
-                                max_attempts
-                            );
-                            return Err(DsqlError::OCCRetryExhausted {
-                                attempts: max_attempts,
-                                occ_type,
-                                source: Box::new(DsqlError::DatabaseError(e)),
-                            });
-                        }
-
-                        let delay = calculate_backoff(&config, attempt);
-
-                        log::warn!(
-                            "OCC conflict on commit, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                            occ_type, attempt + 1, max_attempts, delay.as_millis()
-                        );
-
-                        tokio::time::sleep(delay).await;
-                        attempt += 1;
-                    }
-                }
-            }
-            Err(e) => {
-                // Explicitly rollback before handling the error
-                if let Err(rollback_err) = tx.rollback().await {
-                    log::warn!(
-                        "Rollback failed: original_error={}, rollback_error={}, attempt={}/{}",
-                        e,
-                        rollback_err,
-                        attempt,
-                        max_attempts
-                    );
-                }
-
-                // Check if this is an OCC error from the closure execution
-                let Some(occ_type) = is_occ_error(&e) else {
-                    return Err(DsqlError::DatabaseError(e));
-                };
-
-                last_occ_type = Some(occ_type);
-
-                if attempt == max_attempts {
-                    log::error!(
-                        "OCC transaction retry exhausted during execution, type={:?}, attempts={}",
-                        occ_type,
-                        max_attempts
-                    );
-                    return Err(DsqlError::OCCRetryExhausted {
-                        attempts: max_attempts,
-                        occ_type,
-                        source: Box::new(DsqlError::DatabaseError(e)),
-                    });
-                }
-
-                let delay = calculate_backoff(&config, attempt);
-
-                log::warn!(
-                    "OCC conflict during execution, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                    occ_type, attempt + 1, max_attempts, delay.as_millis()
-                );
-
-                tokio::time::sleep(delay).await;
                 attempt += 1;
             }
         }
@@ -356,7 +225,6 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
         let config = config.cloned().unwrap_or_default();
         let max_attempts = config.max_attempts;
         let mut attempt = 1;
-        let mut last_occ_type: Option<OCCType> = None;
 
         loop {
             // Get fresh connection from pool on each retry
@@ -367,12 +235,6 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                     // Attempt commit - OCC errors occur at commit time
                     match tx.commit().await {
                         Ok(_) => {
-                            if attempt > 1 {
-                                log::info!(
-                                    "OCC transaction succeeded after retry, type={:?}, attempt={}, max_attempts={}",
-                                    last_occ_type, attempt, max_attempts
-                                );
-                            }
                             return Ok(val);
                         }
                         Err(e) => {
@@ -388,8 +250,6 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                                 return Err(DsqlError::DatabaseError(e));
                             };
 
-                            last_occ_type = Some(occ_type);
-
                             if attempt == max_attempts {
                                 log::error!(
                                     "OCC transaction retry exhausted on commit, type={:?}, attempts={}",
@@ -404,7 +264,7 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
 
                             let delay = calculate_backoff(&config, attempt);
 
-                            log::warn!(
+                            log::debug!(
                                 "OCC conflict on commit, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
                                 occ_type, attempt + 1, max_attempts, delay.as_millis()
                             );
@@ -417,15 +277,19 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                 Err(e) => {
                     // Explicitly rollback before handling the error
                     if let Err(rollback_err) = tx.rollback().await {
-                        log::warn!("Rollback failed during error handling: {}", rollback_err);
+                        log::debug!(
+                            "Rollback failed: original_error={}, rollback_error={}, attempt={}/{}",
+                            e,
+                            rollback_err,
+                            attempt,
+                            max_attempts
+                        );
                     }
 
                     // Check if this is an OCC error from the closure execution
                     let Some(occ_type) = is_occ_error(&e) else {
                         return Err(DsqlError::DatabaseError(e));
                     };
-
-                    last_occ_type = Some(occ_type);
 
                     if attempt == max_attempts {
                         log::error!(
@@ -441,7 +305,7 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
 
                     let delay = calculate_backoff(&config, attempt);
 
-                    log::warn!(
+                    log::debug!(
                         "OCC conflict during execution, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
                         occ_type, attempt + 1, max_attempts, delay.as_millis()
                     );
@@ -474,7 +338,99 @@ impl OCCRetryExt for sqlx::PgConnection {
             > + Send,
         T: Send,
     {
-        transaction_with_retry_impl(self, config, f).await
+        let config = config.cloned().unwrap_or_default();
+        let max_attempts = config.max_attempts;
+        let mut attempt = 1;
+
+        loop {
+            let mut tx = self.begin().await.map_err(DsqlError::DatabaseError)?;
+
+            // OCC errors may occur during execution or at commit; both are retried.
+            match f(&mut tx).await {
+                Ok(val) => {
+                    // Attempt commit - OCC errors occur at commit time
+                    match tx.commit().await {
+                        Ok(_) => {
+                            return Ok(val);
+                        }
+                        Err(e) => {
+                            log::debug!(
+                                "Commit failed: error={}, attempt={}/{}, will_retry={}",
+                                e,
+                                attempt,
+                                max_attempts,
+                                attempt < max_attempts
+                            );
+
+                            let Some(occ_type) = is_occ_error(&e) else {
+                                return Err(DsqlError::DatabaseError(e));
+                            };
+
+                            if attempt == max_attempts {
+                                log::error!(
+                                    "OCC transaction retry exhausted on commit, type={:?}, attempts={}",
+                                    occ_type, max_attempts
+                                );
+                                return Err(DsqlError::OCCRetryExhausted {
+                                    attempts: max_attempts,
+                                    occ_type,
+                                    source: Box::new(DsqlError::DatabaseError(e)),
+                                });
+                            }
+
+                            let delay = calculate_backoff(&config, attempt);
+
+                            log::debug!(
+                                "OCC conflict on commit, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                                occ_type, attempt + 1, max_attempts, delay.as_millis()
+                            );
+
+                            tokio::time::sleep(delay).await;
+                            attempt += 1;
+                        }
+                    }
+                }
+                Err(e) => {
+                    // Explicitly rollback before handling the error
+                    if let Err(rollback_err) = tx.rollback().await {
+                        log::debug!(
+                            "Rollback failed: original_error={}, rollback_error={}, attempt={}/{}",
+                            e,
+                            rollback_err,
+                            attempt,
+                            max_attempts
+                        );
+                    }
+
+                    // Check if this is an OCC error from the closure execution
+                    let Some(occ_type) = is_occ_error(&e) else {
+                        return Err(DsqlError::DatabaseError(e));
+                    };
+
+                    if attempt == max_attempts {
+                        log::error!(
+                            "OCC transaction retry exhausted during execution, type={:?}, attempts={}",
+                            occ_type, max_attempts
+                        );
+                        return Err(DsqlError::OCCRetryExhausted {
+                            attempts: max_attempts,
+                            occ_type,
+                            source: Box::new(DsqlError::DatabaseError(e)),
+                        });
+                    }
+
+                    let delay = calculate_backoff(&config, attempt);
+
+                    log::debug!(
+                        "OCC conflict during execution, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                        occ_type, attempt + 1, max_attempts, delay.as_millis()
+                    );
+
+                    tokio::time::sleep(delay).await;
+                    attempt += 1;
+                }
+            }
+        }
     }
 }
 
@@ -594,12 +550,12 @@ mod tests {
         let config = OCCRetryConfig::default();
 
         let delay1 = calculate_backoff(&config, 1);
-        assert!(delay1 >= Duration::from_millis(100));
-        assert!(delay1 <= Duration::from_millis(125));
+        assert!(delay1 >= Duration::from_millis(1));
+        assert!(delay1 <= Duration::from_millis(2));
 
         let delay2 = calculate_backoff(&config, 2);
-        assert!(delay2 >= Duration::from_millis(200));
-        assert!(delay2 <= Duration::from_millis(250));
+        assert!(delay2 >= Duration::from_millis(2));
+        assert!(delay2 <= Duration::from_millis(3));
     }
 
     #[test]
@@ -607,15 +563,15 @@ mod tests {
         let config = OCCRetryConfig::default();
 
         let delay = calculate_backoff(&config, 10);
-        assert!(delay <= Duration::from_millis(6250)); // max_delay + 25% jitter
+        assert!(delay <= Duration::from_millis(125)); // max_delay(100ms) + 25% jitter
     }
 
     #[test]
     fn test_builder_defaults() {
         let config = OCCRetryConfigBuilder::default().build().unwrap();
         assert_eq!(config.max_attempts, 3);
-        assert_eq!(config.base_delay_ms, 100);
-        assert_eq!(config.max_delay_ms, 5000);
+        assert_eq!(config.base_delay_ms, 1);
+        assert_eq!(config.max_delay_ms, 100);
         assert!((config.jitter_factor - 0.25).abs() < f64::EPSILON);
     }
 
@@ -623,12 +579,12 @@ mod tests {
     fn test_builder_custom_values() {
         let config = OCCRetryConfigBuilder::default()
             .max_attempts(5u32)
-            .base_delay_ms(200u64)
+            .base_delay_ms(10u64)
             .build()
             .unwrap();
         assert_eq!(config.max_attempts, 5);
-        assert_eq!(config.base_delay_ms, 200);
-        assert_eq!(config.max_delay_ms, 5000); // default
+        assert_eq!(config.base_delay_ms, 10);
+        assert_eq!(config.max_delay_ms, 100); // default
     }
 
     #[test]
@@ -833,7 +789,7 @@ mod tests {
     #[test]
     fn test_builder_rejects_excessive_max_delay() {
         let result = OCCRetryConfigBuilder::default()
-            .max_delay_ms(60_001u64)
+            .max_delay_ms(101u64)
             .build();
 
         assert!(result.is_err());

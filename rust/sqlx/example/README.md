@@ -72,7 +72,7 @@ The **preferred example** demonstrates the following operations:
 
 - Opening a connection pool to an Aurora DSQL cluster
 - Creating a table
-- Performing a transactional insert with OCC retry using the `OCCRetryExt` trait ⚠️ transactions must be idempotent
+- Performing a transactional insert with OCC retry using the `OCCRetryExt` trait transactions must be idempotent
 - Opting out of OCC retry for operations that don't need it
 - Running concurrent queries across multiple tokio tasks
 
