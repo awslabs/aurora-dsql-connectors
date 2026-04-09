@@ -20,9 +20,11 @@ pub enum DsqlError {
     #[error("database error: {0}")]
     DatabaseError(#[source] sqlx::Error),
 
-    #[error("OCC retry exhausted after {attempts} attempts: {source}")]
+    #[cfg(feature = "occ")]
+    #[error("OCC retry exhausted after {attempts} attempts (type: {occ_type:?}): {source}")]
     OCCRetryExhausted {
         attempts: u32,
+        occ_type: crate::occ_retry::OCCType,
         #[source]
         source: Box<DsqlError>,
     },

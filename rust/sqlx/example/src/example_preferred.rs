@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{DsqlConnectOptions, OCCRetryExt};
+use aurora_dsql_sqlx_connector::{txn, DsqlConnectOptions, OCCRetryExt};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Executor, Row};
 
@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     // connect_with() verifies connectivity and spawns a background token refresh task.
     let config = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let schema_owned = schema.to_string();
-    let pool = aurora_dsql_sqlx_connector::pool::connect_with(
+    let mut pool = aurora_dsql_sqlx_connector::pool::connect_with(
         &config,
         PgPoolOptions::new()
             .max_connections(10)
@@ -70,17 +70,15 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    // -- Transactional write WITH OCC retry (using trait) --
-    pool.transaction_with_retry(None, |tx| {
-        Box::pin(async move {
-            sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
-                .bind("John Doe")
-                .bind("Anytown")
-                .execute(&mut **tx)
-                .await?;
-            Ok(())
-        })
-    })
+    // -- Transactional write WITH OCC retry (using trait and txn! macro) --
+    pool.transaction_with_retry(None, |tx| txn!({
+        sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
+            .bind("John Doe")
+            .bind("Anytown")
+            .execute(&mut **tx)
+            .await?;
+        Ok(())
+    }))
     .await?;
 
     // Verify the write

@@ -44,23 +44,14 @@ aurora-dsql-sqlx-connector = "0.1.2"
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`); `OCCRetryExt` trait requires both `occ` and `pool` |
-| `pool` | No | sqlx pool helper with background token refresh |
-| `occ-tracing` | No | Optional logging for OCC retry attempts (requires `occ`) |
+| `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`, `OCCType`, `OCCRetryExt` trait for `PgConnection`) |
+| `pool` | No | sqlx pool helper with background token refresh; enables `OCCRetryExt` for `PgPool` (requires both `occ` and `pool`) |
 
 For most applications, enable both features:
 
 ```toml
 [dependencies]
 aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
-```
-
-Enable `occ-tracing` for debugging retry behavior:
-
-```toml
-[dependencies]
-aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ", "occ-tracing"] }
-tracing-subscriber = "0.3"
 ```
 
 ## Configuration Options
@@ -252,15 +243,33 @@ Aurora DSQL uses optimistic concurrency control (OCC). Transactions may fail wit
 
 ### Using the Extension Trait (Recommended)
 
-Import `OCCRetryExt` to add retry methods directly to `PgPool`:
+Import `OCCRetryExt` to add retry methods to `PgPool` or `PgConnection`:
 
 ```rust
 use aurora_dsql_sqlx_connector::OCCRetryExt;
 
-// With default config (3 attempts, exponential backoff)
+// With connection pool
+let mut pool = aurora_dsql_sqlx_connector::pool::connect(
+    "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres"
+).await?;
+
 pool.transaction_with_retry(None, |tx| Box::pin(async move {
     sqlx::query("UPDATE accounts SET balance = balance - 100 WHERE id = $1")
         .bind(account_id)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+})).await?;
+
+// With single connection
+let mut conn = aurora_dsql_sqlx_connector::connection::connect(
+    "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres"
+).await?;
+
+conn.transaction_with_retry(None, |tx| Box::pin(async move {
+    sqlx::query("INSERT INTO users VALUES ($1, $2)")
+        .bind(1)
+        .bind("alice")
         .execute(&mut **tx)
         .await?;
     Ok(())
@@ -275,6 +284,21 @@ let config = OCCRetryConfigBuilder::default()
     .build()?;
 
 pool.transaction_with_retry(Some(&config), |tx| Box::pin(async move {
+    sqlx::query("INSERT INTO products VALUES ($1, $2)")
+        .bind(1)
+        .bind("Widget")
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
+})).await?;
+```
+
+**Simplifying with `txn!` macro:** Hide `Box::pin` boilerplate:
+
+```rust
+use aurora_dsql_sqlx_connector::{txn, OCCRetryExt};
+
+pool.transaction_with_retry(None, |tx| txn!({
     sqlx::query("INSERT INTO users VALUES ($1, $2)")
         .bind(1)
         .bind("alice")
@@ -295,7 +319,7 @@ tx.commit().await?;
 
 ### Manual Retry (Advanced)
 
-For non-pool operations or custom retry logic:
+For custom retry logic or operations that need explicit transaction control:
 
 ```rust
 use aurora_dsql_sqlx_connector::retry_on_occ;
@@ -330,35 +354,27 @@ let config = OCCRetryConfigBuilder::default()
 - Additive jitter: `jitter = delay * random(0..1) * jitter_factor`
 - Capped at `max_delay_ms`
 
-### Optional Retry Logging
+### Retry Logging
 
-Enable the `occ-tracing` feature to log retry attempts:
-
-```toml
-[dependencies]
-aurora-dsql-sqlx-connector = { version = "0.1", features = ["pool", "occ", "occ-tracing"] }
-tracing-subscriber = "0.3"
-```
-
-Configure tracing in your application:
-
-```rust
-tracing_subscriber::fmt()
-    .with_env_filter("info,aurora_dsql_sqlx_connector=warn")
-    .init();
-```
+The connector uses the `log` crate for retry logging. If your application uses any log implementation (e.g., `env_logger`, `tracing-subscriber`), the connector's logs will be captured automatically.
 
 **Log Levels:**
-- `warn`: OCC conflict detected, retrying
-- `info`: Operation succeeded after retry
-- `error`: Max retry attempts exhausted
+- `warn`: OCC conflict detected (includes type: Data/Schema/Unknown), retrying
+- `info`: Operation succeeded after retry (includes type)
+- `error`: Max retry attempts exhausted (includes type)
+- `debug`: Internal details (commit failures, rollback events)
 
-### OCC Error Detection
+### OCC Error Types
 
-Automatically detects these error codes:
-- `40001`: SQLSTATE serialization failure
-- `OC000`: Data conflict
-- `OC001`: Schema conflict
+The connector classifies OCC errors by type for better observability:
+
+| SQLSTATE | OCCType | Description |
+|----------|---------|-------------|
+| `OC000` | `Data` | Data conflict - concurrent modification of same rows |
+| `OC001` | `Schema` | Schema conflict - DDL changes during transaction |
+| `40001` | `Unknown` | Generic serialization failure |
+
+Use `is_occ_error()` to detect and classify errors, or check logs for conflict types.
 
 ## Examples
 

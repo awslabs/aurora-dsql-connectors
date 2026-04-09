@@ -101,13 +101,10 @@ impl DsqlConnectOptions {
                 }
                 "ormPrefix" => orm_prefix = Some(value.to_string()),
                 other => {
-                    #[cfg(feature = "tracing")]
-                    tracing::warn!(
-                        param = other,
-                        "aurora-dsql: ignoring unrecognized connection parameter"
+                    log::debug!(
+                        "aurora-dsql: ignoring unrecognized connection parameter: {}",
+                        other
                     );
-                    #[cfg(not(feature = "tracing"))]
-                    let _ = other;
                 }
             }
         }

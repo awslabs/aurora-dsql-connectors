@@ -18,7 +18,8 @@ The connector pool helper (`aurora_dsql_sqlx_connector::pool::connect`) with `OC
 ## Alternatives
 
 ### `no_connection_pool/`
-Single connection without pooling or automatic OCC retry:
-- `example_no_connection_pool.rs` — Direct connection using `connection::connect()`
+Single connection without pooling:
+- `example_no_connection_pool.rs` — Direct connection using `connection::connect()` with `OCCRetryExt` for transactional retry
 - Best for simple scripts or cases where pooling overhead isn't needed
-- Does not include automatic OCC retry (use `retry_on_occ` manually if needed)
+- Supports automatic OCC retry via `OCCRetryExt` trait on `PgConnection`
+- Does not include background token refresh (connections are valid for token duration only)
