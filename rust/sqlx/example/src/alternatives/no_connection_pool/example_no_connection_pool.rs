@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use aurora_dsql_sqlx_connector::{txn, OCCRetryExt};
 use sqlx::{Executor, Row};
 
 #[tokio::main]
@@ -23,9 +24,18 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    // Insert a row
-    conn.execute("INSERT INTO owner(name, city) VALUES('John Doe', 'Anytown')")
-        .await?;
+    // -- Transactional write WITH OCC retry --
+    conn.transaction_with_retry(None, |tx| {
+        txn!({
+            sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
+                .bind("John Doe")
+                .bind("Anytown")
+                .execute(&mut **tx)
+                .await?;
+            Ok(())
+        })
+    })
+    .await?;
 
     // Query it back
     let row = sqlx::query("SELECT * FROM owner WHERE name = $1")

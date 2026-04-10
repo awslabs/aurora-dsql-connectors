@@ -53,10 +53,7 @@ fn spawn_refresh_task(
                 _ = pool.close_event() => break,
                 _ = interval.tick() => {
                     if let Err(e) = refresh_token(&config, &signer, &sdk_config, &pool).await {
-                        tracing::error!(
-                            error = ?e,
-                            "token refresh failed"
-                        );
+                        log::error!("token refresh failed: {:?}", e);
                     }
                 }
             }

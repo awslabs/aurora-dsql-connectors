@@ -1,9 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-use aurora_dsql_sqlx_connector::{retry_on_occ, DsqlConnectOptions, OCCRetryConfig};
+use aurora_dsql_sqlx_connector::{txn, DsqlConnectOptions, OCCRetryExt};
 use sqlx::postgres::PgPoolOptions;
-use sqlx::{Connection, Executor, Row};
+use sqlx::{Executor, Row};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     // connect_with() verifies connectivity and spawns a background token refresh task.
     let config = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let schema_owned = schema.to_string();
-    let pool = aurora_dsql_sqlx_connector::pool::connect_with(
+    let mut pool = aurora_dsql_sqlx_connector::pool::connect_with(
         &config,
         PgPoolOptions::new()
             .max_connections(10)
@@ -70,20 +70,16 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?;
 
-    // -- Transactional write with OCC retry --
-    let occ_config = OCCRetryConfig::default();
-    retry_on_occ(&occ_config, || async {
-        let mut conn = pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-
-        sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
-            .bind("John Doe")
-            .bind("Anytown")
-            .execute(&mut *tx)
-            .await?;
-
-        tx.commit().await?;
-        Ok(())
+    // -- Transactional write WITH OCC retry (using trait and txn! macro) --
+    pool.transaction_with_retry(None, |tx| {
+        txn!({
+            sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
+                .bind("John Doe")
+                .bind("Anytown")
+                .execute(&mut **tx)
+                .await?;
+            Ok(())
+        })
     })
     .await?;
 
@@ -97,11 +93,14 @@ async fn main() -> anyhow::Result<()> {
     let city: &str = row.get("city");
     println!("Inserted: name={}, city={}", name, city);
 
-    // Clean up
+    // -- Transactional write WITHOUT OCC retry (opt-out) --
+    // For operations that don't need retry, use sqlx directly
+    let mut tx = pool.begin().await?;
     sqlx::query("DELETE FROM owner WHERE name = $1")
         .bind("John Doe")
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
 
     println!("Transactional write completed successfully");
 

@@ -19,4 +19,6 @@ pub use aws_config::Region;
 pub use config::{DsqlConnectOptions, DsqlConnectOptionsBuilder};
 pub use error::{DsqlError, Result};
 #[cfg(feature = "occ")]
-pub use occ_retry::{is_occ_error, retry_on_occ, OCCRetryConfig, OCCRetryConfigBuilder};
+pub use occ_retry::{
+    is_occ_error, retry_on_occ, OCCRetryConfig, OCCRetryConfigBuilder, OCCRetryExt, OCCType,
+};
