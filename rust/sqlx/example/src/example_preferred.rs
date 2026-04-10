@@ -71,14 +71,16 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     // -- Transactional write WITH OCC retry (using trait and txn! macro) --
-    pool.transaction_with_retry(None, |tx| txn!({
-        sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
-            .bind("John Doe")
-            .bind("Anytown")
-            .execute(&mut **tx)
-            .await?;
-        Ok(())
-    }))
+    pool.transaction_with_retry(None, |tx| {
+        txn!({
+            sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
+                .bind("John Doe")
+                .bind("Anytown")
+                .execute(&mut **tx)
+                .await?;
+            Ok(())
+        })
+    })
     .await?;
 
     // Verify the write

@@ -21,10 +21,16 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     let mut pool =
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
 
+    // Cleanup any leftover table from previous runs
+    sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name))
+        .execute(&pool)
+        .await
+        .map_err(DsqlError::DatabaseError)?;
+
     // Setup: create table with a counter
     pool.transaction_with_retry(None, |tx| {
         let t = table_name.clone();
-        Box::pin(async move {
+        txn!({
             sqlx::query(&format!(
                 "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, counter INT NOT NULL)",
                 t
@@ -39,7 +45,7 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     // Initialize counter to 0
     pool.transaction_with_retry(None, |tx| {
         let t = table_name.clone();
-        Box::pin(async move {
+        txn!({
             sqlx::query(&format!("INSERT INTO {} (id, counter) VALUES (1, 0)", t))
                 .execute(&mut **tx)
                 .await?;
@@ -54,7 +60,7 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
         .build()?;
 
     // Spawn 10 concurrent tasks that all read-modify-write the same counter
-    // This creates OCC conflicts that require retry
+    // This creates OCC conflicts (OC000, OC001, 40001) that require retry
     let mut handles = Vec::new();
     for _ in 0..10 {
         let mut pool = pool.clone();
@@ -63,7 +69,7 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
         handles.push(tokio::spawn(async move {
             pool.transaction_with_retry(Some(&config), |tx| {
                 let t = table.clone();
-                Box::pin(async move {
+                txn!({
                     // Read current value
                     let row = sqlx::query(&format!("SELECT counter FROM {} WHERE id = 1", t))
                         .fetch_one(&mut **tx)
@@ -101,7 +107,7 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     // Cleanup
     pool.transaction_with_retry(None, |tx| {
         let t = table_name.clone();
-        Box::pin(async move {
+        txn!({
             sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
                 .execute(&mut **tx)
                 .await?;
@@ -160,7 +166,6 @@ async fn test_connection_occ_retry_with_conflict() -> Result<()> {
     let opts = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let mut pool =
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
-
     // Setup table
     pool.transaction_with_retry(None, |tx| {
         let t = table_name.clone();
@@ -298,6 +303,12 @@ async fn test_retry_exhaustion() -> Result<()> {
     let opts = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let mut pool =
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
+
+    // Cleanup any leftover table from previous runs
+    sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name))
+        .execute(&pool)
+        .await
+        .map_err(DsqlError::DatabaseError)?;
 
     // Setup table
     pool.transaction_with_retry(None, |tx| {
@@ -438,6 +449,12 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
     let opts = DsqlConnectOptions::from_connection_string(&conn_str)?;
     let mut pool =
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
+
+    // Cleanup any leftover table from previous runs
+    sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name))
+        .execute(&pool)
+        .await
+        .map_err(DsqlError::DatabaseError)?;
 
     // Setup table
     pool.transaction_with_retry(None, |tx| {

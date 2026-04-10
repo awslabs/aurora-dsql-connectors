@@ -369,9 +369,9 @@ The connector classifies OCC errors by type for better observability:
 |----------|---------|-------------|
 | `OC000` | `Data` | Data conflict - concurrent modification of same rows |
 | `OC001` | `Schema` | Schema conflict - DDL changes during transaction |
-| `40001` | `Unknown` | Generic serialization failure |
+| `40001` | `Unknown` | Generic serialization failure (parsed for embedded OC000/OC001) |
 
-Use `is_occ_error()` to detect and classify errors, or check logs for conflict types.
+Use `is_occ_error()` to detect and classify errors, or check logs for conflict types. Error codes are included in all retry log messages for better observability.
 
 ## Examples
 

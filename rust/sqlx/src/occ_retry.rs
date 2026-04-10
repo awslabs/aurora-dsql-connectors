@@ -81,18 +81,27 @@ impl Default for OCCRetryConfig {
     }
 }
 
-/// Detect and classify OCC errors. Returns `Some(OCCType)` for OCC errors, `None` otherwise.
-pub fn is_occ_error(err: &sqlx::Error) -> Option<OCCType> {
+/// Detect and classify OCC errors. Returns `Some((OCCType, code))` for OCC errors, `None` otherwise.
+pub fn is_occ_error(err: &sqlx::Error) -> Option<(OCCType, &'static str)> {
     if let sqlx::Error::Database(db_err) = err {
         match db_err.code().as_deref() {
-            Some("OC000") => Some(OCCType::Data),
-            Some("OC001") => Some(OCCType::Schema),
-            Some("40001") => Some(OCCType::Unknown),
-            _ => None,
+            Some("OC000") => return Some((OCCType::Data, "OC000")),
+            Some("OC001") => return Some((OCCType::Schema, "OC001")),
+            Some("40001") => {
+                // Fallback: parse message for embedded OCC type
+                let message = db_err.message();
+                if message.contains("(OC000)") {
+                    return Some((OCCType::Data, "OC000"));
+                } else if message.contains("(OC001)") {
+                    return Some((OCCType::Schema, "OC001"));
+                } else {
+                    return Some((OCCType::Unknown, "40001"));
+                }
+            }
+            _ => return None,
         }
-    } else {
-        None
     }
+    None
 }
 
 pub(crate) fn calculate_backoff(config: &OCCRetryConfig, attempt: u32) -> Duration {
@@ -133,14 +142,15 @@ where
                 return Ok(val);
             }
             Err(e) => {
-                let Some(occ_type) = is_occ_error(&e) else {
+                let Some((occ_type, occ_code)) = is_occ_error(&e) else {
                     return Err(DsqlError::DatabaseError(e));
                 };
 
                 if attempt == max_attempts {
                     log::error!(
-                        "OCC transaction retry exhausted, type={:?}, attempts={}",
+                        "OCC transaction retry exhausted, type={:?}, code={}, attempts={}",
                         occ_type,
+                        occ_code,
                         max_attempts
                     );
                     return Err(DsqlError::OCCRetryExhausted {
@@ -153,8 +163,8 @@ where
                 let delay = calculate_backoff(config, attempt);
 
                 log::debug!(
-                    "OCC conflict detected, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                    occ_type, attempt + 1, max_attempts, delay.as_millis()
+                    "OCC conflict detected, type={:?}, code={}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                    occ_type, occ_code, attempt + 1, max_attempts, delay.as_millis()
                 );
 
                 tokio::time::sleep(delay).await;
@@ -246,14 +256,14 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                                 attempt < max_attempts
                             );
 
-                            let Some(occ_type) = is_occ_error(&e) else {
+                            let Some((occ_type, occ_code)) = is_occ_error(&e) else {
                                 return Err(DsqlError::DatabaseError(e));
                             };
 
                             if attempt == max_attempts {
                                 log::error!(
-                                    "OCC transaction retry exhausted on commit, type={:?}, attempts={}",
-                                    occ_type, max_attempts
+                                    "OCC transaction retry exhausted on commit, type={:?}, code={}, attempts={}",
+                                    occ_type, occ_code, max_attempts
                                 );
                                 return Err(DsqlError::OCCRetryExhausted {
                                     attempts: max_attempts,
@@ -265,8 +275,8 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                             let delay = calculate_backoff(&config, attempt);
 
                             log::debug!(
-                                "OCC conflict on commit, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                                occ_type, attempt + 1, max_attempts, delay.as_millis()
+                                "OCC conflict on commit, type={:?}, code={}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                                occ_type, occ_code, attempt + 1, max_attempts, delay.as_millis()
                             );
 
                             tokio::time::sleep(delay).await;
@@ -287,14 +297,14 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                     }
 
                     // Check if this is an OCC error from the closure execution
-                    let Some(occ_type) = is_occ_error(&e) else {
+                    let Some((occ_type, occ_code)) = is_occ_error(&e) else {
                         return Err(DsqlError::DatabaseError(e));
                     };
 
                     if attempt == max_attempts {
                         log::error!(
-                            "OCC transaction retry exhausted during execution, type={:?}, attempts={}",
-                            occ_type, max_attempts
+                            "OCC transaction retry exhausted during execution, type={:?}, code={}, attempts={}",
+                            occ_type, occ_code, max_attempts
                         );
                         return Err(DsqlError::OCCRetryExhausted {
                             attempts: max_attempts,
@@ -306,8 +316,8 @@ impl OCCRetryExt for sqlx::postgres::PgPool {
                     let delay = calculate_backoff(&config, attempt);
 
                     log::debug!(
-                        "OCC conflict during execution, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                        occ_type, attempt + 1, max_attempts, delay.as_millis()
+                        "OCC conflict during execution, type={:?}, code={}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                        occ_type, occ_code, attempt + 1, max_attempts, delay.as_millis()
                     );
 
                     tokio::time::sleep(delay).await;
@@ -362,14 +372,14 @@ impl OCCRetryExt for sqlx::PgConnection {
                                 attempt < max_attempts
                             );
 
-                            let Some(occ_type) = is_occ_error(&e) else {
+                            let Some((occ_type, occ_code)) = is_occ_error(&e) else {
                                 return Err(DsqlError::DatabaseError(e));
                             };
 
                             if attempt == max_attempts {
                                 log::error!(
-                                    "OCC transaction retry exhausted on commit, type={:?}, attempts={}",
-                                    occ_type, max_attempts
+                                    "OCC transaction retry exhausted on commit, type={:?}, code={}, attempts={}",
+                                    occ_type, occ_code, max_attempts
                                 );
                                 return Err(DsqlError::OCCRetryExhausted {
                                     attempts: max_attempts,
@@ -381,8 +391,8 @@ impl OCCRetryExt for sqlx::PgConnection {
                             let delay = calculate_backoff(&config, attempt);
 
                             log::debug!(
-                                "OCC conflict on commit, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                                occ_type, attempt + 1, max_attempts, delay.as_millis()
+                                "OCC conflict on commit, type={:?}, code={}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                                occ_type, occ_code, attempt + 1, max_attempts, delay.as_millis()
                             );
 
                             tokio::time::sleep(delay).await;
@@ -403,14 +413,14 @@ impl OCCRetryExt for sqlx::PgConnection {
                     }
 
                     // Check if this is an OCC error from the closure execution
-                    let Some(occ_type) = is_occ_error(&e) else {
+                    let Some((occ_type, occ_code)) = is_occ_error(&e) else {
                         return Err(DsqlError::DatabaseError(e));
                     };
 
                     if attempt == max_attempts {
                         log::error!(
-                            "OCC transaction retry exhausted during execution, type={:?}, attempts={}",
-                            occ_type, max_attempts
+                            "OCC transaction retry exhausted during execution, type={:?}, code={}, attempts={}",
+                            occ_type, occ_code, max_attempts
                         );
                         return Err(DsqlError::OCCRetryExhausted {
                             attempts: max_attempts,
@@ -422,8 +432,8 @@ impl OCCRetryExt for sqlx::PgConnection {
                     let delay = calculate_backoff(&config, attempt);
 
                     log::debug!(
-                        "OCC conflict during execution, type={:?}, retrying after backoff, attempt={}/{}, delay_ms={}",
-                        occ_type, attempt + 1, max_attempts, delay.as_millis()
+                        "OCC conflict during execution, type={:?}, code={}, retrying after backoff, attempt={}/{}, delay_ms={}",
+                        occ_type, occ_code, attempt + 1, max_attempts, delay.as_millis()
                     );
 
                     tokio::time::sleep(delay).await;
@@ -507,12 +517,28 @@ mod tests {
 
     #[test]
     fn test_occ_error_detection_sqlstate() {
+        // 40001 without embedded code -> Unknown
         let err = sqlx::Error::Database(Box::new(MockDbError {
             code: Some("40001".to_string()),
             message: "serialization failure".to_string(),
         }));
+        assert_eq!(is_occ_error(&err), Some((OCCType::Unknown, "40001")));
 
-        assert_eq!(is_occ_error(&err), Some(OCCType::Unknown));
+        // 40001 with embedded (OC000) -> Data
+        let err = sqlx::Error::Database(Box::new(MockDbError {
+            code: Some("40001".to_string()),
+            message: "data has been updated by another transaction, please retry: (OC000)"
+                .to_string(),
+        }));
+        assert_eq!(is_occ_error(&err), Some((OCCType::Data, "OC000")));
+
+        // 40001 with embedded (OC001) -> Schema
+        let err = sqlx::Error::Database(Box::new(MockDbError {
+            code: Some("40001".to_string()),
+            message: "schema has been updated by another transaction, please retry: (OC001)"
+                .to_string(),
+        }));
+        assert_eq!(is_occ_error(&err), Some((OCCType::Schema, "OC001")));
     }
 
     #[test]
@@ -522,7 +548,7 @@ mod tests {
             message: "optimistic concurrency failure".to_string(),
         }));
 
-        assert_eq!(is_occ_error(&err), Some(OCCType::Data));
+        assert_eq!(is_occ_error(&err), Some((OCCType::Data, "OC000")));
     }
 
     #[test]
@@ -532,7 +558,7 @@ mod tests {
             message: "transaction conflict".to_string(),
         }));
 
-        assert_eq!(is_occ_error(&err), Some(OCCType::Schema));
+        assert_eq!(is_occ_error(&err), Some((OCCType::Schema, "OC001")));
     }
 
     #[test]
@@ -805,8 +831,8 @@ mod tests {
     fn test_builder_accepts_valid_config() {
         let result = OCCRetryConfigBuilder::default()
             .max_attempts(5u32)
-            .base_delay_ms(100u64)
-            .max_delay_ms(5000u64)
+            .base_delay_ms(10u64)
+            .max_delay_ms(50u64)
             .jitter_factor(0.25)
             .build();
 

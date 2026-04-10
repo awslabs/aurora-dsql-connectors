@@ -25,14 +25,16 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     // -- Transactional write WITH OCC retry --
-    conn.transaction_with_retry(None, |tx| txn!({
-        sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
-            .bind("John Doe")
-            .bind("Anytown")
-            .execute(&mut **tx)
-            .await?;
-        Ok(())
-    }))
+    conn.transaction_with_retry(None, |tx| {
+        txn!({
+            sqlx::query("INSERT INTO owner(name, city) VALUES($1, $2)")
+                .bind("John Doe")
+                .bind("Anytown")
+                .execute(&mut **tx)
+                .await?;
+            Ok(())
+        })
+    })
     .await?;
 
     // Query it back
