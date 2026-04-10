@@ -237,6 +237,7 @@ $config = new DsqlConfig(
 ```bash
 cd example && composer install && cd ..
 export CLUSTER_ENDPOINT=your-cluster.dsql.us-east-1.on.aws
+export CLUSTER_USER=admin
 php example/src/example_preferred.php
 ```
 
