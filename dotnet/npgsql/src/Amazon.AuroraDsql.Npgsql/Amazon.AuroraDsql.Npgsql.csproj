@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="Npgsql" Version="10.0.2" />
     <PackageReference Include="AWSSDK.DSQL" Version="4.0.9.6" />
-    <PackageReference Include="AWSSDK.Core" Version="4.0.3.28" />
+    <PackageReference Include="AWSSDK.Core" Version="4.0.3.29" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.5" />
   </ItemGroup>
 
