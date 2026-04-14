@@ -12,7 +12,7 @@ const NON_ADMIN_SCHEMA = "myschema";
 async function getConnection(clusterEndpoint, user) {
   const client = new AuroraDSQLClient({
     host: clusterEndpoint,
-    user: user,
+    user: user
   });
 
   await client.connect();
@@ -33,7 +33,10 @@ async function example() {
       await client.query("SET search_path=" + NON_ADMIN_SCHEMA);
     }
 
-    // Create a new table
+    // Use transactionWithRetry() to handle OCC conflicts
+    // Wraps operations in BEGIN/COMMIT with automatic retry
+
+    // Create a new table (DDL - outside transaction)
     await client.query(`CREATE TABLE IF NOT EXISTS owner (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name VARCHAR(30) NOT NULL,
@@ -41,11 +44,13 @@ async function example() {
       telephone VARCHAR(20)
     )`);
 
-    // Insert some data
-    await client.query(
-      "INSERT INTO owner(name, city, telephone) VALUES($1, $2, $3)",
-      ["John Doe", "Anytown", "555-555-1900"]
-    );
+    // Insert data with OCC retry
+    await client.transactionWithRetry(async (c) => {
+      await c.query(
+        "INSERT INTO owner(name, city, telephone) VALUES($1, $2, $3)",
+        ["John Doe", "Anytown", "555-555-1900"]
+      );
+    });
 
     // Check that data is inserted by reading it back
     const result = await client.query(
@@ -54,7 +59,11 @@ async function example() {
     assert.deepEqual(result.rows[0].city, "Anytown");
     assert.notEqual(result.rows[0].id, null);
 
-    await client.query("DELETE FROM owner where name='John Doe'");
+    // Delete with OCC retry
+    await client.transactionWithRetry(async (c) => {
+      await c.query("DELETE FROM owner where name='John Doe'");
+    });
+
     console.log("Completed successfully");
   } catch (error) {
     console.error(error);

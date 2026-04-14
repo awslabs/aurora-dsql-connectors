@@ -2,19 +2,21 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- Required for pg library query overload compatibility */
 import { Client, QueryResult, QueryResultRow, QueryConfig, QueryArrayConfig, QueryConfigValues, QueryArrayResult, Submittable } from "pg";
 import { AuroraDSQLConfig } from "./config/aurora-dsql-config.js";
 import { AuroraDSQLUtil } from "./aurora-dsql-util.js";
 import {
   DEFAULT_OCC_CONFIG,
   OccRetryConfig,
+  validateOccConfig,
   executeWithRetry,
   OccRetryEvent,
   OccRetryExhaustedEvent
 } from "./occ-retry.js";
 
 // Extended QueryConfig to support skipRetry option
-interface QueryConfigWithRetry<I = any[]> extends QueryConfig<I> {
+export interface QueryConfigWithRetry<I = any[]> extends QueryConfig<I> {
   skipRetry?: boolean;
 }
 
@@ -35,6 +37,7 @@ class AuroraDSQLClient extends Client {
     // Initialize OCC retry config if provided
     if (dsqlConfig.occ) {
       this.occConfig = { ...DEFAULT_OCC_CONFIG, ...dsqlConfig.occ };
+      validateOccConfig(this.occConfig);
     }
   }
 
@@ -79,16 +82,16 @@ class AuroraDSQLClient extends Client {
   ): Promise<QueryResult<R>>;
   override query<R extends any[] = any[], I = any[]>(
     queryConfig: QueryArrayConfig<I>,
-    callback: (err: Error, result: QueryArrayResult<R>) => void,
+    callback: (err: Error | null, result: QueryArrayResult<R>) => void,
   ): void;
   override query<R extends QueryResultRow = any, I = any[]>(
     queryTextOrConfig: string | QueryConfigWithRetry<I>,
-    callback: (err: Error, result: QueryResult<R>) => void,
+    callback: (err: Error | null, result: QueryResult<R>) => void,
   ): void;
   override query<R extends QueryResultRow = any, I = any[]>(
     queryText: string,
     values: QueryConfigValues<I>,
-    callback: (err: Error, result: QueryResult<R>) => void,
+    callback: (err: Error | null, result: QueryResult<R>) => void,
   ): void;
 
   // Implementation
@@ -167,27 +170,36 @@ class AuroraDSQLClient extends Client {
       enabled: true
     };
 
-    return executeWithRetry(
-      async () => {
-        await super.query('BEGIN');
-        try {
-          const result = await callback(this);
-          await super.query('COMMIT');
-          return result;
-        } catch (error) {
+    // Temporarily disable query-level retry inside transaction to avoid double-retry
+    const savedOccConfig = this.occConfig;
+    this.occConfig = undefined;
+
+    try {
+      return await executeWithRetry(
+        async () => {
+          await super.query('BEGIN');
           try {
-            await super.query('ROLLBACK');
-          } catch (rollbackError) {
-            console.debug(
-              `Rollback failed: original_error=${error}, rollback_error=${rollbackError}`
-            );
+            const result = await callback(this);
+            await super.query('COMMIT');
+            return result;
+          } catch (error) {
+            try {
+              await super.query('ROLLBACK');
+            } catch (rollbackError) {
+              console.debug(
+                `Rollback failed: original_error=${error}, rollback_error=${rollbackError}`
+              );
+            }
+            throw error;
           }
-          throw error;
-        }
-      },
-      effectiveConfig,
-      (event) => this.emitOccEvent(event)
-    );
+        },
+        effectiveConfig,
+        (event) => this.emitOccEvent(event)
+      );
+    } finally {
+      // Restore query-level retry config
+      this.occConfig = savedOccConfig;
+    }
   }
 }
 

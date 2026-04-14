@@ -11,7 +11,8 @@ import {
   DEFAULT_OCC_CONFIG,
   OccRetryConfig,
   OccRetryEvent,
-  OccRetryExhaustedEvent
+  OccRetryExhaustedEvent,
+  validateOccConfig
 } from '../src/occ-retry';
 
 // Mock database error helper
@@ -95,10 +96,11 @@ describe('OCC Retry - Core Feature Tests', () => {
       expect(delay3).toBeLessThanOrEqual(51);
     });
 
-    it('should respect maxDelayMs cap', () => {
+    it('should respect maxDelayMs cap with jitter', () => {
       const delay = calculateBackoff(config, 10);
-      // 10 * 2^9 = 5120ms, but capped at 100ms + jitter (25ms) = max 125ms
-      expect(delay).toBeLessThanOrEqual(126);
+      // 10 * 2^9 = 5120ms, capped at 100ms, then jitter added (up to 25ms)
+      expect(delay).toBeGreaterThanOrEqual(100);
+      expect(delay).toBeLessThanOrEqual(125);
     });
 
     it('should work with zero jitter', () => {
@@ -288,6 +290,88 @@ describe('OCC Retry - Core Feature Tests', () => {
       expect(OCCType.Data).toBe('Data');
       expect(OCCType.Schema).toBe('Schema');
       expect(OCCType.Unknown).toBe('Unknown');
+    });
+  });
+
+  describe('validateOccConfig', () => {
+    it('should accept valid config', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 1,
+        maxDelayMs: 100,
+        jitterFactor: 0.25
+      })).not.toThrow();
+    });
+
+    it('should reject maxAttempts less than 1', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 0,
+        baseDelayMs: 1,
+        maxDelayMs: 100,
+        jitterFactor: 0.25
+      })).toThrow('occ.maxAttempts must be between 1 and 100');
+    });
+
+    it('should reject maxAttempts greater than 100', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 101,
+        baseDelayMs: 1,
+        maxDelayMs: 100,
+        jitterFactor: 0.25
+      })).toThrow('occ.maxAttempts must be between 1 and 100');
+    });
+
+    it('should reject baseDelayMs less than 1', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 0,
+        maxDelayMs: 100,
+        jitterFactor: 0.25
+      })).toThrow('occ.baseDelayMs must be at least 1');
+    });
+
+    it('should reject maxDelayMs greater than 100', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 1,
+        maxDelayMs: 101,
+        jitterFactor: 0.25
+      })).toThrow('occ.maxDelayMs must not exceed 100');
+    });
+
+    it('should reject maxDelayMs less than baseDelayMs', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 50,
+        maxDelayMs: 10,
+        jitterFactor: 0.25
+      })).toThrow('occ.maxDelayMs must be >= occ.baseDelayMs');
+    });
+
+    it('should reject jitterFactor less than 0', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 1,
+        maxDelayMs: 100,
+        jitterFactor: -0.1
+      })).toThrow('occ.jitterFactor must be between 0 and 1');
+    });
+
+    it('should reject jitterFactor greater than 1', () => {
+      expect(() => validateOccConfig({
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 1,
+        maxDelayMs: 100,
+        jitterFactor: 1.5
+      })).toThrow('occ.jitterFactor must be between 0 and 1');
     });
   });
 });

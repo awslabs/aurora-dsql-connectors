@@ -137,6 +137,35 @@ await client.end();
 
 All other parameters from [Client](https://node-postgres.com/apis/client) / [Pool](https://node-postgres.com/apis/pool) are supported.
 
+### OCC Retry
+
+Aurora DSQL uses Optimistic Concurrency Control (OCC). The connector provides automatic retry on OCC conflicts (error codes: OC000, OC001, 40001).
+
+```typescript
+const pool = new AuroraDSQLPool({
+  host: "<CLUSTER_ENDPOINT>",
+  user: "admin",
+  occ: {
+    enabled: true,     // Automatically retry on OCC conflicts
+    maxAttempts: 3,    // Optional: defaults shown
+    baseDelayMs: 1,
+    maxDelayMs: 100,
+    jitterFactor: 0.25
+  }
+});
+
+// All queries automatically retry
+await pool.query("INSERT INTO accounts VALUES($1, $2)", [1, 100]);
+
+// Opt-out per query
+await pool.query({ text: "SELECT * FROM accounts", skipRetry: true });
+
+// Explicit transaction retry (works with both pool and client)
+await pool.transactionWithRetry(async (c) => {
+  await c.query("UPDATE accounts SET balance = balance - 10 WHERE id = $1", [1]);
+});
+```
+
 ## Authentication
 
 The connector automatically handles DSQL authentication by generating tokens using the DSQL client token generator. If the AWS region is not provided, it will be automatically parsed from the hostname provided.

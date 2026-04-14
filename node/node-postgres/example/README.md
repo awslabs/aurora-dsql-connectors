@@ -11,7 +11,7 @@ you to interact with PostgreSQL databases using JavaScript code.
 
 ## About the code example
 
-The example demonstrates a flexible connection approach that works for both admin and non-admin users:
+The example demonstrates OCC retry and a flexible connection approach that works for both admin and non-admin users:
 
 - When connecting as an **admin user**, the example uses the `public` schema and generates an admin authentication
   token.
@@ -19,6 +19,10 @@ The example demonstrates a flexible connection approach that works for both admi
   authentication token.
 
 The code automatically detects the user type and adjusts its behavior accordingly.
+
+## OCC Automatic Retry
+
+Aurora DSQL uses Optimistic Concurrency Control (OCC). This connector provides automatic retry via `occ: { enabled: true }` config (pool or client level) or `transactionWithRetry()` method. See examples for usage.
 
 ## ⚠️ Important
 

@@ -2,6 +2,7 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
+/* eslint-disable @typescript-eslint/no-explicit-any -- Required for untyped pg error properties */
 
 /**
  * OCC error type classification
@@ -90,6 +91,27 @@ export const DEFAULT_OCC_CONFIG: Required<OccRetryConfig> = {
 };
 
 /**
+ * Validate OCC retry configuration
+ */
+export function validateOccConfig(config: Required<OccRetryConfig>): void {
+  if (config.maxAttempts < 1 || config.maxAttempts > 100) {
+    throw new Error('occ.maxAttempts must be between 1 and 100');
+  }
+  if (config.baseDelayMs < 1) {
+    throw new Error('occ.baseDelayMs must be at least 1');
+  }
+  if (config.maxDelayMs > 100) {
+    throw new Error('occ.maxDelayMs must not exceed 100');
+  }
+  if (config.maxDelayMs < config.baseDelayMs) {
+    throw new Error('occ.maxDelayMs must be >= occ.baseDelayMs');
+  }
+  if (config.jitterFactor < 0 || config.jitterFactor > 1) {
+    throw new Error('occ.jitterFactor must be between 0 and 1');
+  }
+}
+
+/**
  * Detect if error is an OCC error and classify it
  *
  * @param error - Database error to check
@@ -118,11 +140,11 @@ export function isOccError(error: Error): OccErrorInfo | null {
     const message = dbError.message || '';
 
     // Parse message for embedded OCC codes
-    if (message.includes('OC000')) {
+    if (message.includes('(OC000)')) {
       return { type: OCCType.Data, code: 'OC000' };
     }
 
-    if (message.includes('OC001')) {
+    if (message.includes('(OC001)')) {
       return { type: OCCType.Schema, code: 'OC001' };
     }
 
@@ -136,9 +158,6 @@ export function isOccError(error: Error): OccErrorInfo | null {
 /**
  * Calculate exponential backoff delay with jitter
  *
- * Formula: delay = min(baseDelayMs * 2^(attempt-1) + jitter, maxDelayMs)
- * Jitter: random(0, delay * jitterFactor)
- *
  * @param config - Retry configuration
  * @param attempt - Current attempt number (1-based)
  * @returns Calculated delay in milliseconds
@@ -147,16 +166,11 @@ export function calculateBackoff(
   config: Required<OccRetryConfig>,
   attempt: number
 ): number {
-  // Exponential backoff: baseDelayMs * 2^(attempt-1)
-  const exponentialDelay = config.baseDelayMs * Math.pow(2, attempt - 1);
-
-  // Calculate jitter: random value between 0 and (delay * jitterFactor)
-  const jitterRange = exponentialDelay * config.jitterFactor;
-  const jitter = Math.random() * jitterRange;
-
-  // Apply jitter and cap at maxDelayMs
-  const delayWithJitter = exponentialDelay + jitter;
-  return Math.min(Math.round(delayWithJitter), config.maxDelayMs);
+  const exponent = Math.min(attempt - 1, 31); // Cap at 2^31 to prevent overflow
+  const exponentialDelay = config.baseDelayMs * Math.pow(2, exponent);
+  const cappedDelay = Math.min(exponentialDelay, config.maxDelayMs);
+  const jitter = Math.random() * cappedDelay * config.jitterFactor;
+  return Math.round(cappedDelay + jitter);
 }
 
 /**

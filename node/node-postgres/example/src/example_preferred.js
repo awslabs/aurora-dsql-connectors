@@ -15,6 +15,13 @@ function createPool(clusterEndpoint, user) {
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    occ: {
+      enabled: true,        // Enable automatic retry for all queries
+      maxAttempts: 3,       // Optional (default: 3)
+      baseDelayMs: 1,       // Optional (default: 1)
+      maxDelayMs: 100,      // Optional (default: 100)
+      jitterFactor: 0.25    // Optional (default: 0.25)
+    }
   });
 }
 
@@ -33,6 +40,8 @@ async function example() {
   const pool = createPool(clusterEndpoint, user);
 
   try {
+    // OCC retry is enabled - all queries automatically retry on conflicts
+
     // Run concurrent queries using the connection pool
     const workers = [];
     for (let i = 1; i <= NUM_CONCURRENT_QUERIES; i++) {
@@ -41,6 +50,9 @@ async function example() {
 
     // Wait for all workers to complete
     await Promise.all(workers);
+
+    // Opt-out per query using QueryConfig
+    await pool.query({ text: "SELECT 1", skipRetry: true });
 
     console.log("Connection pool with concurrent connections exercised successfully");
   } catch (error) {

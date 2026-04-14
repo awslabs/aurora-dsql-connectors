@@ -395,4 +395,127 @@ describe("AuroraDSQLPool", () => {
       );
     });
   });
+
+  describe("OCC retry integration", () => {
+    let pool: AuroraDSQLPool;
+    let mockQuery: jest.Mock;
+
+    beforeEach(() => {
+      mockQuery = jest.fn();
+      mockPool.prototype.query = mockQuery;
+
+      mockAuroraDSQLUtil.parsePgConfig.mockReturnValueOnce({
+        host: "example.dsql.us-east-1.on.aws",
+        user: "admin",
+        port: 5432,
+        database: "postgres",
+        region: "us-east-1",
+        profile: "default",
+        ssl: { rejectUnauthorized: true },
+        occ: { enabled: true, maxAttempts: 3, baseDelayMs: 1, maxDelayMs: 10, jitterFactor: 0 }
+      });
+
+      pool = new AuroraDSQLPool({
+        host: "example.dsql.us-east-1.on.aws",
+        user: "admin",
+        occ: { enabled: true, maxAttempts: 3, baseDelayMs: 1, maxDelayMs: 10, jitterFactor: 0 }
+      });
+    });
+
+    it("should retry query on OCC conflict and succeed", async () => {
+      const occError = new Error("conflict") as any;
+      occError.code = "OC000";
+
+      mockQuery
+        .mockRejectedValueOnce(occError)
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] });
+
+      const result = await pool.query("INSERT INTO accounts VALUES($1)", [1]);
+
+      expect(mockQuery).toHaveBeenCalledTimes(2);
+      expect(result.rows).toEqual([{ id: 1 }]);
+    });
+
+    it("should skip retry when skipRetry is true", async () => {
+      const occError = new Error("conflict") as any;
+      occError.code = "OC000";
+
+      mockQuery.mockRejectedValueOnce(occError);
+
+      await expect(pool.query({ text: "SELECT 1", skipRetry: true })).rejects.toThrow("conflict");
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not retry on non-OCC errors", async () => {
+      const uniqueViolation = new Error("unique violation") as any;
+      uniqueViolation.code = "23505";
+
+      mockQuery.mockRejectedValueOnce(uniqueViolation);
+
+      await expect(pool.query("INSERT INTO accounts VALUES(1)")).rejects.toThrow("unique violation");
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("should retry transaction on OCC conflict", async () => {
+      const occError = new Error("conflict") as any;
+      occError.code = "OC000";
+
+      const mockConnect = jest.fn();
+      const mockClient = {
+        query: jest.fn(),
+        release: jest.fn()
+      };
+
+      mockPool.prototype.connect = mockConnect;
+      mockConnect.mockResolvedValue(mockClient);
+
+      // Mock pool options
+      (pool as any).options = {
+        host: "example.dsql.us-east-1.on.aws",
+        user: "admin"
+      };
+
+      mockAuroraDSQLUtil.getDSQLToken.mockResolvedValue("mock-token");
+
+      let attempts = 0;
+      mockClient.query.mockImplementation(async (sql: string) => {
+        if (sql === 'BEGIN') return { rows: [] };
+        if (sql === 'COMMIT') {
+          attempts++;
+          if (attempts === 1) throw occError;
+          return { rows: [] };
+        }
+        if (sql === 'ROLLBACK') return { rows: [] };
+        return { rows: [{ id: 1 }] };
+      });
+
+      const result = await pool.transactionWithRetry(async (c) => {
+        await c.query("INSERT INTO accounts VALUES(1)");
+        return "success";
+      });
+
+      expect(result).toBe("success");
+      expect(attempts).toBe(2);
+      expect(mockClient.release).toHaveBeenCalled();
+    });
+
+    it("should validate occ config on initialization", () => {
+      mockAuroraDSQLUtil.parsePgConfig.mockReturnValueOnce({
+        host: "example.dsql.us-east-1.on.aws",
+        user: "admin",
+        port: 5432,
+        database: "postgres",
+        region: "us-east-1",
+        profile: "default",
+        ssl: { rejectUnauthorized: true },
+        occ: { enabled: true, jitterFactor: 2 }
+      });
+
+      expect(() => new AuroraDSQLPool({
+        host: "example.dsql.us-east-1.on.aws",
+        user: "admin",
+        occ: { enabled: true, jitterFactor: 2 }
+      })).toThrow('occ.jitterFactor must be between 0 and 1');
+    });
+  });
 });

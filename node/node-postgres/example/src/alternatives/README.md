@@ -1,6 +1,6 @@
 # Alternative Examples
 
-The recommended approach is `example_preferred.ts` in the parent directory, which uses AuroraDSQLPool with the Aurora DSQL Node.js Connector.
+The recommended approach is `example_preferred.js` in the parent directory, which uses AuroraDSQLPool with the Aurora DSQL Node.js Connector.
 
 ## Why Connection Pooling with the Connector?
 
@@ -27,8 +27,8 @@ The connector + pool combination handles this automatically:
 
 ### `pool/`
 Other pool configurations:
-- `example_with_nonconcurrent_connection_pool.ts` - Sequential pool usage
+- `example_with_nonconcurrent_connection_pool.js` - Sequential pool usage
 
 ### `no_connection_pool/`
 Examples without pooling:
-- `example_with_no_connection_pool.ts` - Single connection with connector
+- `example_with_no_connection_pool.js` - Single connection with `transactionWithRetry()` for OCC handling
