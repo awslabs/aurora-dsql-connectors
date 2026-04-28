@@ -20,7 +20,8 @@ pub async fn connect_with(
     config: &DsqlConnectOptions,
     pool_options: PgPoolOptions,
 ) -> Result<PgPool> {
-    let sdk_config = crate::config::load_aws_config(config.profile()).await;
+    let sdk_config =
+        crate::config::load_aws_config(config.profile(), config.credentials_provider()).await;
     let host = config.resolve_host(&sdk_config)?;
     let region = config.resolve_region(&sdk_config)?;
     let signer =

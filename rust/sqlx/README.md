@@ -22,14 +22,16 @@ For information about creating an Aurora DSQL cluster, see the [Getting started 
 
 ### Credentials Resolution
 
-The connector uses the [AWS SDK for Rust default credential chain](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html), which resolves credentials in the following order:
+By default, the connector uses the [AWS SDK for Rust default credential chain](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/credproviders.html), which resolves credentials in the following order:
 
 1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN`)
 2. **Shared credentials file** (`~/.aws/credentials`) with optional profile via `AWS_PROFILE` or `profile` config option
 3. **Shared config file** (`~/.aws/config`)
 4. **IAM role for Amazon EC2/ECS/Lambda** (instance metadata or task role)
 
-The first source that provides valid credentials is used. You can override this by specifying `profile` in the connection string for a specific AWS profile.
+The first source that provides valid credentials is used. You can override this by:
+- Specifying `profile` in the connection string for a specific AWS profile
+- Passing a custom `SharedCredentialsProvider` via the builder for programmatic credential control (e.g., assumed IAM roles in Lambda)
 
 ## Installation
 
@@ -68,6 +70,7 @@ These options are parsed from the connection string or set via the builder:
 | `database` | `string` | `"postgres"` | Database name |
 | `port` | `u16` | `5432` | Database port |
 | `profile` | `Option<String>` | `None` | AWS profile name for credentials |
+| `credentials_provider` | `Option<SharedCredentialsProvider>` | `None` | Custom credentials provider (builder only) |
 | `tokenDurationSecs` | `u64` | `900` (15 minutes) | Token validity duration in seconds |
 | `ormPrefix` | `Option<String>` | `None` | ORM prefix for application_name (e.g. `"diesel"` → `"diesel:aurora-dsql-rust-sqlx/{version}"`) |
 
@@ -225,6 +228,33 @@ let opts = DsqlConnectOptionsBuilder::default()
     .build()?;
 
 let mut conn = aurora_dsql_sqlx_connector::connection::connect_with(&opts).await?;
+```
+
+### Custom Credentials Provider
+
+For environments where the default credential chain doesn't apply (e.g., Lambda with assumed roles), pass a custom `SharedCredentialsProvider`:
+
+```rust
+use aurora_dsql_sqlx_connector::{DsqlConnectOptionsBuilder, SharedCredentialsProvider};
+use aws_credential_types::Credentials;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+
+let creds = Credentials::new("AKID", "SECRET", Some("SESSION".into()), None, "assumed-role");
+
+let config = DsqlConnectOptionsBuilder::default()
+    .pg_connect_options(
+        PgConnectOptions::new()
+            .host("foo0bar1baz2quux3quuux4.dsql.us-east-1.on.aws")
+            .username("admin")
+            .database("postgres"),
+    )
+    .credentials_provider(SharedCredentialsProvider::new(creds))
+    .build()?;
+
+let pool = aurora_dsql_sqlx_connector::pool::connect_with(
+    &config,
+    PgPoolOptions::new(),
+).await?;
 ```
 
 ## Token Generation

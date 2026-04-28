@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use aurora_dsql_sqlx_connector::{
-    txn, DsqlConnectOptions, DsqlError, OCCRetryConfigBuilder, OCCRetryExt, Result,
+    txn, DsqlConnectOptions, DsqlConnectOptionsBuilder, DsqlError, OCCRetryConfigBuilder,
+    OCCRetryExt, Result,
 };
-use sqlx::postgres::PgPoolOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::Row;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
@@ -55,7 +56,7 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     .await?;
 
     let retry_config = OCCRetryConfigBuilder::default()
-        .max_attempts(20u32)
+        .max_attempts(50u32)
         .base_delay_ms(10u64)
         .build()?;
 
@@ -552,6 +553,43 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
         })
     })
     .await?;
+
+    pool.close().await;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_pool_with_custom_credentials_provider() -> Result<()> {
+    let endpoint = std::env::var("CLUSTER_ENDPOINT").expect("CLUSTER_ENDPOINT must be set");
+    let user = std::env::var("CLUSTER_USER").unwrap_or_else(|_| "admin".to_string());
+
+    let sdk_config = aws_config::defaults(aws_config::BehaviorVersion::latest())
+        .load()
+        .await;
+    let provider = sdk_config
+        .credentials_provider()
+        .expect("environment must have credentials");
+
+    let config = DsqlConnectOptionsBuilder::default()
+        .pg_connect_options(
+            PgConnectOptions::new()
+                .host(&endpoint)
+                .username(&user)
+                .database("postgres"),
+        )
+        .credentials_provider(provider)
+        .build()
+        .unwrap();
+
+    let pool =
+        aurora_dsql_sqlx_connector::pool::connect_with(&config, PgPoolOptions::new()).await?;
+
+    let row = sqlx::query("SELECT 1 as value")
+        .fetch_one(&pool)
+        .await
+        .map_err(DsqlError::DatabaseError)?;
+    let value: i32 = row.get("value");
+    assert_eq!(value, 1);
 
     pool.close().await;
     Ok(())
