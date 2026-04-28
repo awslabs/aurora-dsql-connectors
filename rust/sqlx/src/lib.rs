@@ -16,6 +16,7 @@ mod token;
 pub(crate) mod util;
 
 pub use aws_config::Region;
+pub use aws_credential_types::provider::SharedCredentialsProvider;
 pub use config::{DsqlConnectOptions, DsqlConnectOptionsBuilder};
 pub use error::{DsqlError, Result};
 #[cfg(feature = "occ")]
