@@ -3,6 +3,7 @@
 
 use crate::{util::ClusterId, DsqlError, Result};
 use aws_config::{Region, SdkConfig};
+use aws_credential_types::provider::SharedCredentialsProvider;
 use derive_builder::Builder;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 #[cfg(feature = "pool")]
@@ -26,6 +27,8 @@ pub struct DsqlConnectOptions {
     token_duration_secs: u64,
     #[builder(default)]
     orm_prefix: Option<String>,
+    #[builder(default)]
+    credentials_provider: Option<SharedCredentialsProvider>,
 }
 
 impl DsqlConnectOptionsBuilder {
@@ -125,6 +128,7 @@ impl DsqlConnectOptions {
             profile,
             token_duration_secs,
             orm_prefix,
+            credentials_provider: None,
         })
     }
 
@@ -133,7 +137,7 @@ impl DsqlConnectOptions {
     /// This is the main entry point for advanced use cases where you need
     /// to supply your own `PgPoolOptions` or manage connections directly.
     pub async fn authenticated_pg_options(&self) -> Result<PgConnectOptions> {
-        let sdk_config = load_aws_config(self.profile()).await;
+        let sdk_config = load_aws_config(self.profile(), self.credentials_provider()).await;
         let host = self.resolve_host(&sdk_config)?;
         let region = self.resolve_region(&sdk_config)?;
         let signer =
@@ -171,6 +175,11 @@ impl DsqlConnectOptions {
     /// AWS profile name, if configured.
     pub(crate) fn profile(&self) -> Option<&str> {
         self.profile.as_deref()
+    }
+
+    /// Custom credentials provider, if configured.
+    pub(crate) fn credentials_provider(&self) -> Option<&SharedCredentialsProvider> {
+        self.credentials_provider.as_ref()
     }
 
     /// Token validity duration in seconds. Defaults to 900s.
@@ -220,11 +229,17 @@ impl DsqlConnectOptions {
     }
 }
 
-/// Load AWS SDK config, optionally using a named profile.
-pub(crate) async fn load_aws_config(profile: Option<&str>) -> SdkConfig {
+/// Load AWS SDK config, optionally using a named profile and/or custom credentials.
+pub(crate) async fn load_aws_config(
+    profile: Option<&str>,
+    credentials_provider: Option<&SharedCredentialsProvider>,
+) -> SdkConfig {
     let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
     if let Some(profile) = profile {
         loader = loader.profile_name(profile);
+    }
+    if let Some(provider) = credentials_provider {
+        loader = loader.credentials_provider(provider.clone());
     }
     loader.load().await
 }
@@ -356,7 +371,7 @@ mod tests {
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?region=us-east-1",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let region = config.resolve_region(&sdk_config)?;
         assert_eq!(region.as_ref(), "us-east-1");
         Ok(())
@@ -368,7 +383,7 @@ mod tests {
             "postgres://admin@example.dsql.us-west-2.on.aws/postgres",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let region = config.resolve_region(&sdk_config)?;
         assert_eq!(region.as_ref(), "us-west-2");
         Ok(())
@@ -380,7 +395,7 @@ mod tests {
             "postgres://admin@abcdefghijklmnopqrstuvwxyz/postgres?region=us-east-1",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let host = config.resolve_host(&sdk_config)?;
         assert_eq!(host, "abcdefghijklmnopqrstuvwxyz.dsql.us-east-1.on.aws");
         Ok(())
@@ -392,7 +407,7 @@ mod tests {
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let host = config.resolve_host(&sdk_config)?;
         assert_eq!(host, "example.dsql.us-east-1.on.aws");
         Ok(())
@@ -428,7 +443,7 @@ mod tests {
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert_eq!(opts.get_host(), "example.dsql.us-east-1.on.aws");
         assert_eq!(opts.get_port(), 5432);
@@ -444,7 +459,7 @@ mod tests {
             "postgres://admin@abcdefghijklmnopqrstuvwxyz/postgres?region=us-east-1",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert_eq!(
             opts.get_host(),
@@ -459,7 +474,7 @@ mod tests {
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let opts = config.build_connect_options(&sdk_config, "test-token")?;
         let app_name = opts
             .get_application_name()
@@ -474,7 +489,7 @@ mod tests {
             "postgres://admin@example.dsql.us-east-1.on.aws/postgres?ormPrefix=my-service",
         )?;
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert!(
             opts.get_application_name()
@@ -511,7 +526,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let sdk_config = load_aws_config(config.profile()).await;
+        let sdk_config = load_aws_config(config.profile(), config.credentials_provider()).await;
         let opts = config.build_connect_options(&sdk_config, "test-token")?;
         assert!(
             matches!(opts.get_ssl_mode(), PgSslMode::VerifyFull),
@@ -548,5 +563,73 @@ mod tests {
             .unwrap();
 
         assert_eq!(config.refresh_interval(), Duration::from_secs(1));
+    }
+
+    // --- credentials_provider tests ---
+
+    #[test]
+    fn test_from_connection_string_has_no_credentials_provider() {
+        let config = DsqlConnectOptions::from_connection_string(
+            "postgres://admin@example.dsql.us-east-1.on.aws/postgres",
+        )
+        .unwrap();
+
+        assert!(config.credentials_provider.is_none());
+    }
+
+    #[test]
+    fn test_builder_with_custom_credentials_provider() {
+        use aws_credential_types::provider::SharedCredentialsProvider;
+        use aws_credential_types::Credentials;
+
+        let creds = Credentials::new("custom_key", "custom_secret", None, None, "test");
+        let provider = SharedCredentialsProvider::new(creds);
+
+        let pg = PgConnectOptions::new()
+            .host("example.dsql.us-east-1.on.aws")
+            .username("admin")
+            .database("postgres");
+
+        let config = DsqlConnectOptionsBuilder::default()
+            .pg_connect_options(pg)
+            .credentials_provider(provider)
+            .build()
+            .unwrap();
+
+        assert!(config.credentials_provider.is_some());
+    }
+
+    #[test]
+    fn test_builder_without_credentials_provider() {
+        let pg = PgConnectOptions::new()
+            .host("example.dsql.us-east-1.on.aws")
+            .username("admin")
+            .database("postgres");
+
+        let config = DsqlConnectOptionsBuilder::default()
+            .pg_connect_options(pg)
+            .build()
+            .unwrap();
+
+        assert!(config.credentials_provider.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_load_aws_config_with_custom_credentials() {
+        use aws_credential_types::provider::{ProvideCredentials, SharedCredentialsProvider};
+        use aws_credential_types::Credentials;
+
+        let creds = Credentials::new("custom_key", "custom_secret", None, None, "test");
+        let provider = SharedCredentialsProvider::new(creds);
+
+        let sdk_config = load_aws_config(None, Some(&provider)).await;
+        let resolved = sdk_config
+            .credentials_provider()
+            .expect("SdkConfig should have a credentials provider")
+            .provide_credentials()
+            .await
+            .expect("should resolve credentials");
+        assert_eq!(resolved.access_key_id(), "custom_key");
+        assert_eq!(resolved.secret_access_key(), "custom_secret");
     }
 }
