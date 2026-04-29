@@ -67,22 +67,22 @@
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.2",
-    "@eslint/js": "^9.37.0",
+    "@eslint/js": "^10.0.1",
     "@jest/globals": "^30.2.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.0",
     "@typescript-eslint/eslint-plugin": "^8.48.0",
     "@typescript-eslint/parser": "^8.48.0",
     "depcheck": "^1.4.7",
-    "eslint": "^9.39.1",
+    "eslint": "^10.2.1",
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-import-x": "^4.16.1",
     "jest": "^30.2.0",
     "postgres": "^3.4.7",
     "publint": "^0.3.16",
     "ts-jest": "^29.4.5",
-    "tsdown": "^0.20.2",
-    "typescript": "^5.9.3"
+    "tsdown": "^0.21.10",
+    "typescript": "^6.0.3"
   },
   "overrides": {
     "fast-xml-parser": "^5.4.1"
