@@ -57,8 +57,12 @@ final class PropertyUtils {
                         "The key and value of the entry cannot be null.");
             }
             String key = entry.getKey().toString();
-            String value = sanitizePropertyValue(entry.getValue().toString());
-            dest.setProperty(key, value);
+            if (entry.getValue() instanceof String) {
+                String value = sanitizePropertyValue((String) entry.getValue());
+                dest.setProperty(key, value);
+            } else {
+                dest.put(key, entry.getValue());
+            }
         }
         return dest;
     }
