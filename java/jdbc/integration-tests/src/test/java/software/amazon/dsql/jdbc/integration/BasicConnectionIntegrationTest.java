@@ -34,6 +34,8 @@ import java.util.Properties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import software.amazon.dsql.jdbc.AuroraDsqlCredentialsManager;
+import software.amazon.dsql.jdbc.PropertyDefinition;
 
 /**
  * Integration tests for basic Aurora DSQL Connector for JDBC connections. These tests require a
@@ -328,6 +330,23 @@ public class BasicConnectionIntegrationTest {
                         "Application name should start with 'aurora-dsql-jdbc/', got: " + appName);
                 System.out.println("Application name: " + appName);
             }
+        }
+    }
+
+    @Test
+    void testConnectionWithPerConnectionCredentialsProvider() throws SQLException {
+        String user = CLUSTER_USER != null ? CLUSTER_USER : "admin";
+
+        Properties props = new Properties();
+        props.setProperty("user", user);
+        props.put(
+                PropertyDefinition.CREDENTIALS_PROVIDER_KEY,
+                AuroraDsqlCredentialsManager.getProvider());
+
+        String url = "jdbc:aws-dsql:postgresql://" + CLUSTER_ENDPOINT + "/postgres";
+
+        try (Connection conn = DriverManager.getConnection(url, props)) {
+            assertConnectionValid(conn);
         }
     }
 

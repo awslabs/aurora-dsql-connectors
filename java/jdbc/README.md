@@ -105,6 +105,40 @@ The connector supports the following connection properties:
 
 **Note:** The database name is specified in the URL path (e.g., `/postgres`). If not specified in the URL, it defaults to `postgres`.
 
+### Credentials Resolution
+
+The driver resolves AWS credentials in the following order:
+
+1. **Per-connection provider** — an `AwsCredentialsProvider` passed in the `Properties` object via `PropertyDefinition.CREDENTIALS_PROVIDER_KEY`
+2. **Profile** — a `ProfileCredentialsProvider` created from the `profile` property
+3. **Global provider** — the provider configured via `AuroraDsqlCredentialsManager.setProvider()` (defaults to the AWS SDK default credential chain)
+
+### Custom Credentials Provider (Per-Connection)
+
+For environments where different connections need different credentials (e.g., multi-tenant Lambda, assumed roles), pass an `AwsCredentialsProvider` directly in the `Properties` object:
+
+```java
+import software.amazon.dsql.jdbc.PropertyDefinition;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
+
+// Create credentials for a specific role
+AwsCredentialsProvider roleCredentials = StsAssumeRoleCredentialsProvider.builder()
+    .refreshRequest(r -> r.roleArn("arn:aws:iam::123456789012:role/MyRole")
+                          .roleSessionName("dsql-session"))
+    .stsClient(stsClient)
+    .build();
+
+Properties props = new Properties();
+props.setProperty("user", "admin");
+props.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, roleCredentials);
+
+Connection conn = DriverManager.getConnection(
+    "jdbc:aws-dsql:postgresql://cluster.dsql.us-east-1.on.aws/postgres", props);
+```
+
+This per-connection approach takes precedence over both the `profile` property and the global `AuroraDsqlCredentialsManager`.
+
 ## Logging
 Enabling logging is a very useful mechanism for troubleshooting any issue one might potentially experience while using the Aurora DSQL Connector for JDBC.
 
