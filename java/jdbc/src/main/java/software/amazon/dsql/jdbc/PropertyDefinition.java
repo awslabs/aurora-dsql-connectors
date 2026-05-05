@@ -150,6 +150,29 @@ public final class PropertyDefinition {
                             + "their name (e.g., 'hibernate'). Max 39 characters.");
 
     /**
+     * Property key for passing a per-connection {@link
+     * software.amazon.awssdk.auth.credentials.AwsCredentialsProvider} via the {@link Properties}
+     * object.
+     *
+     * <p>This property cannot be set via URL query parameters since it requires an object value.
+     * Use {@link Properties#put(Object, Object)} to set it:
+     *
+     * <pre>{@code
+     * Properties props = new Properties();
+     * props.setProperty("user", "admin");
+     * props.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, myCredentialsProvider);
+     * Connection conn = DriverManager.getConnection(url, props);
+     * }</pre>
+     *
+     * <p>When set, this takes precedence over both the {@code profile} property and the global
+     * provider configured via {@link AuroraDsqlCredentialsManager}.
+     *
+     * @see DSQLConnector#connect(String, Properties)
+     * @see AuroraDsqlCredentialsManager
+     */
+    public static final String CREDENTIALS_PROVIDER_KEY = "credentialsProvider";
+
+    /**
      * Specifies the SSL mode for the connection.
      *
      * <p>This property controls how SSL/TLS encryption is negotiated with the server. Aurora DSQL

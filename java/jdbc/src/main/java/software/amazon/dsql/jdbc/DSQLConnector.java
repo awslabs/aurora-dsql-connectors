@@ -65,10 +65,11 @@ import software.amazon.awssdk.services.dsql.model.GenerateAuthTokenRequest;
  * can be sourced from:
  *
  * <ul>
- *   <li>The default AWS profile
+ *   <li>A per-connection {@link AwsCredentialsProvider} passed via the {@link java.util.Properties}
+ *       object using {@link PropertyDefinition#CREDENTIALS_PROVIDER_KEY}
  *   <li>A configurable AWS profile specified via the {@code profile} connection property
- *   <li>A custom credentials provider configured through {@link AuroraDsqlCredentialsManager} for
- *       advanced use cases
+ *   <li>The global provider from {@link AuroraDsqlCredentialsManager} (defaults to the AWS SDK
+ *       default credential chain)
  * </ul>
  *
  * <p>See {@link #connect(String, Properties)} for more details on configuring the driver and the
@@ -185,12 +186,15 @@ public class DSQLConnector implements java.sql.Driver {
      * <p>The driver resolves AWS credentials in the following order:
      *
      * <ol>
+     *   <li>If an {@link AwsCredentialsProvider} is passed in the {@link Properties} object via
+     *       {@link PropertyDefinition#CREDENTIALS_PROVIDER_KEY}, it is used directly
+     *       (per-connection)
      *   <li>If the {@code profile} connection property is specified, credentials are loaded from
      *       that named profile in the AWS credentials file
-     *   <li>If no {@code profile} is specified, the driver uses the credentials provider configured
-     *       via {@link AuroraDsqlCredentialsManager#setProvider(AwsCredentialsProvider)}
-     *   <li>By default, {@link AuroraDsqlCredentialsManager} uses the AWS SDK's default credentials
-     *       provider.
+     *   <li>Otherwise, the driver uses the provider from {@link
+     *       AuroraDsqlCredentialsManager#getProvider()}, which defaults to the AWS SDK default
+     *       credential chain unless overridden via {@link
+     *       AuroraDsqlCredentialsManager#setProvider(AwsCredentialsProvider)}
      * </ol>
      *
      * <h3>Error Scenarios</h3>
@@ -242,10 +246,13 @@ public class DSQLConnector implements java.sql.Driver {
             final Duration tokenDurationInSecond =
                     tokenDuration == 0 ? null : Duration.ofSeconds(tokenDuration);
 
+            // Resolve credentials provider and clean up non-String entry before props reach pgJDBC
+            final AwsCredentialsProvider credentialsProvider = getCredentialsProvider(props);
+            props.remove(PropertyDefinition.CREDENTIALS_PROVIDER_KEY);
+
             // Generate IAM authentication token
             final String authToken;
             try {
-                final AwsCredentialsProvider credentialsProvider = getCredentialsProvider(props);
                 final DsqlUtilities utilities =
                         DsqlUtilities.builder()
                                 .region(regionObj)
@@ -308,7 +315,19 @@ public class DSQLConnector implements java.sql.Driver {
         return ConnUrlParser.extractRegionFromHost(host);
     }
 
-    private AwsCredentialsProvider getCredentialsProvider(final Properties props) {
+    private AwsCredentialsProvider getCredentialsProvider(final Properties props)
+            throws SQLException {
+        final Object perConnection = props.get(PropertyDefinition.CREDENTIALS_PROVIDER_KEY);
+        if (perConnection != null) {
+            if (perConnection instanceof AwsCredentialsProvider) {
+                return (AwsCredentialsProvider) perConnection;
+            }
+            throw new SQLException(
+                    "Property '"
+                            + PropertyDefinition.CREDENTIALS_PROVIDER_KEY
+                            + "' must be an instance of AwsCredentialsProvider, but was: "
+                            + perConnection.getClass().getName());
+        }
         final String profile = PropertyDefinition.PROFILE.get(props);
         if (profile != null) {
             return ProfileCredentialsProvider.create(profile);

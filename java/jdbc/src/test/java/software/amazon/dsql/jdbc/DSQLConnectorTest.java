@@ -442,6 +442,100 @@ class DSQLConnectorTest {
     }
 
     @Test
+    void testConnect_WithPerConnectionCredentialsProvider()
+            throws SQLException, URISyntaxException {
+        // Arrange
+        String url = "jdbc:aws-dsql:postgresql://test-cluster.dsql.us-east-1.on.aws/testdb";
+        Properties info = new Properties();
+        info.setProperty("user", "testuser");
+
+        AwsCredentialsProvider perConnectionProvider = mock(AwsCredentialsProvider.class);
+        info.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, perConnectionProvider);
+
+        Properties copiedProps = new Properties();
+        copiedProps.setProperty("user", "testuser");
+        copiedProps.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, perConnectionProvider);
+
+        propertyUtilsMock.when(() -> PropertyUtils.copyProperties(info)).thenReturn(copiedProps);
+
+        // Mock ConnWrapper to prevent actual network connection
+        Connection mockConnection = mock(Connection.class);
+        try (MockedConstruction<ConnWrapper> connWrapperMock =
+                mockConstruction(
+                        ConnWrapper.class,
+                        (mock, context) -> {
+                            when(mock.makeConnection()).thenReturn(mockConnection);
+                        })) {
+            // Act
+            Connection result = driver.connect(url, info);
+
+            // Assert - connection succeeds without touching the global credentials manager
+            assertNotNull(result);
+            assertEquals(mockConnection, result);
+            credentialsManagerMock.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void testConnect_PerConnectionProviderTakesPrecedenceOverProfile()
+            throws SQLException, URISyntaxException {
+        // Arrange
+        String url = "jdbc:aws-dsql:postgresql://test-cluster.dsql.us-east-1.on.aws/testdb";
+        Properties info = new Properties();
+        info.setProperty("user", "testuser");
+        info.setProperty("profile", "test-profile");
+
+        AwsCredentialsProvider perConnectionProvider = mock(AwsCredentialsProvider.class);
+        info.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, perConnectionProvider);
+
+        Properties copiedProps = new Properties();
+        copiedProps.setProperty("user", "testuser");
+        copiedProps.setProperty("profile", "test-profile");
+        copiedProps.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, perConnectionProvider);
+
+        propertyUtilsMock.when(() -> PropertyUtils.copyProperties(info)).thenReturn(copiedProps);
+
+        // Mock ConnWrapper to prevent actual network connection
+        Connection mockConnection = mock(Connection.class);
+        try (MockedConstruction<ConnWrapper> connWrapperMock =
+                mockConstruction(
+                        ConnWrapper.class,
+                        (mock, context) -> {
+                            when(mock.makeConnection()).thenReturn(mockConnection);
+                        })) {
+            // Act
+            Connection result = driver.connect(url, info);
+
+            // Assert - per-connection provider used, profile and global manager both skipped
+            assertNotNull(result);
+            assertEquals(mockConnection, result);
+            credentialsManagerMock.verifyNoInteractions();
+            profileCredentialsProviderMock.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void testConnect_WrongTypeCredentialsProviderThrowsException()
+            throws SQLException, URISyntaxException {
+        // Arrange
+        String url = "jdbc:aws-dsql:postgresql://test-cluster.dsql.us-east-1.on.aws/testdb";
+        Properties info = new Properties();
+        info.setProperty("user", "testuser");
+        info.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, "com.example.MyProvider");
+
+        Properties copiedProps = new Properties();
+        copiedProps.setProperty("user", "testuser");
+        copiedProps.put(PropertyDefinition.CREDENTIALS_PROVIDER_KEY, "com.example.MyProvider");
+
+        propertyUtilsMock.when(() -> PropertyUtils.copyProperties(info)).thenReturn(copiedProps);
+
+        // Act & Assert
+        SQLException exception = assertThrows(SQLException.class, () -> driver.connect(url, info));
+        assertTrue(exception.getMessage().contains("AwsCredentialsProvider"));
+        assertTrue(exception.getMessage().contains("java.lang.String"));
+    }
+
+    @Test
     void testConnect_WithRegionFromProperties() throws SQLException, URISyntaxException {
         // Arrange
         String url = "jdbc:aws-dsql:postgresql://test-cluster.dsql.us-east-1.on.aws/testdb";

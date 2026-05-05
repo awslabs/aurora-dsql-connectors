@@ -295,6 +295,20 @@ class PropertyUtilsTest {
     }
 
     @Test
+    void testCopyPropertiesPreservesNonStringValues() {
+        Properties source = new Properties();
+        Object objectValue = new Object();
+        source.put("objectKey", objectValue);
+        source.setProperty("stringKey", "stringValue");
+
+        Properties result = PropertyUtils.copyProperties(source);
+
+        assertSame(objectValue, result.get("objectKey"));
+        assertNull(result.getProperty("objectKey"));
+        assertEquals("stringValue", result.getProperty("stringKey"));
+    }
+
+    @Test
     void testNullHandling() {
         // Test null source properties
         assertNotNull(PropertyUtils.copyProperties(null));
