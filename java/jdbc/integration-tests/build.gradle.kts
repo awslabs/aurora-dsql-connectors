@@ -18,7 +18,7 @@ dependencies {
     testImplementation(project(":"))
     testImplementation("software.amazon.awssdk:auth:2.43.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.14.3")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.14.4")
     testRuntimeOnly("org.junit.platform:junit-platform-console-standalone:1.14.3")
 }
 
