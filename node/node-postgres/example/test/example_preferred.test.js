@@ -8,4 +8,4 @@ import { example } from "../src/example_preferred.js";
 
 test("Preferred example (connection pool concurrent)", async () => {
   await example();
-});
+}, 30000);

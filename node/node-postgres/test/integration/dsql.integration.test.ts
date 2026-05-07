@@ -304,4 +304,102 @@ describe("DSQL Integration Tests", () => {
       }
     });
   });
+
+  describe("OCC Retry", () => {
+    test("should retry OCC conflicts with Client", async () => {
+      const client1 = new AuroraDSQLClient({
+        host: clusterEndpoint,
+        user: "admin",
+        logger: (msg) => console.log(`[client1] ${msg}`),
+        transaction: { retry: { maxAttempts: 5, baseDelayMs: 10, jitter: true } },
+      });
+
+      const client2 = new AuroraDSQLClient({
+        host: clusterEndpoint,
+        user: "admin",
+        logger: (msg) => console.log(`[client2] ${msg}`),
+        transaction: { retry: { maxAttempts: 5, baseDelayMs: 10, jitter: true } },
+      });
+
+      try {
+        await client1.connect();
+        await client2.connect();
+        await client1.query("CREATE TABLE IF NOT EXISTS occ_test_client (id INT PRIMARY KEY, value INT)");
+        await client1.query("INSERT INTO occ_test_client (id, value) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET value = 0");
+
+        const updatePromises = [
+          client1.transaction(async (c) => {
+            const result = await c.query("SELECT value FROM occ_test_client WHERE id = 1");
+            const currentValue = result.rows[0].value;
+            await c.query("UPDATE occ_test_client SET value = $1 WHERE id = 1", [currentValue + 1]);
+          }),
+          client2.transaction(async (c) => {
+            const result = await c.query("SELECT value FROM occ_test_client WHERE id = 1");
+            const currentValue = result.rows[0].value;
+            await c.query("UPDATE occ_test_client SET value = $1 WHERE id = 1", [currentValue + 1]);
+          }),
+        ];
+
+        await Promise.all(updatePromises);
+
+        const finalResult = await client1.query("SELECT value FROM occ_test_client WHERE id = 1");
+        expect(finalResult.rows[0].value).toBe(2);
+      } finally {
+        await client1.query("DROP TABLE IF EXISTS occ_test_client");
+        await client1.end();
+        await client2.end();
+      }
+    });
+
+    test("should retry OCC conflicts with Pool", async () => {
+      const pool = new AuroraDSQLPool({
+        host: clusterEndpoint,
+        user: "admin",
+        max: 5,
+        logger: (msg) => console.log(`[pool] ${msg}`),
+        transaction: { retry: { maxAttempts: 10, baseDelayMs: 10, maxDelayMs: 100, jitter: true } },
+      });
+
+      try {
+        await pool.query("CREATE TABLE IF NOT EXISTS occ_test_pool (id INT PRIMARY KEY, value INT)");
+        await pool.query("INSERT INTO occ_test_pool (id, value) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET value = 0");
+
+        const updatePromises = Array.from({ length: 10 }, () =>
+          pool.transaction(async (client) => {
+            const result = await client.query("SELECT value FROM occ_test_pool WHERE id = 1");
+            const currentValue = result.rows[0].value;
+            await client.query("UPDATE occ_test_pool SET value = $1 WHERE id = 1", [currentValue + 1]);
+          })
+        );
+
+        await Promise.all(updatePromises);
+
+        const finalResult = await pool.query("SELECT value FROM occ_test_pool WHERE id = 1");
+        expect(finalResult.rows[0].value).toBe(10);
+      } finally {
+        await pool.query("DROP TABLE IF EXISTS occ_test_pool");
+        await pool.end();
+      }
+    });
+
+    test("should not retry non-OCC errors", async () => {
+      const client = new AuroraDSQLClient({
+        host: clusterEndpoint,
+        user: "admin",
+        transaction: { retry: { maxAttempts: 3 } },
+      });
+
+      try {
+        await client.connect();
+
+        await expect(
+          client.transaction(async (c) => {
+            await c.query("SELECT * FROM nonexistent_table");
+          })
+        ).rejects.toThrow();
+      } finally {
+        await client.end();
+      }
+    });
+  });
 });

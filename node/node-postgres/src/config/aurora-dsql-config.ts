@@ -10,6 +10,21 @@ interface AuroraDSQLConfig extends ClientConfig {
   region?: string;
   tokenDurationSecs?: number;
   customCredentialsProvider?: AwsCredentialIdentity | AwsCredentialIdentityProvider;
+  logger?: (msg: string) => void;
+  transaction?: {
+    retry?: RetryConfig;
+  };
 }
 
-export { AuroraDSQLConfig };
+interface RetryConfig {
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  jitter?: boolean;
+}
+
+interface TransactionOptions {
+  retry?: RetryConfig | false;
+}
+
+export { AuroraDSQLConfig, RetryConfig, TransactionOptions };

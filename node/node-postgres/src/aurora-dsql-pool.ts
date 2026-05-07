@@ -4,7 +4,9 @@
  */
 import { Pool, PoolClient } from "pg";
 import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config.js";
+import { TransactionOptions } from "./config/aurora-dsql-config.js";
 import { AuroraDSQLUtil } from "./aurora-dsql-util.js";
+import { resolveRetryConfig, executeTransaction } from "./occ-retry.js";
 
 class AuroraDSQLPool extends Pool {
   private dsqlConfig?: AuroraDSQLPoolConfig;
@@ -62,6 +64,39 @@ class AuroraDSQLPool extends Pool {
       return super.connect(callback);
     }
     return super.connect();
+  }
+
+  async transaction<T>(
+    callback: (client: PoolClient) => Promise<T>,
+    options?: TransactionOptions,
+  ): Promise<T> {
+    const retryConfig = resolveRetryConfig(this.dsqlConfig?.transaction, options);
+
+    return executeTransaction(async () => {
+      // Get fresh connection from pool on each retry attempt
+      const client = await this.connect();
+      try {
+        await client.query("BEGIN");
+        try {
+          const result = await callback(client);
+          await client.query("COMMIT");
+          return result;
+        } catch (error) {
+          try {
+            await client.query("ROLLBACK");
+          } catch (rollbackError) {
+            this.dsqlConfig?.logger?.(`Failed to rollback transaction: ${rollbackError}`);
+          }
+          throw error;
+        }
+      } finally {
+        try {
+          client.release();
+        } catch (releaseError) {
+          this.dsqlConfig?.logger?.(`Failed to release pool connection: ${releaseError}`);
+        }
+      }
+    }, retryConfig, this.dsqlConfig?.logger);
   }
 }
 

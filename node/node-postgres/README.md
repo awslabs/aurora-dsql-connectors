@@ -35,6 +35,7 @@ The Aurora DSQL Connector for node-postgres is designed to understand these requ
 - **Full TypeScript Support** - Provides full type safety
 - **AWS Credentials Support** - Supports various AWS credential providers (default, profile-based, custom)
 - **Connection Pooling Compatibility** - Works seamlessly with built-in connection pooling
+- **OCC Retry** - Automatic retry with jitter for optimistic concurrency control conflicts
 
 ## Example Application
 
@@ -134,6 +135,8 @@ await client.end();
 | `customCredentialsProvider` | `AwsCredentialIdentity / AwsCredentialIdentityProvider` | No       | Custom AWS credentials provider                          |
 | `profile`                   | `string`                                                | No       | The IAM profile name. Default to "default"               |
 | `tokenDurationSecs`         | `number`                                                | No       | Token expiration time in seconds                         |
+| `logger`                    | `(msg: string) => void`                                 | No       | Optional callback for connector diagnostics              |
+| `transaction`               | `{ retry?: RetryConfig }`                               | No       | Default retry config for `transaction()` calls           |
 
 All other parameters from [Client](https://node-postgres.com/apis/client) / [Pool](https://node-postgres.com/apis/pool) are supported.
 
@@ -148,6 +151,117 @@ For more information on authentication in Aurora DSQL, see the [user guide](http
 - Users named "admin" automatically use admin authentication tokens
 - All other users use regular authentication tokens
 - Tokens are generated dynamically for each connection
+
+## OCC Retry
+
+Aurora DSQL uses optimistic concurrency control (OCC). Transactions may fail with OCC errors when concurrent modifications conflict. The connector provides a `transaction()` method on both `AuroraDSQLPool` and `AuroraDSQLClient` that automatically detects and retries these conflicts.
+
+### Using Pool (Recommended)
+
+```typescript
+import { AuroraDSQLPool } from "@aws/aurora-dsql-node-postgres-connector";
+
+const pool = new AuroraDSQLPool({
+  host: "<CLUSTER_ENDPOINT>",
+  user: "admin",
+  transaction: {
+    retry: { maxAttempts: 5, baseDelayMs: 10 },
+  },
+});
+
+// Transactions are automatically retried on OCC conflict
+const result = await pool.transaction(async (client) => {
+  await client.query("UPDATE accounts SET balance = balance - $1 WHERE id = $2", [100, fromId]);
+  await client.query("UPDATE accounts SET balance = balance + $1 WHERE id = $2", [100, toId]);
+  return client.query("SELECT balance FROM accounts WHERE id = $1", [fromId]);
+});
+```
+
+### Using Client
+
+```typescript
+import { AuroraDSQLClient } from "@aws/aurora-dsql-node-postgres-connector";
+
+const client = new AuroraDSQLClient({
+  host: "<CLUSTER_ENDPOINT>",
+  user: "admin",
+  transaction: {
+    retry: { maxAttempts: 5},
+  },
+});
+await client.connect();
+
+const result = await client.transaction(async (c) => {
+  await c.query("INSERT INTO users (id, name) VALUES (gen_random_uuid(), $1)", ["Alice"]);
+  return c.query("SELECT * FROM users WHERE name = $1", ["Alice"]);
+});
+```
+
+**Opting Out:** For operations that don't need retry, use node-postgres directly:
+
+```typescript
+// Direct usage - no OCC retry
+await client.query("BEGIN");
+await client.query("SELECT * FROM users");
+await client.query("COMMIT");
+```
+
+### OCC Configuration
+
+Retry options can be set at the constructor level (shown above) or overridden per-call:
+
+| Option         | Type      | Default | Description                              |
+|----------------|-----------|---------|------------------------------------------|
+| `maxAttempts`  | `number`  | `3`     | Total attempts (must be a positive integer) |
+| `baseDelayMs`  | `number`  | `1`     | Base delay between retries (ms)          |
+| `maxDelayMs`   | `number`  | `100`   | Maximum delay cap (ms)                   |
+| `jitter`       | `boolean` | `true`  | Randomize delay to reduce contention     |
+
+```typescript
+// Per-call override
+await pool.transaction(callback, {
+  retry: { maxAttempts: 10 },
+});
+
+// Disable retry for a single call
+await pool.transaction(callback, { retry: false });
+```
+
+**Backoff Strategy:**
+- Jittered: `delay = baseDelayMs + random(0..1) * baseDelayMs`
+- Capped at `maxDelayMs`
+- When jitter is disabled, delay is constant at `baseDelayMs`
+
+### OCC Error Types
+
+The connector classifies OCC errors by type:
+
+| SQLSTATE | Type     | Description                                              |
+|----------|----------|----------------------------------------------------------|
+| `OC000`  | Data     | Data conflict - concurrent modification of same rows     |
+| `OC001`  | Schema   | Schema conflict - DDL changes during transaction         |
+| `40001`  | Unknown  | Generic serialization failure (parsed for embedded OC000/OC001) |
+
+Non-OCC errors are not retried and propagate immediately.
+
+### Logging
+
+The `logger` option is optional. If enabled, the connector sends OCC retry logs to your function. You can also customize the output:
+
+```typescript
+const pool = new AuroraDSQLPool({
+  host: "<CLUSTER_ENDPOINT>",
+  user: "admin",
+  logger: (msg) => console.log(`[pool] ${msg}`),
+  transaction: { retry: { maxAttempts: 5 } },
+});
+```
+
+Output:
+```
+[pool] OCC conflict (Data) on attempt 1, retrying in 1.4ms
+[pool] OCC retry exhausted after 5 attempts (Data conflict)
+```
 
 ## Development
 

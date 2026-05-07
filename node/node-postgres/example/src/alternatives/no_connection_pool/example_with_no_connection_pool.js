@@ -9,14 +9,14 @@ import { AuroraDSQLClient } from "@aws/aurora-dsql-node-postgres-connector";
 const ADMIN = "admin";
 const NON_ADMIN_SCHEMA = "myschema";
 
-async function getConnection(clusterEndpoint, user) {
-  const client = new AuroraDSQLClient({
+function createClient(clusterEndpoint, user) {
+  return new AuroraDSQLClient({
     host: clusterEndpoint,
     user: user,
+    transaction: {
+      retry: { maxAttempts: 10, baseDelayMs: 10, jitter: true },
+    },
   });
-
-  await client.connect();
-  return client;
 }
 
 async function example() {
@@ -25,42 +25,46 @@ async function example() {
   const user = process.env.CLUSTER_USER;
   assert(user, "CLUSTER_USER environment variable is not set");
 
-  let client;
-  try {
-    client = await getConnection(clusterEndpoint, user);
+  const client1 = createClient(clusterEndpoint, user);
+  const client2 = createClient(clusterEndpoint, user);
+  await client1.connect();
+  await client2.connect();
 
+  try {
     if (user !== ADMIN) {
-      await client.query("SET search_path=" + NON_ADMIN_SCHEMA);
+      await client1.query("SET search_path=" + NON_ADMIN_SCHEMA);
+      await client2.query("SET search_path=" + NON_ADMIN_SCHEMA);
     }
 
-    // Create a new table
-    await client.query(`CREATE TABLE IF NOT EXISTS owner (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      name VARCHAR(30) NOT NULL,
-      city VARCHAR(80) NOT NULL,
-      telephone VARCHAR(20)
-    )`);
+    await client1.query("CREATE TABLE IF NOT EXISTS occ_test_client (id INT PRIMARY KEY, value INT)");
+    await client1.query("INSERT INTO occ_test_client (id, value) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET value = 0");
 
-    // Insert some data
-    await client.query(
-      "INSERT INTO owner(name, city, telephone) VALUES($1, $2, $3)",
-      ["John Doe", "Anytown", "555-555-1900"]
-    );
+    // Run concurrent transactional writes across two clients.
+    // OCC conflicts are automatically retried by client.transaction().
+    await Promise.all([
+      client1.transaction(async (c) => {
+        const result = await c.query("SELECT value FROM occ_test_client WHERE id = 1");
+        const currentValue = result.rows[0].value;
+        await c.query("UPDATE occ_test_client SET value = $1 WHERE id = 1", [currentValue + 1]);
+      }),
+      client2.transaction(async (c) => {
+        const result = await c.query("SELECT value FROM occ_test_client WHERE id = 1");
+        const currentValue = result.rows[0].value;
+        await c.query("UPDATE occ_test_client SET value = $1 WHERE id = 1", [currentValue + 1]);
+      }),
+    ]);
 
-    // Check that data is inserted by reading it back
-    const result = await client.query(
-      "SELECT id, city FROM owner where name='John Doe'"
-    );
-    assert.deepEqual(result.rows[0].city, "Anytown");
-    assert.notEqual(result.rows[0].id, null);
-
-    await client.query("DELETE FROM owner where name='John Doe'");
-    console.log("Completed successfully");
+    const { rows } = await client1.query("SELECT value FROM occ_test_client WHERE id = 1");
+    assert.strictEqual(rows[0].value, 2);
+    console.log(`Final counter value: ${rows[0].value} (expected 2)`);
+    console.log("Client with OCC retry exercised successfully");
   } catch (error) {
     console.error(error);
     throw error;
   } finally {
-    await client?.end();
+    await client1.query("DROP TABLE IF EXISTS occ_test_client");
+    await client1.end();
+    await client2.end();
   }
 }
 

@@ -8,4 +8,4 @@ import { example } from "../../../src/alternatives/no_connection_pool/example_wi
 
 test("Example with no connection pool", async () => {
   await example();
-});
+}, 30000);

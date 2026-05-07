@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import { AuroraDSQLPool } from "@aws/aurora-dsql-node-postgres-connector";
 
-const NUM_CONCURRENT_QUERIES = 8;
+const NUM_CONCURRENT_WORKERS = 8;
 
 function createPool(clusterEndpoint, user) {
   return new AuroraDSQLPool({
@@ -15,13 +15,19 @@ function createPool(clusterEndpoint, user) {
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    transaction: {
+      retry: { maxAttempts: 10, baseDelayMs: 10, jitter: true },
+    },
   });
 }
 
 async function worker(pool, workerId) {
-  const result = await pool.query("SELECT $1::int as worker_id", [workerId]);
-  console.log(`Worker ${workerId} result: ${result.rows[0].worker_id}`);
-  assert.strictEqual(result.rows[0].worker_id, workerId);
+  await pool.transaction(async (client) => {
+    const result = await client.query("SELECT value FROM occ_test WHERE id = 1");
+    const currentValue = result.rows[0].value;
+    await client.query("UPDATE occ_test SET value = $1 WHERE id = 1", [currentValue + 1]);
+  });
+  console.log(`Worker ${workerId} completed`);
 }
 
 async function example() {
@@ -33,20 +39,26 @@ async function example() {
   const pool = createPool(clusterEndpoint, user);
 
   try {
-    // Run concurrent queries using the connection pool
+    await pool.query("CREATE TABLE IF NOT EXISTS occ_test (id INT PRIMARY KEY, value INT)");
+    await pool.query("INSERT INTO occ_test (id, value) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET value = 0");
+
+    // Run concurrent transactional writes.
+    // OCC conflicts are automatically retried by pool.transaction().
     const workers = [];
-    for (let i = 1; i <= NUM_CONCURRENT_QUERIES; i++) {
+    for (let i = 1; i <= NUM_CONCURRENT_WORKERS; i++) {
       workers.push(worker(pool, i));
     }
-
-    // Wait for all workers to complete
     await Promise.all(workers);
 
-    console.log("Connection pool with concurrent connections exercised successfully");
+    const { rows } = await pool.query("SELECT value FROM occ_test WHERE id = 1");
+    assert.strictEqual(rows[0].value, NUM_CONCURRENT_WORKERS);
+    console.log(`Final counter value: ${rows[0].value} (expected ${NUM_CONCURRENT_WORKERS})`);
+    console.log("Connection pool with OCC retry exercised successfully");
   } catch (error) {
     console.error(error);
     throw error;
   } finally {
+    await pool.query("DROP TABLE IF EXISTS occ_test");
     await pool.end();
   }
 }
