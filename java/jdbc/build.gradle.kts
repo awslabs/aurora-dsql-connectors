@@ -41,7 +41,7 @@ dependencies {
     implementation("software.amazon.awssdk:dsql:2.44.2")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector
-    implementation("org.postgresql:postgresql:42.7.10")
+    implementation("org.postgresql:postgresql:42.7.11")
 
     // Annotation dependencies for @Nullable, @Nonnull, etc.
     compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.8")
