@@ -19,7 +19,7 @@ dependencies {
     testImplementation("software.amazon.awssdk:auth:2.44.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.14.4")
-    testRuntimeOnly("org.junit.platform:junit-platform-console-standalone:1.14.3")
+    testRuntimeOnly("org.junit.platform:junit-platform-console-standalone:1.14.4")
 }
 
 sourceSets {
