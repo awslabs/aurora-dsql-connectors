@@ -5,6 +5,7 @@
 import { Client } from "pg";
 import { AuroraDSQLConfig } from "./config/aurora-dsql-config.js";
 import { AuroraDSQLUtil } from "./aurora-dsql-util.js";
+import { resolveRetryConfig, executeWithRetry } from "./occ-retry.js";
 
 class AuroraDSQLClient extends Client {
   private dsqlConfig?: AuroraDSQLConfig;
@@ -18,9 +19,12 @@ class AuroraDSQLClient extends Client {
     super(dsqlConfig);
 
     this.dsqlConfig = dsqlConfig;
+
+    if (dsqlConfig.retry) {
+      resolveRetryConfig(dsqlConfig.retry, undefined);
+    }
   }
 
-  // TypeScript doesn't allow multiple declarations of the same function name hence the following declaration was used
   override async connect(callback?: (err: Error) => void) {
     if (this.dsqlConfig !== undefined) {
       try {
@@ -44,6 +48,40 @@ class AuroraDSQLClient extends Client {
       return super.connect(callback);
     }
     return super.connect();
+  }
+
+  /**
+   * Execute a callback within a transaction with automatic OCC retry.
+   *
+   * The callback may be invoked multiple times on OCC conflicts — it must be
+   * idempotent (no side effects that should not be repeated, e.g. sending
+   * emails, enqueuing messages, incrementing external counters).
+   *
+   * Not safe for concurrent calls on the same AuroraDSQLClient instance.
+   * Use AuroraDSQLPool.transaction() for concurrent transactional work,
+   * where each call acquires its own connection.
+   */
+  async transaction<T>(
+    callback: (client: this) => Promise<T>,
+    options?: { maxRetries?: number },
+  ): Promise<T> {
+    const retryConfig = resolveRetryConfig(this.dsqlConfig?.retry, options?.maxRetries);
+
+    return executeWithRetry(async () => {
+      await this.query("BEGIN");
+      try {
+        const result = await callback(this);
+        await this.query("COMMIT");
+        return result;
+      } catch (error) {
+        try {
+          await this.query("ROLLBACK");
+        } catch (rollbackError) {
+          this.dsqlConfig?.logger?.error(`Failed to rollback transaction: ${rollbackError}`);
+        }
+        throw error;
+      }
+    }, retryConfig, this.dsqlConfig?.logger);
   }
 }
 

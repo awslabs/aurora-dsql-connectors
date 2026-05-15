@@ -35,6 +35,7 @@ The Aurora DSQL Connector for node-postgres is designed to understand these requ
 - **Full TypeScript Support** - Provides full type safety
 - **AWS Credentials Support** - Supports various AWS credential providers (default, profile-based, custom)
 - **Connection Pooling Compatibility** - Works seamlessly with built-in connection pooling
+- **OCC Retry** - Automatic retry with exponential backoff on optimistic concurrency conflicts
 
 ## Example Application
 
@@ -122,18 +123,55 @@ const result = await client.query("SELECT NOW()");
 await client.end();
 ```
 
+### OCC Retry
+
+Aurora DSQL uses optimistic concurrency control (OCC). Transactions that conflict are rejected at
+commit time with error codes `OC000`, `OC001`, or `40001`. The connector provides a `transaction()`
+method that automatically retries on these conflicts with exponential backoff.
+
+```typescript
+import { AuroraDSQLPool } from "@aws/aurora-dsql-node-postgres-connector";
+
+const pool = new AuroraDSQLPool({
+  host: "<CLUSTER_ENDPOINT>",
+  user: "admin",
+  retry: { maxRetries: 5 },
+});
+
+await pool.transaction(async (client) => {
+  await client.query("INSERT INTO accounts(id, balance) VALUES($1, $2)", [1, 100]);
+});
+```
+
+The retry config accepts a partial object — unset fields use defaults:
+
+| Field          | Default | Description                        |
+| -------------- | ------- | ---------------------------------- |
+| `maxRetries`   | 3       | Number of retry attempts after the initial try (0 = no retry) |
+| `baseDelayMs`  | 1       | Initial backoff delay in ms        |
+| `maxDelayMs`   | 100     | Maximum base backoff delay in ms (jitter is added on top) |
+| `jitterFactor` | 0.25    | Jitter as a fraction of delay      |
+
+Per-call override:
+
+```typescript
+await pool.transaction(callback, { maxRetries: 0 }); // no retry for this call
+```
+
 ## Configuration Options
 
 | Option                      | Type                                                    | Required | Description                                              |
 | --------------------------- | ------------------------------------------------------- | -------- | -------------------------------------------------------- |
 | `host`                      | `string`                                                | Yes      | DSQL cluster hostname                                    |
-| `username`                  | `string`                                                | Yes      | DSQL username                                            |
+| `user`                      | `string`                                                | Yes      | DSQL username                                            |
 | `database`                  | `string`                                                | No       | Database name                                            |
 | `region`                    | `string`                                                | No       | AWS region (auto-detected from hostname if not provided) |
 | `port`                      | `number`                                                | No       | Default to 5432                                          |
 | `customCredentialsProvider` | `AwsCredentialIdentity / AwsCredentialIdentityProvider` | No       | Custom AWS credentials provider                          |
 | `profile`                   | `string`                                                | No       | The IAM profile name. Default to "default"               |
 | `tokenDurationSecs`         | `number`                                                | No       | Token expiration time in seconds                         |
+| `retry`                     | `Partial<OCCRetryConfig>`                               | No       | OCC retry configuration (see above)                      |
+| `logger`                    | `Logger`                                                | No       | Logger with `warn` and `error` methods (e.g. `console`)  |
 
 All other parameters from [Client](https://node-postgres.com/apis/client) / [Pool](https://node-postgres.com/apis/pool) are supported.
 
