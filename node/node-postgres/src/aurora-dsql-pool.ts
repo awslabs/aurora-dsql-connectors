@@ -5,7 +5,7 @@
 import { Pool, PoolClient } from "pg";
 import { AuroraDSQLPoolConfig } from "./config/aurora-dsql-pool-config.js";
 import { AuroraDSQLUtil } from "./aurora-dsql-util.js";
-import { resolveRetryConfig, executeWithRetry } from "./occ-retry.js";
+import { resolveRetryConfig, executeWithRetry, type OCCRetryConfig } from "./occ-retry.js";
 
 class AuroraDSQLPool extends Pool {
   private dsqlConfig?: AuroraDSQLPoolConfig;
@@ -76,9 +76,9 @@ class AuroraDSQLPool extends Pool {
    */
   async transaction<T>(
     callback: (client: PoolClient) => Promise<T>,
-    options?: { maxRetries?: number },
+    options?: Partial<OCCRetryConfig>,
   ): Promise<T> {
-    const retryConfig = resolveRetryConfig(this.dsqlConfig?.retry, options?.maxRetries);
+    const retryConfig = resolveRetryConfig(this.dsqlConfig?.retry, options);
 
     return executeWithRetry(async () => {
       const client = await this.connect();
