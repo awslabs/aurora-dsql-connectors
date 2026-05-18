@@ -54,17 +54,14 @@ function validateRetryConfig(config: OCCRetryConfig): void {
 }
 
 function resolveRetryConfig(
-  constructorRetryConfig: Partial<OCCRetryConfig> | undefined,
-  callMaxRetries: number | undefined,
+  retryConfig: Partial<OCCRetryConfig> | undefined,
+  overrideConfig: Partial<OCCRetryConfig> | undefined,
 ): OCCRetryConfig {
   const resolved: OCCRetryConfig = {
     ...DEFAULT_CONFIG,
-    ...constructorRetryConfig,
+    ...retryConfig,
+    ...overrideConfig,
   };
-
-  if (callMaxRetries !== undefined) {
-    resolved.maxRetries = callMaxRetries;
-  }
 
   validateRetryConfig(resolved);
   return resolved;
