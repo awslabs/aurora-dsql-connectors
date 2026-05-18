@@ -9,6 +9,7 @@ import {
 } from "@aws-sdk/types";
 import { DsqlSigner, DsqlSignerConfig } from "@aws-sdk/dsql-signer";
 import { createPostgresWs } from "./postgres-web-socket";
+import { Logger, OCCRetryConfig, resolveRetryConfig, executeWithRetry } from "./occ-retry";
 
 // Version is injected at build time via tsdown
 declare const __VERSION__: string;
@@ -54,8 +55,23 @@ function parseConnectionParams(
     throw new Error("Multi-host configurations are not supported for Aurora DSQL");
   }
 
-  if (!opts.region) {
-    opts.region = parseRegionFromHost(host);
+  let parsedRegion: string | undefined;
+  if (!isClusterID(host)) {
+    try {
+      parsedRegion = parseRegionFromHost(host);
+    } catch {
+      // Couldn't parse region from hostname.
+    }
+  }
+
+  opts.region = opts.region || parsedRegion || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+
+  if (opts.region === undefined) {
+    if (isClusterID(host)) {
+      throw new Error(`Region is not specified for cluster '${host}'`);
+    } else {
+      throw new Error(`Region is not specified and could not be parsed from hostname: '${host}'`);
+    }
   }
 
   if (isClusterID(host)) {
@@ -94,58 +110,87 @@ function setupDsqlSigner(opts: any): { signerConfig: DsqlSignerConfig; } {
   return { signerConfig };
 }
 
+type UnwrapPromiseArray<T> = T extends any[] ? {
+  [k in keyof T]: T[k] extends Promise<infer R> ? R : T[k]
+} : T;
+
+export type AuroraDSQLSql<T extends Record<string, postgres.PostgresType> = {}> = postgres.Sql<
+  Record<string, postgres.PostgresType> extends T
+  ? {}
+  : {
+    [type in keyof T]: T[type] extends {
+      serialize: (value: infer R) => any;
+      parse: (raw: any) => infer R;
+    }
+    ? R
+    : never;
+  }
+> & {
+  transaction: {
+    <R>(fn: (sql: any) => R | Promise<R>): Promise<UnwrapPromiseArray<R>>;
+    <R>(fn: (sql: any) => R | Promise<R>, retryOptions: Partial<OCCRetryConfig>): Promise<UnwrapPromiseArray<R>>;
+    <R>(options: string, fn: (sql: any) => R | Promise<R>): Promise<UnwrapPromiseArray<R>>;
+    <R>(options: string, fn: (sql: any) => R | Promise<R>, retryOptions: Partial<OCCRetryConfig>): Promise<UnwrapPromiseArray<R>>;
+  };
+};
+
+type TransactionCallback =
+  (sql: any) => any | Promise<any>;
+
+function attachTransaction<T extends Record<string, postgres.PostgresType> = {}>(
+  sql: postgres.Sql<any>,
+  retry: Partial<OCCRetryConfig> | undefined,
+  logger: Logger | undefined,
+): AuroraDSQLSql<T> {
+  if (retry) {
+    resolveRetryConfig(retry, undefined);
+  }
+
+  const transaction = (first: string | TransactionCallback, second?: TransactionCallback | Partial<OCCRetryConfig>, third?: Partial<OCCRetryConfig>) => {
+    let beginOptions: string | undefined;
+    let fn: TransactionCallback;
+    let callRetryConfig: Partial<OCCRetryConfig> | undefined;
+
+    if (typeof first === 'function') {
+      fn = first;
+      callRetryConfig = second as Partial<OCCRetryConfig> | undefined;
+    } else {
+      beginOptions = first;
+      fn = second as TransactionCallback;
+      callRetryConfig = third;
+    }
+
+    const config = resolveRetryConfig(retry, callRetryConfig);
+
+    return executeWithRetry(
+      () => beginOptions ? sql.begin(beginOptions, fn) : sql.begin(fn),
+      config,
+      logger,
+    );
+  };
+
+  return Object.assign(sql, { transaction }) as AuroraDSQLSql<T>;
+}
+
 export function auroraDSQLPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   url: string,
   options?: AuroraDSQLConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): AuroraDSQLSql<T>;
 
 export function auroraDSQLPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   options: AuroraDSQLConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): AuroraDSQLSql<T>;
 
 export function auroraDSQLPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   urlOrOptions: string | AuroraDSQLConfig<T>,
   options?: AuroraDSQLConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
-> {
+): AuroraDSQLSql<T> {
 
   let { opts } = parseConnectionParams(urlOrOptions, options);
   const { signerConfig } = setupDsqlSigner(opts);
@@ -156,9 +201,11 @@ export function auroraDSQLPostgres<
     ...opts,
     pass: () => getToken(signer, opts.username),
   };
-  return typeof urlOrOptions === "string"
+  const sql = typeof urlOrOptions === "string"
     ? postgres(urlOrOptions, postgresOpts)
     : postgres(postgresOpts);
+
+  return attachTransaction<T>(sql, opts.retry, opts.logger);
 }
 
 export function auroraDSQLWsPostgres<
@@ -166,53 +213,20 @@ export function auroraDSQLWsPostgres<
 >(
   url: string,
   options?: AuroraDSQLWsConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): AuroraDSQLSql<T>;
 
 export function auroraDSQLWsPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   options: AuroraDSQLWsConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): AuroraDSQLSql<T>;
 
 export function auroraDSQLWsPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   urlOrOptions: string | AuroraDSQLWsConfig<T>,
   options?: AuroraDSQLWsConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
-> {
+): AuroraDSQLSql<T> {
 
   let { opts } = parseConnectionParams(urlOrOptions, options);
   const { signerConfig } = setupDsqlSigner(opts);
@@ -238,9 +252,11 @@ export function auroraDSQLWsPostgres<
 
   opts.port = 443;
 
-  return typeof urlOrOptions === "string"
+  const sql = typeof urlOrOptions === "string"
     ? postgres(urlOrOptions, opts)
     : postgres(opts);
+
+  return attachTransaction<T>(sql, opts.retry, opts.logger);
 }
 
 
@@ -337,6 +353,10 @@ export interface AuroraDSQLConfig<T extends Record<string, PostgresType<T>>> ext
 
   customCredentialsProvider?: AwsCredentialIdentity | AwsCredentialIdentityProvider;
 
+  retry?: Partial<OCCRetryConfig>;
+
+  logger?: Logger;
+
 }
 export interface AuroraDSQLWsConfig<T extends Record<string, PostgresType<T>>>
   extends Omit<postgres.Options<T>, "socket" | "ssl" | "port"> {
@@ -348,4 +368,6 @@ export interface AuroraDSQLWsConfig<T extends Record<string, PostgresType<T>>>
   connectionCheck?: boolean;
   connectionId?: string;
   onReservedConnectionClose?: (connectionId?: string) => void;
+  retry?: Partial<OCCRetryConfig>;
+  logger?: Logger;
 }
