@@ -1,3 +1,20 @@
+<a id="node/node-postgres/v0.1.9"></a>
+# [Aurora DSQL Connector for node-postgres v0.1.9 (node/node-postgres/v0.1.9)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/node/node-postgres/v0.1.9) - 2026-05-18
+
+## What's Changed
+
+### New Features
+- Added OCC (Optimistic Concurrency Control) retry support for transactions via `transaction()` method on both `AuroraDSQLClient` and `AuroraDSQLPool`
+- Support full retry config override per call
+- Exported `isOCCError` utility for custom retry logic
+- Configurable retry behavior with exponential backoff and jitter
+
+### Full Changelog
+https://github.com/awslabs/aurora-dsql-connectors/compare/node/node-postgres/v0.1.8...node/node-postgres/v0.1.9
+
+[Changes][node/node-postgres/v0.1.9]
+
+
 <a id="node/node-postgres/v0.1.8"></a>
 # [Aurora DSQL Connector for node-postgres v0.1.8 (node/node-postgres/v0.1.8)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/node/node-postgres/v0.1.8) - 2026-02-05
 
@@ -223,6 +240,7 @@ Initial release of the Aurora DSQL Connector for node-postgres
 [Changes][node/node-postgres/v0.1.0]
 
 
+[node/node-postgres/v0.1.9]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/node-postgres/v0.1.8...node/node-postgres/v0.1.9
 [node/node-postgres/v0.1.8]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/node-postgres/v0.1.7...node/node-postgres/v0.1.8
 [node/node-postgres/v0.1.7]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/node-postgres/v0.1.6...node/node-postgres/v0.1.7
 [node/node-postgres/v0.1.6]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/node-postgres/v0.1.5...node/node-postgres/v0.1.6
