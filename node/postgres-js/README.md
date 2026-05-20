@@ -42,6 +42,7 @@ The Aurora DSQL Connector for Postgres.js is designed to understand these requir
 - **Full TypeScript Support** - Provides full type safety
 - **AWS Credentials Support** - Supports various AWS credential providers (default, profile-based, custom)
 - **Connection Pooling Compatibility** - Works seamlessly with Postgres.js' built-in connection pooling
+- **OCC Retry** - Automatic retry with exponential backoff on optimistic concurrency conflicts
 
 ## Quick start guide
 
@@ -127,6 +128,50 @@ const sql = AuroraDSQLPostgres({
 });
 ```
 
+### OCC Retry
+
+Aurora DSQL uses optimistic concurrency control (OCC). Transactions that conflict are rejected at
+commit time with error codes `OC000`, `OC001`, or `40001`. The connector can automatically retry
+`begin()` transactions on these conflicts with exponential backoff.
+
+```typescript
+import { auroraDSQLPostgres } from '@aws/aurora-dsql-postgresjs-connector';
+
+// Opt-in at connection level — all begin() calls will retry on OCC conflicts
+const sql = auroraDSQLPostgres({
+  host: 'your-cluster.dsql.us-east-1.on.aws',
+  username: 'admin',
+  retry: true,
+});
+
+// No per-call config needed
+await sql.begin(async (tx) => {
+  await tx`INSERT INTO accounts(id, balance) VALUES(${1}, ${100})`;
+});
+```
+
+The retry config accepts a partial object — unset fields use defaults:
+
+| Field          | Default | Description                        |
+| -------------- | ------- | ---------------------------------- |
+| `maxRetries`   | 3       | Number of retry attempts after the initial try (0 = no retry) |
+| `baseDelayMs`  | 1       | Initial backoff delay in ms        |
+| `maxDelayMs`   | 100     | Maximum base backoff delay in ms (jitter is added on top) |
+| `jitterFactor` | 0.25    | Jitter as a fraction of delay      |
+
+Per-call opt-in/out:
+
+```typescript
+// Per-call opt-in (no constructor config needed)
+await sql.begin(async (tx) => { ... }, { retry: true });
+await sql.begin(async (tx) => { ... }, { retry: { maxRetries: 10 } });
+
+// Per-call opt-out (overrides constructor config)
+await sql.begin(async (tx) => { ... }, { retry: false });
+```
+
+**Note:** The callback may be invoked multiple times on OCC conflicts. Keep it idempotent - avoid non-database side effects (HTTP calls, message publishes, external counters) inside the transaction body.
+
 ### Configuration Options
 
 | Option                      | Type                             | Required | Description                                              |
@@ -137,6 +182,8 @@ const sql = AuroraDSQLPostgres({
 | `region`                    | `string?`                        | No       | AWS region (auto-detected from hostname if not provided) |
 | `customCredentialsProvider` | `AwsCredentialIdentityProvider?` | No       | Custom AWS credentials provider                          |
 | `tokenDurationSecs`         | `number?`                        | No       | Token expiration time in seconds                         |
+| `retry`                     | `Partial<OCCRetryConfig> \| boolean` | No   | OCC retry configuration (see above)                      |
+| `logger`                    | `Logger`                         | No       | Logger with `error` method and optional `debug` (e.g. `console`)  |
 
 All standard [Postgres.js options](https://github.com/porsager/postgres?tab=readme-ov-file#connection-details) are also supported.
 
