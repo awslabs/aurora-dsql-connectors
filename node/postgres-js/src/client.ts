@@ -9,6 +9,7 @@ import {
 } from "@aws-sdk/types";
 import { DsqlSigner, DsqlSignerConfig } from "@aws-sdk/dsql-signer";
 import { createPostgresWs } from "./postgres-web-socket";
+import { Logger, OCCRetryConfig, resolveRetryConfig, executeWithRetry } from "./occ-retry";
 
 // Version is injected at build time via tsdown
 declare const __VERSION__: string;
@@ -94,6 +95,45 @@ function setupDsqlSigner(opts: any): { signerConfig: DsqlSignerConfig; } {
   return { signerConfig };
 }
 
+function wrapBegin(sql: postgres.Sql<any>, opts: { retry?: Partial<OCCRetryConfig> | boolean; logger?: Logger }): void {
+  if (!sql.begin) return;
+  const { retry: constructorRetry, logger } = opts;
+  if (constructorRetry && constructorRetry !== true) {
+    resolveRetryConfig(constructorRetry, undefined);
+  }
+  const originalBegin = sql.begin.bind(sql);
+  // postgres-js does not call this.begin internally, so direct mutation is safe.
+  (sql as any).begin = (first: any, second?: any, third?: any) => {
+    let beginOpts: string | undefined;
+    let fn: (sql: any) => any;
+    let callOpts: { retry?: Partial<OCCRetryConfig> | boolean } | undefined;
+
+    if (typeof first === "string") {
+      beginOpts = first;
+      fn = second;
+      callOpts = third;
+    } else {
+      fn = first;
+      callOpts = second;
+    }
+
+    if (typeof fn !== "function") {
+      throw new TypeError("sql.begin: callback function is required");
+    }
+
+    const config = resolveRetryConfig(constructorRetry, callOpts?.retry);
+    if (!config) {
+      return beginOpts ? originalBegin(beginOpts, fn) : originalBegin(fn);
+    }
+
+    return executeWithRetry(
+      () => beginOpts ? originalBegin(beginOpts, fn) : originalBegin(fn),
+      config,
+      logger,
+    );
+  };
+}
+
 export function auroraDSQLPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
@@ -156,9 +196,12 @@ export function auroraDSQLPostgres<
     ...opts,
     pass: () => getToken(signer, opts.username),
   };
-  return typeof urlOrOptions === "string"
+  const sql = typeof urlOrOptions === "string"
     ? postgres(urlOrOptions, postgresOpts)
     : postgres(postgresOpts);
+
+  wrapBegin(sql, { retry: opts.retry, logger: opts.logger });
+  return sql;
 }
 
 export function auroraDSQLWsPostgres<
@@ -238,9 +281,13 @@ export function auroraDSQLWsPostgres<
 
   opts.port = 443;
 
-  return typeof urlOrOptions === "string"
-    ? postgres(urlOrOptions, opts)
-    : postgres(opts);
+  const postgresOpts: postgres.Options<T> = { ...opts };
+  const sql = typeof urlOrOptions === "string"
+    ? postgres(urlOrOptions, postgresOpts)
+    : postgres(postgresOpts);
+
+  wrapBegin(sql, { retry: opts.retry, logger: opts.logger });
+  return sql;
 }
 
 
@@ -337,6 +384,10 @@ export interface AuroraDSQLConfig<T extends Record<string, PostgresType<T>>> ext
 
   customCredentialsProvider?: AwsCredentialIdentity | AwsCredentialIdentityProvider;
 
+  retry?: Partial<OCCRetryConfig> | boolean;
+
+  logger?: Logger;
+
 }
 export interface AuroraDSQLWsConfig<T extends Record<string, PostgresType<T>>>
   extends Omit<postgres.Options<T>, "socket" | "ssl" | "port"> {
@@ -348,4 +399,6 @@ export interface AuroraDSQLWsConfig<T extends Record<string, PostgresType<T>>>
   connectionCheck?: boolean;
   connectionId?: string;
   onReservedConnectionClose?: (connectionId?: string) => void;
+  retry?: Partial<OCCRetryConfig> | boolean;
+  logger?: Logger;
 }

@@ -269,6 +269,124 @@ describe('auroraDSQLPostgres DSQL Integration Tests', () => {
     });
 });
 
+describe('OCC Retry', () => {
+    const clusterEndpoint = process.env.CLUSTER_ENDPOINT;
+    const region = process.env.REGION;
+
+    test('should retry OCC conflicts with constructor opt-in', async () => {
+        const debugCalls: string[] = [];
+        const logger = {
+            debug: (msg: string) => debugCalls.push(msg),
+            error: (msg: string) => console.error(`[occ] ${msg}`),
+        };
+
+        const sqlT1: any = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            region: region,
+            retry: { maxRetries: 5 },
+            logger,
+        });
+
+        const sqlT2: any = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            region: region,
+        });
+
+        try {
+            await sqlT1`CREATE TABLE IF NOT EXISTS occ_test_pjs (id INT PRIMARY KEY, v INT)`;
+            await sqlT1`INSERT INTO occ_test_pjs (id, v) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET v = 0`;
+
+            let t1Attempts = 0;
+            let t2Done: () => void;
+            const t2Finished = new Promise<void>(r => { t2Done = r; });
+
+            const t1 = sqlT1.begin(async (tx: any) => {
+                t1Attempts++;
+                const [row] = await tx`SELECT v FROM occ_test_pjs WHERE id = 1`;
+                if (t1Attempts === 1) await t2Finished;
+                await tx`UPDATE occ_test_pjs SET v = ${row.v + 10} WHERE id = 1`;
+            });
+
+            await sqlT2.begin(async (tx: any) => {
+                await tx`UPDATE occ_test_pjs SET v = v + 1 WHERE id = 1`;
+            });
+            t2Done!();
+
+            await t1;
+
+            expect(t1Attempts).toBeGreaterThanOrEqual(2);
+            expect(debugCalls.some(m => m.includes('OCC conflict'))).toBe(true);
+            const finalResult = await sqlT1`SELECT v FROM occ_test_pjs WHERE id = 1`;
+            expect(finalResult[0].v).toBe(11);
+        } finally {
+            await sqlT1`DROP TABLE IF EXISTS occ_test_pjs`;
+            await sqlT1.end();
+            await sqlT2.end();
+        }
+    });
+
+    test('should retry OCC conflicts with per-call opt-in', async () => {
+        const debugCalls: string[] = [];
+        const logger = {
+            debug: (msg: string) => debugCalls.push(msg),
+            error: (msg: string) => console.error(`[occ] ${msg}`),
+        };
+
+        const sql: any = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            region: region,
+            logger,
+        });
+
+        try {
+            await sql`CREATE TABLE IF NOT EXISTS occ_test_percall (id INT PRIMARY KEY, value INT)`;
+            await sql`INSERT INTO occ_test_percall (id, value) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET value = 0`;
+
+            const updatePromises = Array.from({ length: 3 }, () =>
+                sql.begin(async (tx: any) => {
+                    const result = await tx`SELECT value FROM occ_test_percall WHERE id = 1`;
+                    const currentValue = result[0].value;
+                    await tx`UPDATE occ_test_percall SET value = ${currentValue + 1} WHERE id = 1`;
+                }, { retry: { maxRetries: 5 } })
+            );
+
+            await Promise.all(updatePromises);
+
+            const finalResult = await sql`SELECT value FROM occ_test_percall WHERE id = 1`;
+            expect(finalResult[0].value).toBe(3);
+            expect(debugCalls.some(m => m.includes('OCC conflict'))).toBe(true);
+        } finally {
+            await sql`DROP TABLE IF EXISTS occ_test_percall`;
+            await sql.end();
+        }
+    });
+
+    test('should not retry non-OCC errors', async () => {
+        const sql: any = auroraDSQLPostgres({
+            host: clusterEndpoint,
+            username: 'admin',
+            region: region,
+            retry: { maxRetries: 3 },
+        });
+
+        try {
+            let attempts = 0;
+            await expect(
+                sql.begin(async (tx: any) => {
+                    attempts++;
+                    await tx`SELECT * FROM nonexistent_table_xyz`;
+                })
+            ).rejects.toThrow();
+            expect(attempts).toBe(1);
+        } finally {
+            await sql.end();
+        }
+    });
+});
+
 // Websocket is not available by default until node 21 and above
 const isNode20 = process.version.startsWith('v20.');
 (isNode20 ? describe.skip : describe)('auroraDSQLWsPostgres DSQL Integration Tests', () => {
