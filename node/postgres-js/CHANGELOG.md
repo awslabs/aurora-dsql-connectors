@@ -1,3 +1,19 @@
+<a id="node/postgres-js/v0.3.0"></a>
+# [Aurora DSQL Connector for Postgres.js v0.3.0 (node/postgres-js/v0.3.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/node/postgres-js/v0.3.0) - 2026-05-22
+
+## What's Changed
+
+### New Features
+- Added OCC (Optimistic Concurrency Control) retry with exponential backoff for `begin()` transactions
+  - Automatic retry on OCC conflicts (OC000, OC001, 40001)
+  - Supports constructor-level and per-call opt-in/out with configurable backoff parameters
+
+### Full Changelog
+https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.2.1...node/postgres-js/v0.3.0
+
+[Changes][node/postgres-js/v0.3.0]
+
+
 <a id="node/postgres-js/v0.2.1"></a>
 # [Aurora DSQL Connector for Postgres.js v0.2.1 (node/postgres-js/v0.2.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/node/postgres-js/v0.2.1) - 2026-02-05
 
@@ -170,6 +186,7 @@ Initial release of Aurora DSQL Connector for Postgres.js
 [Changes][node/postgres-js/v0.1.0]
 
 
+[node/postgres-js/v0.3.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.2.1...node/postgres-js/v0.3.0
 [node/postgres-js/v0.2.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.2.0...node/postgres-js/v0.2.1
 [node/postgres-js/v0.2.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.1.3...node/postgres-js/v0.2.0
 [node/postgres-js/v0.1.3]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.1.2...node/postgres-js/v0.1.3
