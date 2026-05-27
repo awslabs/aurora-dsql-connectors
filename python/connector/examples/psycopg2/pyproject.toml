@@ -24,6 +24,9 @@ dependencies = [
     "psycopg2-binary>=2.9.0",
 ]
 
+[tool.uv.sources]
+aurora-dsql-python-connector = { path = "../..", editable = true }
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",
