@@ -39,6 +39,7 @@ The Aurora DSQL Connector for Python is designed to understand these requirement
 - **Region Auto-Discovery** - Extracts AWS region from DSQL cluster hostname
 - **AWS Credentials Support** - Supports various AWS credential providers (default, profile-based, custom)
 - **Connection Pooling Compatibility** - Works with psycopg, psycopg2, and asyncpg built-in connection pooling
+- **OCC Retry** - Built-in retry with exponential backoff for optimistic concurrency control (OCC) conflicts
 
 ## Quick start guide
 
@@ -412,6 +413,99 @@ For asyncpg, the connector provides a create_pool function that returns an insta
 ```
 
 
+
+### OCC Retry
+
+Aurora DSQL uses optimistic concurrency control (OCC). When concurrent transactions conflict, the database returns an OCC error (sqlstate `OC000`, `OC001`, or `40001`). The connector provides built-in retry with exponential backoff via `run_transaction()`.
+
+#### Enabling OCC retry
+
+Pass `retry=True` for default settings, or provide an `OCCRetryConfig` for custom backoff:
+
+```python
+    import aurora_dsql_psycopg as dsql
+
+    # Default retry (3 retries, 1-100ms backoff, 0.25 jitter)
+    pool = dsql.create_pool(conninfo, retry=True, kwargs=conn_params)
+
+    # Custom retry config
+    pool = dsql.create_pool(
+        conninfo,
+        retry=dsql.OCCRetryConfig(max_retries=5, base_delay_ms=10, max_delay_ms=200),
+        kwargs=conn_params,
+    )
+```
+
+#### Using run_transaction
+
+##### psycopg
+
+```python
+    import aurora_dsql_psycopg as dsql
+
+    pool = dsql.create_pool(conninfo, retry=True, kwargs=conn_params)
+    with pool:
+        result = pool.run_transaction(lambda conn: conn.execute("INSERT INTO ..."))
+```
+
+##### psycopg (async)
+
+```python
+    import aurora_dsql_psycopg as dsql
+
+    pool = dsql.create_async_pool(conninfo, retry=True, kwargs=conn_params)
+    async with pool:
+        result = await pool.run_transaction(
+            lambda conn: conn.execute("INSERT INTO ...")
+        )
+```
+
+##### psycopg2
+
+```python
+    import aurora_dsql_psycopg2 as dsql
+
+    pool = dsql.AuroraDSQLThreadedConnectionPool(
+        minconn=2, maxconn=8, retry=True, **conn_params
+    )
+    with pool:
+        result = pool.run_transaction(lambda conn: conn.cursor().execute("INSERT INTO ..."))
+```
+
+##### asyncpg
+
+```python
+    import aurora_dsql_asyncpg as dsql
+
+    pool = await dsql.create_pool(retry=True, **conn_params)
+    result = await pool.run_transaction(
+        lambda conn: conn.execute("INSERT INTO ...")
+    )
+```
+
+#### Per-call retry override
+
+You can override the pool-level retry config on each `run_transaction()` call:
+
+```python
+    # Use a different config for this call
+    result = pool.run_transaction(
+        callback,
+        retry=dsql.OCCRetryConfig(max_retries=10, base_delay_ms=5),
+    )
+
+    # Disable retry for this call
+    result = pool.run_transaction(callback, retry=False)
+```
+
+#### OCCRetryConfig options
+
+| Option          | Type    | Default | Description                                           |
+|-----------------|---------|---------|-------------------------------------------------------|
+| `max_retries`   | `int`   | 3       | Additional attempts after the initial try (0-100)     |
+| `base_delay_ms` | `int`   | 1       | Initial backoff delay in milliseconds                 |
+| `max_delay_ms`  | `int`   | 100     | Maximum backoff delay cap in milliseconds             |
+| `jitter_factor` | `float` | 0.25    | Fraction of delay added as random jitter (0.0-1.0)    |
 
 ## Authentication
 

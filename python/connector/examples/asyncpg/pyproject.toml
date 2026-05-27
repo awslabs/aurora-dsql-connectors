@@ -24,6 +24,9 @@ dependencies = [
     "asyncpg>=0.30.0",
 ]
 
+[tool.uv.sources]
+aurora-dsql-python-connector = { path = "../..", editable = true }
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",

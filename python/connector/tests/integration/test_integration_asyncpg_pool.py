@@ -1,12 +1,14 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
 import os
 import ssl
 
 import pytest
 
 import aurora_dsql_asyncpg as dsql
+from dsql_core.occ_retry import OCCRetryConfig
 
 from .common_integration_test_definitions import CustomCredentialProvider
 
@@ -223,7 +225,6 @@ class TestIntegrationAsyncpgPool:
     @pytest.mark.asyncio
     async def test_pool_concurrent_operations(self, cluster_config):
         """Test concurrent operations using pool."""
-        import asyncio
 
         pool = await dsql.create_pool(min_size=2, max_size=5, **cluster_config)
 
@@ -243,5 +244,102 @@ class TestIntegrationAsyncpgPool:
             # Verify all workers completed successfully
             assert results == list(range(5))
 
+        finally:
+            await pool.close()
+
+    @pytest.mark.asyncio
+    async def test_occ_retry_deterministic_conflict(self, cluster_config):
+        """Deterministic OCC test using T1/T2 interleaving:
+        T1: BEGIN, SELECT
+        T2: BEGIN, UPDATE, COMMIT  (forces the conflict)
+        T1: UPDATE, COMMIT         (guaranteed OCC, retry must work)
+        """
+        table_name = "test_occ_asyncpg_deterministic"
+
+        pool = await dsql.create_pool(
+            retry=OCCRetryConfig(max_retries=5),
+            min_size=3,
+            max_size=5,
+            **cluster_config,
+        )
+        try:
+            async with pool.acquire() as conn:
+                await conn.execute(f"""
+                    CREATE TABLE IF NOT EXISTS {table_name} (
+                        id INT PRIMARY KEY, value INT
+                    )
+                """)
+                await conn.execute(
+                    f"INSERT INTO {table_name} (id, value) VALUES (1, 0)"
+                    f" ON CONFLICT (id) DO UPDATE SET value = 0"
+                )
+
+            t1_has_read = asyncio.Event()
+            t2_has_committed = asyncio.Event()
+            t1_attempts = 0
+
+            async def t1(conn):
+                nonlocal t1_attempts
+                t1_attempts += 1
+                row = await conn.fetchrow(f"SELECT value FROM {table_name} WHERE id = 1")
+                t1_has_read.set()
+                await asyncio.wait_for(t2_has_committed.wait(), timeout=10)
+                await conn.execute(
+                    f"UPDATE {table_name} SET value = $1 WHERE id = 1",
+                    row["value"] + 1,
+                )
+
+            async def t2(conn):
+                await asyncio.wait_for(t1_has_read.wait(), timeout=10)
+                await conn.execute(f"UPDATE {table_name} SET value = 100 WHERE id = 1")
+
+            async def run_t2():
+                async with pool.acquire() as conn:
+                    await conn.execute("BEGIN")
+                    await t2(conn)
+                    await conn.execute("COMMIT")
+                t2_has_committed.set()
+
+            t2_task = asyncio.create_task(run_t2())
+            await pool.run_transaction(t1)
+            await t2_task
+
+            async with pool.acquire() as conn:
+                result = await conn.fetchval(f"SELECT value FROM {table_name} WHERE id = 1")
+                assert result == 101
+            assert t1_attempts >= 2, f"Expected retry but t1 ran only {t1_attempts} time(s)"
+        finally:
+            for attempt in range(5):
+                try:
+                    async with pool.acquire() as conn:
+                        await conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+                    break
+                except Exception:
+                    if attempt == 4:
+                        raise
+                    await asyncio.sleep(1)
+            await pool.close()
+
+    @pytest.mark.asyncio
+    async def test_occ_non_occ_error_propagates_immediately(self, cluster_config):
+        """A non-OCC database error should propagate without retry."""
+        pool = await dsql.create_pool(
+            retry=OCCRetryConfig(max_retries=5),
+            min_size=2,
+            max_size=5,
+            **cluster_config,
+        )
+        try:
+            call_count = 0
+
+            async def bad_query(conn):
+                nonlocal call_count
+                call_count += 1
+                await conn.execute("SELECT * FROM nonexistent_table_xyz_12345")
+
+            with pytest.raises(Exception):
+                await pool.run_transaction(bad_query)
+
+            assert call_count == 1
         finally:
             await pool.close()
