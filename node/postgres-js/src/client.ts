@@ -55,11 +55,36 @@ function parseConnectionParams(
     throw new Error("Multi-host configurations are not supported for Aurora DSQL");
   }
 
-  if (!opts.region) {
-    opts.region = parseRegionFromHost(host);
+  if (!host) {
+    throw new Error("Host is required");
   }
 
-  if (isClusterID(host)) {
+  const isClusterId = !host.includes('.');
+
+  let parsedRegion: string | undefined;
+  if (!isClusterId) {
+    try {
+      parsedRegion = parseRegionFromHost(host);
+    } catch {
+      // Couldn't parse region from hostname.
+    }
+  }
+
+  opts.region =
+    opts.region ||
+    parsedRegion ||
+    process.env.AWS_REGION ||
+    process.env.AWS_DEFAULT_REGION;
+
+  if (!opts.region) {
+    if (isClusterId) {
+      throw new Error(`Region is not specified for cluster '${host}'`);
+    } else {
+      throw new Error(`Region is not specified and could not be parsed from hostname: '${host}'`);
+    }
+  }
+
+  if (isClusterId) {
     host = buildHostnameFromIdAndRegion(host, opts.region);
   }
 
@@ -318,22 +343,17 @@ function parseConnectionString(url: string): {
   };
 }
 
-function parseRegionFromHost(host: string): string | undefined {
+function parseRegionFromHost(host: string): string {
   if (!host) {
     throw new Error("Hostname is required to parse region");
   }
 
-  const match = host.match(
-    /^(?<instance>[^.]+)\.(?<dns>dsql(?:-[^.]+)?)\.(?<domain>(?<region>[a-zA-Z0-9-]+)\.on\.aws\.?)$/i
-  );
-  if (match?.groups) {
-    return match.groups.region;
+  const match = host.match(/\.dsql[^.]*\.([^.]+)\.on\.aws$/);
+  if (match) {
+    return match[1];
   }
-  throw new Error(`Unable to parse region from hostname: ${host}`);
-}
 
-function isClusterID(host: string) {
-  return !host.includes(".");
+  throw new Error(`Unable to parse region from hostname: '${host}'`);
 }
 
 function buildHostnameFromIdAndRegion(
