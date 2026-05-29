@@ -2,7 +2,7 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
-import { jest, describe, test, beforeAll, beforeEach, expect } from '@jest/globals';
+import { jest, describe, test, beforeAll, beforeEach, afterEach, expect } from '@jest/globals';
 import { auroraDSQLPostgres } from "../src";
 
 jest.mock('postgres', () => {
@@ -110,6 +110,11 @@ describe('AuroraDSQLPostgres', () => {
     });
 
     describe('parseRegionFromHost', () => {
+        afterEach(() => {
+            delete process.env.AWS_REGION;
+            delete process.env.AWS_DEFAULT_REGION;
+        });
+
         test('should extract region from DSQL hostname', () => {
             AuroraDSQLPostgres({
                 host: 'cluster.dsql.us-east-1.on.aws',
@@ -132,9 +137,75 @@ describe('AuroraDSQLPostgres', () => {
             const signerConfig = mockDsqlSigner.mock.calls[0][0];
             expect(signerConfig.region).toBe('us-east-1');
         });
+
+        test('should respect explicit region override even when hostname is parseable', () => {
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin',
+                region: 'eu-west-1'
+            });
+
+            expect(mockDsqlSigner).toHaveBeenCalledTimes(1);
+            const signerConfig = mockDsqlSigner.mock.calls[0][0];
+            expect(signerConfig.region).toBe('eu-west-1');
+        });
+
+        test('should use parsed region from hostname over env vars', () => {
+            process.env.AWS_REGION = 'eu-west-1';
+            process.env.AWS_DEFAULT_REGION = 'ap-south-1';
+
+            AuroraDSQLPostgres({
+                host: 'cluster.dsql.us-east-1.on.aws',
+                username: 'admin'
+            });
+
+            expect(mockDsqlSigner).toHaveBeenCalledTimes(1);
+            const signerConfig = mockDsqlSigner.mock.calls[0][0];
+            expect(signerConfig.region).toBe('us-east-1');
+        });
+
+        test('should fall back to AWS_REGION for unknown host format', () => {
+            process.env.AWS_REGION = 'eu-west-1';
+
+            AuroraDSQLPostgres({
+                host: 'my-cluster.example.com',
+                username: 'admin'
+            });
+
+            expect(mockDsqlSigner).toHaveBeenCalledTimes(1);
+            const signerConfig = mockDsqlSigner.mock.calls[0][0];
+            expect(signerConfig.region).toBe('eu-west-1');
+        });
+
+        test('should fall back to AWS_DEFAULT_REGION when AWS_REGION not set', () => {
+            process.env.AWS_DEFAULT_REGION = 'ap-south-1';
+
+            AuroraDSQLPostgres({
+                host: 'my-cluster.example.com',
+                username: 'admin'
+            });
+
+            expect(mockDsqlSigner).toHaveBeenCalledTimes(1);
+            const signerConfig = mockDsqlSigner.mock.calls[0][0];
+            expect(signerConfig.region).toBe('ap-south-1');
+        });
+
+        test('should throw when region cannot be determined for unknown host format', () => {
+            expect(() => {
+                AuroraDSQLPostgres({
+                    host: 'my-cluster.example.com',
+                    username: 'admin'
+                });
+            }).toThrow("Region is not specified and could not be parsed from hostname: 'my-cluster.example.com'");
+        });
     });
 
     describe('ClusterID as host', () => {
+        afterEach(() => {
+            delete process.env.AWS_REGION;
+            delete process.env.AWS_DEFAULT_REGION;
+        });
+
         test('should handle cluster ID given as hostname in connection string', () => {
             AuroraDSQLPostgres('postgres://admin@clusterID/', {
                 region: 'us-east-1'
@@ -154,6 +225,28 @@ describe('AuroraDSQLPostgres', () => {
             expect(mockPostgres).toHaveBeenCalledTimes(1);
             const options = mockPostgres.mock.calls[0][0];
             expect(options.host).toBe('clusterID.dsql.us-east-1.on.aws')
+        });
+
+        test('should use AWS_REGION for cluster ID when region not in config', () => {
+            process.env.AWS_REGION = 'eu-west-1';
+
+            AuroraDSQLPostgres({
+                host: 'cluster123',
+                username: 'admin'
+            });
+
+            expect(mockPostgres).toHaveBeenCalledTimes(1);
+            const options = mockPostgres.mock.calls[0][0];
+            expect(options.host).toBe('cluster123.dsql.eu-west-1.on.aws');
+        });
+
+        test('should throw when region cannot be determined for cluster ID', () => {
+            expect(() => {
+                AuroraDSQLPostgres({
+                    host: 'cluster123',
+                    username: 'admin'
+                });
+            }).toThrow("Region is not specified for cluster 'cluster123'");
         });
     });
 
