@@ -106,11 +106,16 @@ jobs:
           CLUSTER_USER: "admin"
         run: ./gradlew integrationTest
 
+      - name: Publish connector to Maven Local
+        run: ./gradlew publishToMavenLocal
+
       - name: Run example smoke tests
         working-directory: java/jdbc/examples/pgjdbc
         env:
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           CLUSTER_USER: "admin"
+          USE_MAVEN_LOCAL: "true"
+          CONNECTOR_VERSION: "0.0.0-SNAPSHOT"
         run: ../../gradlew test
 
   integration-tests:
