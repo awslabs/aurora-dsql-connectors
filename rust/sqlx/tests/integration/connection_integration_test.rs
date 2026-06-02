@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
 use aurora_dsql_sqlx_connector::Result;
 use sqlx::Row;
 

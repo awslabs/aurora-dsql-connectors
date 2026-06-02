@@ -1,6 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::sqlx_compat::sqlx;
 use crate::{DsqlError, Result};
 use derive_builder::Builder;
 use sqlx::Acquire;

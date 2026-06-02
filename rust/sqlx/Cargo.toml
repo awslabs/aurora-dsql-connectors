@@ -12,12 +12,15 @@ keywords = ["aws", "aurora", "dsql", "postgres", "sqlx"]
 categories = ["database", "authentication"]
 
 [features]
-default = []
+default = ["sqlx-0_8"]
+sqlx-0_8 = ["dep:sqlx-0_8"]
+sqlx-0_9 = ["dep:sqlx-0_9"]
 pool = ["dep:tokio", "tokio/rt", "tokio/time", "tokio/macros"]
 occ = ["dep:rand", "dep:tokio", "tokio/time", "dep:async-trait"]
 
 [dependencies]
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
+sqlx-0_8 = { package = "sqlx", version = "0.8", optional = true, features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
+sqlx-0_9 = { package = "sqlx", version = "0.9", optional = true, features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
 aws-config = { version = "1.8", features = ["credentials-login"] }
 aws-sdk-dsql = "1.0"
 aws-credential-types = "1"
@@ -35,4 +38,4 @@ tokio = { version = "1", features = ["macros", "rt"] }
 tokio-test = "0.4"
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["sqlx-0_8", "pool", "occ"]

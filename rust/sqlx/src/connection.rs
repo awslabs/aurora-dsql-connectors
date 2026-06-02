@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::DsqlConnectOptions;
+use crate::sqlx_compat::sqlx;
 use crate::{DsqlError, Result};
 use sqlx::Connection;
 

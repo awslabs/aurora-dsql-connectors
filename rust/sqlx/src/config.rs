@@ -1,11 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::sqlx_compat::sqlx::postgres::{PgConnectOptions, PgSslMode};
 use crate::{util::ClusterId, DsqlError, Result};
 use aws_config::{Region, SdkConfig};
 use aws_credential_types::provider::SharedCredentialsProvider;
 use derive_builder::Builder;
-use sqlx::postgres::{PgConnectOptions, PgSslMode};
 #[cfg(feature = "pool")]
 use std::time::Duration;
 use url::Url;

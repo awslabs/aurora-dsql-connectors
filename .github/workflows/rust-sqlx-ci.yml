@@ -27,6 +27,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
+    strategy:
+      fail-fast: false
+      matrix:
+        sqlx-version: [sqlx-0_8, sqlx-0_9]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -43,16 +47,16 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             rust/sqlx/target
-          key: rust-sqlx-${{ runner.os }}-${{ hashFiles('rust/sqlx/Cargo.lock') }}
+          key: rust-sqlx-${{ matrix.sqlx-version }}-${{ runner.os }}-${{ hashFiles('rust/sqlx/Cargo.lock') }}
 
       - name: Check formatting
         run: cargo fmt --check
 
       - name: Run clippy
-        run: cargo clippy --features pool,occ -- -D warnings
+        run: cargo clippy --no-default-features --features ${{ matrix.sqlx-version }},pool,occ -- -D warnings
 
       - name: Run connector unit tests
-        run: "cargo test --features pool,occ --lib"
+        run: "cargo test --no-default-features --features ${{ matrix.sqlx-version }},pool,occ --lib"
 
       - name: Download Amazon root certificate
         run: |
@@ -70,13 +74,15 @@ jobs:
           CLUSTER_USER: "admin"
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           REGION: ${{ needs.create-cluster.outputs.region }}
-        run: "cargo test --features pool,occ --test tests"
+        run: "cargo test --no-default-features --features ${{ matrix.sqlx-version }},pool,occ --test tests"
 
       - name: Build examples
+        if: matrix.sqlx-version == 'sqlx-0_8'
         working-directory: rust/sqlx/example
         run: cargo build
 
       - name: Run example integration tests
+        if: matrix.sqlx-version == 'sqlx-0_8'
         working-directory: rust/sqlx/example
         env:
           CLUSTER_USER: "admin"

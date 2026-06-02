@@ -4,8 +4,8 @@
 use aws_sdk_dsql::auth_token::AuthTokenGenerator;
 
 use crate::config::DsqlConnectOptions;
+use crate::sqlx_compat::sqlx::postgres::{PgPool, PgPoolOptions};
 use crate::{DsqlError, Result};
-use sqlx::postgres::{PgPool, PgPoolOptions};
 
 /// Parse a connection string, create a PgPool, verify connectivity,
 /// and spawn a background token refresh task.

@@ -5,6 +5,8 @@
 
 //! Aurora DSQL connector for SQLx.
 
+pub mod sqlx_compat;
+
 mod config;
 pub mod connection;
 mod error;

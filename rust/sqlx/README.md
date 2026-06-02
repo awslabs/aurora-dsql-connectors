@@ -46,16 +46,25 @@ aurora-dsql-sqlx-connector = "0.1.2"
 
 | Feature | Default | Description |
 |---------|---------|-------------|
+| `sqlx-0_8` | **Yes** | Use SQLx 0.8 (stable, broad ecosystem compatibility) |
+| `sqlx-0_9` | No | Use SQLx 0.9 (for projects already on sqlx 0.9) |
 | `occ` | No | OCC retry helpers (`retry_on_occ`, `is_occ_error`, `OCCType`, `OCCRetryExt` trait for `PgConnection`) |
 | `pool` | No | sqlx pool helper with background token refresh |
 
-**Note:** To use `OCCRetryExt` on `PgPool`, enable both `occ` and `pool` features.
+**Note:** `sqlx-0_8` and `sqlx-0_9` are mutually exclusive. To use `OCCRetryExt` on `PgPool`, enable both `occ` and `pool` features.
 
-For most applications, enable both features:
+For most applications using SQLx 0.8 (default):
 
 ```toml
 [dependencies]
 aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
+```
+
+For projects already on SQLx 0.9:
+
+```toml
+[dependencies]
+aurora-dsql-sqlx-connector = { version = "0.1.2", default-features = false, features = ["sqlx-0_9", "pool", "occ"] }
 ```
 
 ## Configuration Options
@@ -74,11 +83,21 @@ These options are parsed from the connection string or set via the builder:
 | `tokenDurationSecs` | `u64` | `900` (15 minutes) | Token validity duration in seconds |
 | `ormPrefix` | `Option<String>` | `None` | ORM prefix for application_name (e.g. `"diesel"` → `"diesel:aurora-dsql-rust-sqlx/{version}"`) |
 
+### Accessing SQLx Types
+
+The connector re-exports the selected SQLx version via `sqlx_compat::sqlx`. Use this instead of depending on `sqlx` directly to avoid version conflicts:
+
+```rust
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
+use sqlx::Row;
+```
+
 ## Quick Start
 
 Enable the `pool` feature, then:
 
 ```rust
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
 use sqlx::Row;
 
 #[tokio::main]
@@ -161,6 +180,7 @@ let opts = DsqlConnectOptions::from_connection_string(
 For simple scripts or when connection pooling is not needed:
 
 ```rust
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
 use sqlx::Row;
 
 #[tokio::main]
@@ -188,6 +208,7 @@ The `pool` feature provides `pool::connect()` helpers that return a standard `sq
 For custom pool settings, pass `PgPoolOptions` to `connect_with()` to get both pool tuning and the background token refresh task:
 
 ```rust
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
 use aurora_dsql_sqlx_connector::DsqlConnectOptions;
 use sqlx::postgres::PgPoolOptions;
 
@@ -214,6 +235,7 @@ let pool = aurora_dsql_sqlx_connector::pool::connect(
 Use `DsqlConnectOptionsBuilder` for programmatic configuration:
 
 ```rust
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
 use aurora_dsql_sqlx_connector::{DsqlConnectOptionsBuilder, Region};
 use sqlx::postgres::PgConnectOptions;
 
@@ -235,6 +257,7 @@ let mut conn = aurora_dsql_sqlx_connector::connection::connect_with(&opts).await
 For environments where the default credential chain doesn't apply (e.g., Lambda with assumed roles), pass a custom `SharedCredentialsProvider`:
 
 ```rust
+use aurora_dsql_sqlx_connector::sqlx_compat::sqlx;
 use aurora_dsql_sqlx_connector::{DsqlConnectOptionsBuilder, SharedCredentialsProvider};
 use aws_credential_types::Credentials;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
