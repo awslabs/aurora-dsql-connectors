@@ -6,7 +6,7 @@ use aurora_dsql_sqlx_connector::{
     OCCRetryExt, Result,
 };
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::Row;
+use sqlx::{AssertSqlSafe, Row};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,19 +32,22 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
 
     // Cleanup any leftover table from previous runs
-    sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name))
-        .execute(&pool)
-        .await
-        .map_err(DsqlError::DatabaseError)?;
+    sqlx::query(AssertSqlSafe(format!(
+        "DROP TABLE IF EXISTS {}",
+        table_name
+    )))
+    .execute(&pool)
+    .await
+    .map_err(DsqlError::DatabaseError)?;
 
     // Setup: create table with a counter
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!(
+            sqlx::query(AssertSqlSafe(format!(
                 "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, counter INT NOT NULL)",
                 t
-            ))
+            )))
             .execute(&mut **tx)
             .await?;
             Ok(())
@@ -56,9 +59,12 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("INSERT INTO {} (id, counter) VALUES (1, 0)", t))
-                .execute(&mut **tx)
-                .await?;
+            sqlx::query(AssertSqlSafe(format!(
+                "INSERT INTO {} (id, counter) VALUES (1, 0)",
+                t
+            )))
+            .execute(&mut **tx)
+            .await?;
             Ok(())
         })
     })
@@ -81,16 +87,22 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
                 let t = table.clone();
                 txn!({
                     // Read current value
-                    let row = sqlx::query(&format!("SELECT counter FROM {} WHERE id = 1", t))
-                        .fetch_one(&mut **tx)
-                        .await?;
+                    let row = sqlx::query(AssertSqlSafe(format!(
+                        "SELECT counter FROM {} WHERE id = 1",
+                        t
+                    )))
+                    .fetch_one(&mut **tx)
+                    .await?;
                     let current: i32 = row.get("counter");
 
                     // Increment (classic read-modify-write that triggers OCC)
-                    sqlx::query(&format!("UPDATE {} SET counter = $1 WHERE id = 1", t))
-                        .bind(current + 1)
-                        .execute(&mut **tx)
-                        .await?;
+                    sqlx::query(AssertSqlSafe(format!(
+                        "UPDATE {} SET counter = $1 WHERE id = 1",
+                        t
+                    )))
+                    .bind(current + 1)
+                    .execute(&mut **tx)
+                    .await?;
                     Ok(())
                 })
             })
@@ -104,10 +116,13 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     }
 
     // Verify all increments succeeded - counter should be 10
-    let row = sqlx::query(&format!("SELECT counter FROM {} WHERE id = 1", table_name))
-        .fetch_one(&pool)
-        .await
-        .map_err(DsqlError::DatabaseError)?;
+    let row = sqlx::query(AssertSqlSafe(format!(
+        "SELECT counter FROM {} WHERE id = 1",
+        table_name
+    )))
+    .fetch_one(&pool)
+    .await
+    .map_err(DsqlError::DatabaseError)?;
     let final_count: i32 = row.get("counter");
     assert_eq!(
         final_count, 10,
@@ -118,7 +133,7 @@ async fn test_pool_occ_retry_on_concurrent_conflict() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
+            sqlx::query(AssertSqlSafe(format!("DROP TABLE IF EXISTS {}", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
@@ -180,10 +195,10 @@ async fn test_connection_occ_retry_with_conflict() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!(
+            sqlx::query(AssertSqlSafe(format!(
                 "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, val INT)",
                 t
-            ))
+            )))
             .execute(&mut **tx)
             .await?;
             Ok(())
@@ -194,7 +209,7 @@ async fn test_connection_occ_retry_with_conflict() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("INSERT INTO {} VALUES (1, 0)", t))
+            sqlx::query(AssertSqlSafe(format!("INSERT INTO {} VALUES (1, 0)", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
@@ -219,9 +234,12 @@ async fn test_connection_occ_retry_with_conflict() -> Result<()> {
             .transaction_with_retry(Some(&setup_retry_config()), |tx| {
                 let t = table_clone.clone();
                 txn!({
-                    sqlx::query(&format!("UPDATE {} SET val = 999 WHERE id = 1", t))
-                        .execute(&mut **tx)
-                        .await?;
+                    sqlx::query(AssertSqlSafe(format!(
+                        "UPDATE {} SET val = 999 WHERE id = 1",
+                        t
+                    )))
+                    .execute(&mut **tx)
+                    .await?;
                     Ok(())
                 })
             })
@@ -237,14 +255,17 @@ async fn test_connection_occ_retry_with_conflict() -> Result<()> {
             let t = table_name.clone();
             txn!({
                 c.fetch_add(1, Ordering::SeqCst);
-                let row = sqlx::query(&format!("SELECT val FROM {} WHERE id = 1", t))
+                let row = sqlx::query(AssertSqlSafe(format!("SELECT val FROM {} WHERE id = 1", t)))
                     .fetch_one(&mut **tx)
                     .await?;
                 let current: i32 = row.get("val");
-                sqlx::query(&format!("UPDATE {} SET val = $1 WHERE id = 1", t))
-                    .bind(current + 1)
-                    .execute(&mut **tx)
-                    .await?;
+                sqlx::query(AssertSqlSafe(format!(
+                    "UPDATE {} SET val = $1 WHERE id = 1",
+                    t
+                )))
+                .bind(current + 1)
+                .execute(&mut **tx)
+                .await?;
                 tokio::time::sleep(Duration::from_millis(100)).await;
                 Ok(())
             })
@@ -266,7 +287,7 @@ async fn test_connection_occ_retry_with_conflict() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
+            sqlx::query(AssertSqlSafe(format!("DROP TABLE IF EXISTS {}", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
@@ -316,19 +337,22 @@ async fn test_retry_exhaustion() -> Result<()> {
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
 
     // Cleanup any leftover table from previous runs
-    sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name))
-        .execute(&pool)
-        .await
-        .map_err(DsqlError::DatabaseError)?;
+    sqlx::query(AssertSqlSafe(format!(
+        "DROP TABLE IF EXISTS {}",
+        table_name
+    )))
+    .execute(&pool)
+    .await
+    .map_err(DsqlError::DatabaseError)?;
 
     // Setup table
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!(
+            sqlx::query(AssertSqlSafe(format!(
                 "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, val INT)",
                 t
-            ))
+            )))
             .execute(&mut **tx)
             .await?;
             Ok(())
@@ -339,7 +363,7 @@ async fn test_retry_exhaustion() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("INSERT INTO {} VALUES (1, 0)", t))
+            sqlx::query(AssertSqlSafe(format!("INSERT INTO {} VALUES (1, 0)", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
@@ -369,10 +393,10 @@ async fn test_retry_exhaustion() -> Result<()> {
                         .transaction_with_retry(Some(&setup_retry_config()), |tx| {
                             let tab = t.clone();
                             txn!({
-                                sqlx::query(&format!(
+                                sqlx::query(AssertSqlSafe(format!(
                                     "UPDATE {} SET val = val + 1 WHERE id = 1",
                                     tab
-                                ))
+                                )))
                                 .execute(&mut **tx)
                                 .await?;
                                 Ok(())
@@ -395,14 +419,17 @@ async fn test_retry_exhaustion() -> Result<()> {
             let t = table_name.clone();
             txn!({
                 c.fetch_add(1, Ordering::SeqCst);
-                let row = sqlx::query(&format!("SELECT val FROM {} WHERE id = 1", t))
+                let row = sqlx::query(AssertSqlSafe(format!("SELECT val FROM {} WHERE id = 1", t)))
                     .fetch_one(&mut **tx)
                     .await?;
                 let current: i32 = row.get("val");
-                sqlx::query(&format!("UPDATE {} SET val = $1 WHERE id = 1", t))
-                    .bind(current + 100)
-                    .execute(&mut **tx)
-                    .await?;
+                sqlx::query(AssertSqlSafe(format!(
+                    "UPDATE {} SET val = $1 WHERE id = 1",
+                    t
+                )))
+                .bind(current + 100)
+                .execute(&mut **tx)
+                .await?;
                 tokio::time::sleep(Duration::from_millis(100)).await; // Hold transaction longer
                 Ok(())
             })
@@ -440,7 +467,7 @@ async fn test_retry_exhaustion() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
+            sqlx::query(AssertSqlSafe(format!("DROP TABLE IF EXISTS {}", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
@@ -462,19 +489,22 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
         aurora_dsql_sqlx_connector::pool::connect_with(&opts, PgPoolOptions::new()).await?;
 
     // Cleanup any leftover table from previous runs
-    sqlx::query(&format!("DROP TABLE IF EXISTS {}", table_name))
-        .execute(&pool)
-        .await
-        .map_err(DsqlError::DatabaseError)?;
+    sqlx::query(AssertSqlSafe(format!(
+        "DROP TABLE IF EXISTS {}",
+        table_name
+    )))
+    .execute(&pool)
+    .await
+    .map_err(DsqlError::DatabaseError)?;
 
     // Setup table
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!(
+            sqlx::query(AssertSqlSafe(format!(
                 "CREATE TABLE IF NOT EXISTS {} (id INT PRIMARY KEY, val INT)",
                 t
-            ))
+            )))
             .execute(&mut **tx)
             .await?;
             Ok(())
@@ -485,7 +515,7 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("INSERT INTO {} VALUES (1, 42)", t))
+            sqlx::query(AssertSqlSafe(format!("INSERT INTO {} VALUES (1, 42)", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
@@ -510,9 +540,12 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
             .transaction_with_retry(Some(&setup_retry_config()), |tx| {
                 let t = table_clone.clone();
                 txn!({
-                    sqlx::query(&format!("UPDATE {} SET val = 100 WHERE id = 1", t))
-                        .execute(&mut **tx)
-                        .await?;
+                    sqlx::query(AssertSqlSafe(format!(
+                        "UPDATE {} SET val = 100 WHERE id = 1",
+                        t
+                    )))
+                    .execute(&mut **tx)
+                    .await?;
                     Ok(())
                 })
             })
@@ -526,16 +559,19 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
             let t = table_name.clone();
             txn!({
                 c.fetch_add(1, Ordering::SeqCst);
-                let row = sqlx::query(&format!("SELECT val FROM {} WHERE id = 1", t))
+                let row = sqlx::query(AssertSqlSafe(format!("SELECT val FROM {} WHERE id = 1", t)))
                     .fetch_one(&mut **tx)
                     .await?;
                 let val: i32 = row.get("val");
 
                 // Update it
-                sqlx::query(&format!("UPDATE {} SET val = $1 WHERE id = 1", t))
-                    .bind(val + 10)
-                    .execute(&mut **tx)
-                    .await?;
+                sqlx::query(AssertSqlSafe(format!(
+                    "UPDATE {} SET val = $1 WHERE id = 1",
+                    t
+                )))
+                .bind(val + 10)
+                .execute(&mut **tx)
+                .await?;
 
                 // Return the computed value
                 Ok(val + 10)
@@ -556,7 +592,7 @@ async fn test_return_value_preserved_across_retries() -> Result<()> {
     pool.transaction_with_retry(Some(&setup_retry_config()), |tx| {
         let t = table_name.clone();
         txn!({
-            sqlx::query(&format!("DROP TABLE IF EXISTS {}", t))
+            sqlx::query(AssertSqlSafe(format!("DROP TABLE IF EXISTS {}", t)))
                 .execute(&mut **tx)
                 .await?;
             Ok(())
