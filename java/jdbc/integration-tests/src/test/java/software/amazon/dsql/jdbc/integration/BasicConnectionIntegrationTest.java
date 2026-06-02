@@ -182,6 +182,7 @@ public class BasicConnectionIntegrationTest {
 
     @Test
     void testTransactionHandling() throws SQLException {
+        String tableName = "test_txn_" + System.currentTimeMillis();
         try (Connection conn = createConnection()) {
             assertNotNull(conn, "Connection should not be null");
 
@@ -190,33 +191,32 @@ public class BasicConnectionIntegrationTest {
             assertFalse(conn.getAutoCommit(), "Auto-commit should be disabled");
 
             try (Statement stmt = conn.createStatement()) {
-                // Create a temporary table for testing
-                stmt.executeUpdate("DROP TABLE IF EXISTS test_table");
-                // Commit the transaction
-                conn.commit();
-            }
-
-            try (Statement stmt = conn.createStatement()) {
-                // Create a temporary table for testing
                 stmt.executeUpdate(
-                        "CREATE TABLE IF NOT EXISTS test_table (id INTEGER, name VARCHAR(50))");
-                // Commit the transaction
+                        "CREATE TABLE IF NOT EXISTS "
+                                + tableName
+                                + " (id INTEGER, name VARCHAR(50))");
                 conn.commit();
             }
 
             try (Statement stmt = conn.createStatement()) {
                 // Insert test data
-                stmt.executeUpdate("INSERT INTO test_table (id, name) VALUES (1, 'test1')");
-                stmt.executeUpdate("INSERT INTO test_table (id, name) VALUES (2, 'test2')");
+                stmt.executeUpdate("INSERT INTO " + tableName + " (id, name) VALUES (1, 'test1')");
+                stmt.executeUpdate("INSERT INTO " + tableName + " (id, name) VALUES (2, 'test2')");
 
                 // Commit the transaction
                 conn.commit();
 
                 // Verify data was committed
-                try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM test_table")) {
+                try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
                     assertTrue(rs.next(), "Result set should have at least one row");
                     assertEquals(2, rs.getInt(1), "Should have 2 rows in test table");
                 }
+            }
+
+            // Cleanup
+            try (Statement stmt = conn.createStatement()) {
+                stmt.executeUpdate("DROP TABLE IF EXISTS " + tableName);
+                conn.commit();
             }
 
             // Reset auto-commit

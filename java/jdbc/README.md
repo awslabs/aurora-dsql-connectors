@@ -160,6 +160,115 @@ java.util.logging.ConsoleHandler.formatter = java.util.logging.SimpleFormatter
 java.util.logging.SimpleFormatter.format = %1$tH:%1$tM:%1$tS.%1$tL [%4$s] %3$s - %5$s%n
 ```
 
+## OCC Retry
+
+Aurora DSQL uses Optimistic Concurrency Control (OCC) — conflicts are detected at commit time. When two transactions modify the same data, the second to commit receives an OCC error. This connector provides utilities for automatic retry with exponential backoff.
+
+### Quick Start
+
+```java
+// Bind once, reuse across call sites
+DataSource ds = new HikariDataSource(config);
+OCCTransactionRunner runner = OCCTransactionRunner.create(ds);
+
+int count = runner.run(conn -> {
+    Statement stmt = conn.createStatement();
+    stmt.executeUpdate("UPDATE accounts SET balance = balance - 100 WHERE id = 1");
+    stmt.executeUpdate("UPDATE accounts SET balance = balance + 100 WHERE id = 2");
+    return 2;
+});
+
+// Void variant — no need to return null
+runner.runVoid(conn -> {
+    conn.createStatement().executeUpdate("DELETE FROM expired_sessions");
+});
+```
+
+### Custom Configuration
+
+```java
+OCCRetryConfig config = OCCRetryConfig.builder()
+    .maxRetries(5)
+    .baseDelayMs(200)
+    .maxDelayMs(10000)
+    .multiplier(2.0)
+    .jitterFactor(0.5)
+    .build();
+
+OCCTransactionRunner runner = OCCTransactionRunner.create(ds, config);
+```
+
+### Static API (for one-off use)
+
+```java
+OCCRetry.execute(dataSource, OCCRetryConfig.defaults(), conn -> {
+    // transaction work
+    return result;
+});
+
+// With an existing connection (rolled back between attempts, not closed)
+OCCRetry.execute(connection, OCCRetryConfig.defaults(), conn -> {
+    // transaction work
+    return result;
+});
+```
+
+### Integration with Retry Frameworks
+
+Use `OCCRetry.isOCCError(SQLException)` as the predicate for any retry framework:
+
+**Spring Retry:**
+```java
+RetryTemplate template = RetryTemplate.builder()
+    .maxAttempts(4)
+    .exponentialBackoff(100, 2.0, 5000)
+    .retryOn(SQLException.class)
+    .traversingCauses()
+    .build();
+
+template.execute(ctx -> {
+    try (Connection conn = ds.getConnection()) {
+        conn.setAutoCommit(false);
+        // ... transaction work ...
+        conn.commit();
+        return null;
+    }
+});
+```
+
+**Resilience4j:**
+```java
+RetryConfig retryConfig = RetryConfig.custom()
+    .maxAttempts(4)
+    .retryOnException(e -> e instanceof SQLException && OCCRetry.isOCCError((SQLException) e))
+    .build();
+```
+
+**Failsafe:**
+```java
+RetryPolicy<Object> policy = RetryPolicy.builder()
+    .handleIf(e -> e instanceof SQLException && OCCRetry.isOCCError((SQLException) e))
+    .withMaxAttempts(4)
+    .withBackoff(Duration.ofMillis(100), Duration.ofSeconds(5))
+    .build();
+```
+
+**Plain loop:**
+```java
+SQLException lastErr = null;
+for (int i = 0; i <= maxRetries; i++) {
+    try {
+        doTransaction(ds);
+        return;
+    } catch (SQLException e) {
+        if (!OCCRetry.isOCCError(e)) throw e;
+        lastErr = e;
+        Thread.sleep(backoff(i));
+    }
+}
+throw lastErr;
+```
+
 ## Examples
 
 | Description | Examples |

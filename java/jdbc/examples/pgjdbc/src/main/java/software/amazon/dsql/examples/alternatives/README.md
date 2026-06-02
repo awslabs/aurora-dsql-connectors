@@ -18,4 +18,4 @@ The connector + pool combination handles this automatically:
 
 ### `no_connection_pool/`
 Examples without pooling:
-- `ExampleWithNoConnectionPool.java` - Single connection with connector
+- `ExampleWithNoConnectionPool.java` - Single connection with connector and OCC retry

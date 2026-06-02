@@ -73,6 +73,7 @@ The example demonstrates the following operations:
 - Opening a connection to an Aurora DSQL cluster
 - Creating a table
 - Inserting and querying data
+- Automatic OCC (Optimistic Concurrency Control) retry for write operations
 
 The example is designed to work with both admin and non-admin users:
 
