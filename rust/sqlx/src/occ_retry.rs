@@ -52,8 +52,8 @@ impl OCCRetryConfigBuilder {
         }
 
         if let Some(max) = self.max_delay_ms {
-            if max > 100 {
-                return Err("max_delay_ms exceeds 100ms".into());
+            if max > 5000 {
+                return Err("max_delay_ms exceeds 5000ms".into());
             }
         }
 
@@ -815,7 +815,7 @@ mod tests {
     #[test]
     fn test_builder_rejects_excessive_max_delay() {
         let result = OCCRetryConfigBuilder::default()
-            .max_delay_ms(101u64)
+            .max_delay_ms(5001u64)
             .build();
 
         assert!(result.is_err());
