@@ -14,7 +14,7 @@ A Rust connector for Amazon Aurora DSQL that wraps [SQLx](https://github.com/lau
 
 ## Prerequisites
 
-- Rust 1.80 or later
+- Rust 1.94 or later
 - AWS credentials configured (see [Credentials Resolution](#credentials-resolution) below)
 - An Aurora DSQL cluster
 
@@ -39,7 +39,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-aurora-dsql-sqlx-connector = "0.1.2"
+aurora-dsql-sqlx-connector = "0.2.0"
 ```
 
 ### Feature Flags
@@ -55,7 +55,7 @@ For most applications, enable both features:
 
 ```toml
 [dependencies]
-aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
+aurora-dsql-sqlx-connector = { version = "0.2.0", features = ["pool", "occ"] }
 ```
 
 ## Configuration Options

@@ -1,8 +1,8 @@
 [package]
 name = "aurora-dsql-sqlx-connector"
-version = "0.1.2"
+version = "0.2.0"
 edition = "2021"
-rust-version = "1.80"
+rust-version = "1.94"
 description = "Aurora DSQL connector for SQLx"
 authors = ["Amazon Web Services"]
 license = "Apache-2.0"
@@ -17,7 +17,7 @@ pool = ["dep:tokio", "tokio/rt", "tokio/time", "tokio/macros"]
 occ = ["dep:rand", "dep:tokio", "tokio/time", "dep:async-trait"]
 
 [dependencies]
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
+sqlx = { version = "0.9", features = ["runtime-tokio", "postgres", "tls-rustls-ring"] }
 aws-config = { version = "1.8", features = ["credentials-login"] }
 aws-sdk-dsql = "1.0"
 aws-credential-types = "1"
