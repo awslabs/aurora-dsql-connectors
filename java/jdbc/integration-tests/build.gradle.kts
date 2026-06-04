@@ -16,7 +16,7 @@ tasks.withType<JavaCompile> {
 
 dependencies {
     testImplementation(project(":"))
-    testImplementation("software.amazon.awssdk:auth:2.44.13")
+    testImplementation("software.amazon.awssdk:auth:2.46.3")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.14.4")
     testRuntimeOnly("org.junit.platform:junit-platform-console-standalone:1.14.4")
