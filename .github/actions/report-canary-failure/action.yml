@@ -33,18 +33,26 @@ runs:
 
         ${RUN_URL}
 
-        Stable releases are unaffected — the supported pinned version still builds. Resolve by updating the connector for the new ${UPSTREAM} version, then this issue can be closed (the canary will reopen it if the break recurs)."
+        Stable releases are unaffected — the supported pinned version still builds. Resolve by updating the connector for the new ${UPSTREAM} version, then this issue can be closed (a fresh issue is filed if the break recurs after closure)."
 
-        # Dedup on exact title among open issues so we comment instead of spamming.
+        # Dedup against OPEN issues only: once an issue is closed (fix shipped),
+        # a recurrence files a fresh issue rather than reopening.
+        # GitHub issue search is substring-tokenized, so the exact-title jq
+        # filter (passed via --arg to avoid quote injection) is the correctness
+        # guard; the --search is just a server-side prefilter.
         EXISTING=$(gh issue list --state open --search "in:title \"${TITLE}\"" --json number,title \
-          --jq ".[] | select(.title == \"${TITLE}\") | .number" | head -n1)
+          --jq '.[] | select(.title == $t) | .number' --arg t "${TITLE}" | head -n1)
 
         if [ -n "${EXISTING}" ]; then
           gh issue comment "${EXISTING}" --body "Canary failed again: ${RUN_URL}"
-          echo "Commented on existing issue #${EXISTING}"
+          echo "Commented on existing issue #${EXISTING}" >> "${GITHUB_STEP_SUMMARY}"
         else
-          gh label create compat-canary --color B60205 \
-            --description "Connector breaks against an upcoming upstream version" 2>/dev/null || true
+          # Idempotent label create: probe first so a real auth/network failure
+          # surfaces instead of being swallowed by `|| true`.
+          if ! gh label list --search compat-canary --json name --jq '.[].name' | grep -qx compat-canary; then
+            gh label create compat-canary --color B60205 \
+              --description "Connector breaks against an upcoming upstream version"
+          fi
           gh issue create --title "${TITLE}" --body "${BODY}" --label compat-canary
-          echo "Opened new tracking issue"
+          echo "Opened new tracking issue" >> "${GITHUB_STEP_SUMMARY}"
         fi

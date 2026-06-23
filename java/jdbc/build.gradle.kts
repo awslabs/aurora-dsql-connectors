@@ -41,9 +41,10 @@ dependencies {
     implementation("software.amazon.awssdk:dsql:2.46.11")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector.
-    // Override with -PpgjdbcVersion=... (the compat-canary workflow probes the
-    // next major). Default tracks the supported release.
-    val pgjdbcVersion = (findProperty("pgjdbcVersion") as String?) ?: "42.7.11"
+    // Override with -PpgjdbcVersion=... (the compat-canary workflow passes `+`
+    // to resolve the absolute latest released version, including new majors).
+    // Default tracks the supported release.
+    val pgjdbcVersion = findProperty("pgjdbcVersion")?.toString() ?: "42.7.11"
     implementation("org.postgresql:postgresql:$pgjdbcVersion")
 
     // Annotation dependencies for @Nullable, @Nonnull, etc.
