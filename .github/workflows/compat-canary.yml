@@ -1,0 +1,248 @@
+name: Compatibility Canary
+
+# Early-warning system: weekly, each connector is built/tested against the
+# LATEST released version of its upstream Postgres driver / SDK instead of the
+# pinned-and-supported version. A failure means an upcoming upstream release
+# introduces a breaking change — we find out here instead of from a customer.
+#
+# This NEVER gates anything: it does not run on PRs and is not part of ci-gate.
+# A red run + an auto-filed `compat-canary` issue are the signal. Stable
+# releases keep using the pinned versions and are unaffected.
+#
+# Scope is intentionally cheap (tier 1): recompile + unit tests vs. the latest
+# upstream, no live DSQL cluster. This catches the linkage/compile-time class
+# of break (API/symbol relocations, removed methods) without paying for a
+# cluster every week.
+#
+# Note: PHP's pdo_pgsql is a built-in PHP extension, not an upgradable
+# package — there is no upstream to canary at the connector layer, so it is
+# intentionally omitted.
+
+permissions: {}
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Run probes but skip filing tracking issues on failure (smoke test)"
+        type: boolean
+        default: false
+
+jobs:
+  python:
+    name: Python (psycopg/asyncpg latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: python/connector
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v8
+      - run: uv sync --all-extras
+      - name: Upgrade to latest psycopg, psycopg2, asyncpg
+        run: uv pip install --upgrade --prerelease allow psycopg "psycopg[binary]" psycopg2-binary asyncpg
+      - name: Unit tests vs latest drivers
+        run: uv run --no-sync pytest tests/unit
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: Python
+          upstream: psycopg/asyncpg
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  java-jdbc:
+    name: Java JDBC (pgjdbc latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          java-version: "25"
+          distribution: "corretto"
+      - name: Build + unit tests vs latest pgjdbc
+        working-directory: java/jdbc
+        # `+` resolves to the latest released version, including across majors.
+        run: ./gradlew test -PpgjdbcVersion=+
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: Java JDBC
+          upstream: PostgreSQL JDBC driver
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  go-pgx:
+    name: Go (pgx latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: go/pgx
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Upgrade pgx and aws-sdk to latest
+        run: |
+          go get -u github.com/jackc/pgx/v5
+          go get -u github.com/aws/aws-sdk-go-v2/...
+          go mod tidy
+      - name: Unit tests vs latest pgx
+        run: go test -v ./dsql/...
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: Go pgx
+          upstream: jackc/pgx
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  node-postgres:
+    name: node-postgres (pg latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: node/node-postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Upgrade pg to latest
+        run: npm install pg@latest --save-peer
+      - name: Build + unit tests vs latest pg
+        run: npm run build && npm run test:unit
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: node-postgres
+          upstream: pg
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  postgres-js:
+    name: postgres.js (postgres latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: node/postgres-js
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Upgrade postgres to latest
+        run: npm install postgres@latest --save-peer
+      - name: Build + unit tests vs latest postgres
+        run: npm run build && npm run test:unit
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: postgres.js
+          upstream: postgres
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  dotnet-npgsql:
+    name: .NET (Npgsql latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: dotnet/npgsql
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+      - name: Upgrade Npgsql to latest in src + unit tests
+        run: |
+          dotnet add src/Amazon.AuroraDsql.Npgsql package Npgsql --prerelease
+          dotnet add test/unit/Amazon.AuroraDsql.Npgsql.Tests package Npgsql --prerelease
+      - name: Build + unit tests vs latest Npgsql
+        run: |
+          dotnet build src/Amazon.AuroraDsql.Npgsql
+          dotnet test test/unit/Amazon.AuroraDsql.Npgsql.Tests
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: .NET Npgsql
+          upstream: Npgsql
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  rust-sqlx:
+    name: Rust (sqlx latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: rust/sqlx
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Upgrade sqlx to latest (including next major)
+        # `cargo add` rewrites the manifest constraint, jumping past the pinned
+        # major if a new one is out.
+        run: cargo add sqlx@latest --features runtime-tokio,postgres,tls-rustls-ring
+      - name: Build + unit tests vs latest sqlx
+        run: cargo test --features pool,occ --lib
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: Rust sqlx
+          upstream: sqlx
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  ruby-pg:
+    name: Ruby (pg gem latest)
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    defaults:
+      run:
+        working-directory: ruby/pg
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+          working-directory: ruby/pg
+      - name: Relax pg constraint and bundle to latest
+        # The gemspec pins `pg ~> 1.5`, which would block a hypothetical 2.x.
+        # Inject a Gemfile override (no manifest edit) to track the absolute latest.
+        run: |
+          cat > Gemfile.canary <<'GEMFILE'
+          source "https://rubygems.org"
+          gemspec
+          gem "pg"
+          GEMFILE
+          BUNDLE_GEMFILE=Gemfile.canary bundle install
+      - name: Unit tests vs latest pg gem
+        run: BUNDLE_GEMFILE=Gemfile.canary bundle exec rake unit
+      - name: Report break
+        if: failure() && inputs.dry-run != true
+        uses: ./.github/actions/report-canary-failure
+        with:
+          connector: Ruby pg
+          upstream: pg gem
+          github-token: ${{ secrets.GITHUB_TOKEN }}

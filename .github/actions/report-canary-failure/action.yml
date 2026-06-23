@@ -1,0 +1,50 @@
+name: Report canary failure
+description: >
+  Open (or comment on) a single deduplicated tracking issue when a
+  compatibility canary detects a break against the latest upstream version.
+
+inputs:
+  connector:
+    description: Connector name, used in the issue title (e.g. "Npgsql").
+    required: true
+  upstream:
+    description: Upstream library probed, used in the issue body (e.g. "Npgsql", "sqlx", "pgx").
+    required: true
+  github-token:
+    description: Token with issues:write.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Open or update tracking issue
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        CONNECTOR: ${{ inputs.connector }}
+        UPSTREAM: ${{ inputs.upstream }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        TITLE="[compat-canary] ${CONNECTOR} connector breaks against latest ${UPSTREAM}"
+        BODY="The weekly compatibility canary failed building/testing the ${CONNECTOR} connector against the latest released ${UPSTREAM}.
+
+        This is an early warning that an upcoming ${UPSTREAM} version introduces a breaking change (API/symbol relocation, removed method, etc.) before a customer hits it. See the failing run for the exact error:
+
+        ${RUN_URL}
+
+        Stable releases are unaffected — the supported pinned version still builds. Resolve by updating the connector for the new ${UPSTREAM} version, then this issue can be closed (the canary will reopen it if the break recurs)."
+
+        # Dedup on exact title among open issues so we comment instead of spamming.
+        EXISTING=$(gh issue list --state open --search "in:title \"${TITLE}\"" --json number,title \
+          --jq ".[] | select(.title == \"${TITLE}\") | .number" | head -n1)
+
+        if [ -n "${EXISTING}" ]; then
+          gh issue comment "${EXISTING}" --body "Canary failed again: ${RUN_URL}"
+          echo "Commented on existing issue #${EXISTING}"
+        else
+          gh label create compat-canary --color B60205 \
+            --description "Connector breaks against an upcoming upstream version" 2>/dev/null || true
+          gh issue create --title "${TITLE}" --body "${BODY}" --label compat-canary
+          echo "Opened new tracking issue"
+        fi
