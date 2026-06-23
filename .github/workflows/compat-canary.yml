@@ -221,19 +221,20 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
+    defaults:
+      run:
+        working-directory: rust/sqlx
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-      - name: Upgrade sqlx to latest (including next major)
+      - name: Upgrade sqlx to absolute latest (including new majors)
         # `cargo add` with no version requirement rewrites the manifest to
         # the latest released version, jumping past the pinned major if a new
         # one is out. (`@latest` is not a valid cargo version requirement.)
-        working-directory: rust/sqlx
         run: cargo add sqlx --features runtime-tokio,postgres,tls-rustls-ring
       - name: Build + unit tests vs latest sqlx
-        working-directory: rust/sqlx
         run: cargo test --features pool,occ --lib
       - name: Report break
         if: failure() && inputs.dry-run != true

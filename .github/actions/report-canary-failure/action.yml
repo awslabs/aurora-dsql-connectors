@@ -35,13 +35,14 @@ runs:
 
         Stable releases are unaffected — the supported pinned version still builds. Resolve by updating the connector for the new ${UPSTREAM} version, then this issue can be closed (a fresh issue is filed if the break recurs after closure)."
 
-        # Dedup against OPEN issues only: once an issue is closed (fix shipped),
-        # a recurrence files a fresh issue rather than reopening.
-        # GitHub issue search is substring-tokenized, so the exact-title jq
-        # filter (passed via --arg to avoid quote injection) is the correctness
-        # guard; the --search is just a server-side prefilter.
+        # Dedup against OPEN issues only (closed = fix shipped; a recurrence
+        # files a fresh issue). GitHub issue search is substring-tokenized,
+        # so the exact-title jq match is the real correctness guard; the
+        # --search is a server-side prefilter. TITLE is passed to jq via
+        # --arg (not via shell interpolation into the filter) to avoid
+        # quote/backslash injection.
         EXISTING=$(gh issue list --state open --search "in:title \"${TITLE}\"" --json number,title \
-          --jq '.[] | select(.title == $t) | .number' --arg t "${TITLE}" | head -n1)
+          | jq -r --arg t "${TITLE}" '.[] | select(.title == $t) | .number' | head -n1)
 
         if [ -n "${EXISTING}" ]; then
           gh issue comment "${EXISTING}" --body "Canary failed again: ${RUN_URL}"
