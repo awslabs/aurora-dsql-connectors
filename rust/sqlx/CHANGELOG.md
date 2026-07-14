@@ -10,6 +10,27 @@
 - Bumped MSRV from 1.85 to 1.94
 - Bumped crate version to 0.2.1
 
+### Migration
+
+Replace raw string queries:
+```rust
+// Before (sqlx 0.8)
+sqlx::query(&format!("SELECT * FROM {}", table))
+
+// After (sqlx 0.9)
+use sqlx::AssertSqlSafe;
+sqlx::query(AssertSqlSafe(format!("SELECT * FROM {}", table)))
+```
+
+### Installation
+
+```toml
+[dependencies]
+aurora-dsql-sqlx-connector = { version = "0.2.1", features = ["pool", "occ"] }
+```
+
+**Full Changelog**: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.2.0...rust/sqlx/v0.2.1
+
 [Changes][rust/sqlx/v0.2.1]
 
 
