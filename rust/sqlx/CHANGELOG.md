@@ -39,7 +39,7 @@ aurora-dsql-sqlx-connector = { version = "0.2.1", features = ["pool", "occ"] }
 
 Added automatic OCC retry support for transactional workloads on both pool and single-connection modes.
 
-### What's Changed
+### What's Included
 
 - Added `OCCRetryExt` for `PgPool` and `PgConnection`
 - Added `txn!` macro helpers for simpler retry-based transactions
