@@ -245,8 +245,8 @@ php example/src/example_preferred.php
 
 - [Aurora DSQL User Guide](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html)
 - [Aurora DSQL PostgreSQL Compatibility](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility.html)
-- [Aurora DSQL Unsupported Features](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-unsupported.html)
-- [Optimistic Concurrency Control in Aurora DSQL](https://aws.amazon.com/blogs/database/introducing-optimistic-concurrency-control-in-amazon-aurora-dsql/)
+- [Migrating from PostgreSQL to Aurora DSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-migration-guide.html)
+- [Concurrency Control in Aurora DSQL](https://aws.amazon.com/blogs/database/concurrency-control-in-amazon-aurora-dsql/)
 - [PHP PDO Documentation](https://www.php.net/manual/en/book.pdo.php)
 - [AWS SDK for PHP](https://docs.aws.amazon.com/sdk-for-php/v3/developer-guide/welcome.html)
 
