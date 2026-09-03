@@ -428,7 +428,7 @@ cargo run --bin example_no_connection_pool
 ## Additional Resources
 
 - [Amazon Aurora DSQL Documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html)
-- [Aurora DSQL Best Practices](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/best-practices.html)
+- [Aurora DSQL Considerations](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/considerations.html)
 - [SQLx Documentation](https://docs.rs/sqlx/latest/sqlx/)
 - [AWS SDK for Rust](https://docs.aws.amazon.com/sdk-for-rust/latest/dg/welcome.html)
 

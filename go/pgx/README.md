@@ -25,7 +25,7 @@ For information about creating an Aurora DSQL cluster, see the [Getting started 
 
 ### Credentials Resolution
 
-The connector uses the [AWS SDK for Go v2 default credential chain](https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/#specifying-credentials), which resolves credentials in the following order:
+The connector uses the [AWS SDK for Go v2 default credential chain](https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/configure-gosdk.html#specifying-credentials), which resolves credentials in the following order:
 
 1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN`)
 2. **Shared credentials file** (`~/.aws/credentials`) with optional profile via `AWS_PROFILE` or `Config.Profile`
@@ -391,7 +391,7 @@ For Aurora DSQL best practices including primary key selection, concurrency hand
 - [Amazon Aurora DSQL Documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html)
 - [pgx Documentation](https://pkg.go.dev/github.com/jackc/pgx/v5)
 - [pgxpool Documentation](https://pkg.go.dev/github.com/jackc/pgx/v5/pgxpool)
-- [AWS SDK for Go v2](https://aws.github.io/aws-sdk-go-v2/)
+- [AWS SDK for Go v2](https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/)
 
 ---
 
