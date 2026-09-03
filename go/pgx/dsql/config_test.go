@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,8 +131,8 @@ func TestConfigResolve(t *testing.T) {
 	tests := []struct {
 		name    string
 		config  Config
-		setup   func()    // Optional setup (e.g., set env vars)
-		cleanup func()    // Optional cleanup
+		setup   func() // Optional setup (e.g., set env vars)
+		cleanup func() // Optional cleanup
 		wantErr bool
 		errMsg  string
 	}{
@@ -338,4 +339,30 @@ func TestParseConnectionString(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConfigureConnConfigSetsExecMode(t *testing.T) {
+	cfg := Config{
+		Host: "mycluster.dsql.us-east-1.on.aws",
+	}
+	resolved, err := cfg.resolve()
+	require.NoError(t, err)
+
+	connConfig, err := pgx.ParseConfig("")
+	require.NoError(t, err)
+
+	resolved.configureConnConfig(connConfig)
+
+	// The connector defaults to Exec: it does not cache a description or prepared
+	// statement across executions, so it stays correct after a live schema change
+	// (e.g. ALTER TABLE ADD COLUMN) without the extra Describe round trip that
+	// DescribeExec incurs. See configureConnConfig.
+	assert.Equal(t, pgx.QueryExecModeExec, connConfig.DefaultQueryExecMode)
+
+	// Sanity: the other connection settings are still applied.
+	assert.Equal(t, "mycluster.dsql.us-east-1.on.aws", connConfig.Host)
+	assert.Equal(t, uint16(5432), connConfig.Port)
+	assert.Equal(t, "postgres", connConfig.Database)
+	assert.Equal(t, "admin", connConfig.User)
+	assert.Equal(t, ApplicationName, connConfig.RuntimeParams["application_name"])
 }

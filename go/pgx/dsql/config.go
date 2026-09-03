@@ -226,4 +226,32 @@ func (r *resolvedConfig) configureConnConfig(cfg *pgx.ConnConfig) {
 	cfg.RuntimeParams = map[string]string{
 		"application_name": ApplicationName,
 	}
+
+	// Use Exec as the default query mode on Aurora DSQL.
+	//
+	// pgx's default (QueryExecModeCacheDescribe) caches each statement's result
+	// column descriptions per connection after the first Describe, then reuses
+	// that cached column count to build the Bind result-format-codes array on
+	// subsequent executions. Likewise QueryExecModeCacheStatement caches a
+	// prepared statement. If a table's schema changes (e.g. ALTER TABLE ADD
+	// COLUMN) while pooled connections are still open, those connections hold a
+	// stale description/plan and fail on the next execution:
+	//
+	//	CacheDescribe:  ERROR: bind message has N result formats but query has M columns (SQLSTATE 08P01)
+	//	CacheStatement: ERROR: cached plan must not change result type (SQLSTATE 0A000)
+	//
+	// QueryExecModeExec uses the unnamed prepared statement and does not cache a
+	// description or plan across executions, so it always reflects the current
+	// schema and neither error can occur. It also completes in a single network
+	// round trip. QueryExecModeDescribeExec is likewise schema-change safe but
+	// issues a separate Describe round trip on every execution; measured on
+	// Aurora DSQL that roughly doubles per-query latency (~2x) versus Exec, with
+	// no observed correctness advantage on DSQL's supported type surface (DSQL
+	// does not support enums or arrays, which are the main cases where the extra
+	// server-side parameter type resolution would matter). Exec is therefore the
+	// better default here.
+	//
+	// Callers may override this after construction, e.g. to DescribeExec if their
+	// workload relies on server-driven parameter type resolution.
+	cfg.DefaultQueryExecMode = pgx.QueryExecModeExec
 }
