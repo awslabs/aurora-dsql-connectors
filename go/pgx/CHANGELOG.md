@@ -81,7 +81,7 @@ https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.1.2...go/pgx
 [Changes][go/pgx/v0.1.3]
 
 
-[go/pgx/v0.5.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.3.0...go/pgx/v0.5.0
+[go/pgx/v0.5.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.4.0...go/pgx/v0.5.0
 [go/pgx/v0.3.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.1.3...go/pgx/v0.3.0
 [go/pgx/v0.1.3]: https://github.com/awslabs/aurora-dsql-connectors/tree/go/pgx/v0.1.3
 
