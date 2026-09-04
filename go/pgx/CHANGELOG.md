@@ -1,3 +1,21 @@
+<a id="go/pgx/v0.5.0"></a>
+# [Aurora DSQL Connector for Go pgx v0.5.0 (go/pgx/v0.5.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/go/pgx/v0.5.0) - 2026-09-04
+
+## What's Changed
+
+- Default the pgx query execution mode to `QueryExecModeDescribeExec` so pooled connections remain safe across live schema changes.
+- Add `Config.QueryExecMode` for callers that need to select another pgx execution mode.
+- Document the execution-mode correctness and latency tradeoffs, plus guidance for evolving schemas.
+- Refresh AWS SDK dependencies and documentation links since `v0.4.0`.
+
+Thanks to [@rmconstantin](https://github.com/rmconstantin) for the implementation and live-cluster validation, and [@praba2210](https://github.com/praba2210) for the detailed review.
+
+**Full Changelog**: https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.4.0...go/pgx/v0.5.0
+
+
+[Changes][go/pgx/v0.5.0]
+
+
 <a id="go/pgx/v0.3.0"></a>
 # [Aurora DSQL Connector for Go pgx v0.3.0 (go/pgx/v0.3.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/go/pgx/v0.3.0) - 2026-03-18
 
@@ -63,6 +81,7 @@ https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.1.2...go/pgx
 [Changes][go/pgx/v0.1.3]
 
 
+[go/pgx/v0.5.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.3.0...go/pgx/v0.5.0
 [go/pgx/v0.3.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/go/pgx/v0.1.3...go/pgx/v0.3.0
 [go/pgx/v0.1.3]: https://github.com/awslabs/aurora-dsql-connectors/tree/go/pgx/v0.1.3
 
