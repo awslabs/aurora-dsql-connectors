@@ -382,6 +382,66 @@ go run ./src/occ_retry/...
 go run ./src/connection_string/...
 ```
 
+## Query Execution Mode and Schema Evolution
+
+The connector sets pgx's `DefaultQueryExecMode` to `QueryExecModeDescribeExec` on
+every connection it creates. You can override this via `Config.QueryExecMode`.
+
+**Why not pgx's caching defaults?** pgx's default is `QueryExecModeCacheStatement`,
+which caches a prepared statement per connection; `QueryExecModeCacheDescribe`
+caches the statement's result-column descriptions. If a table's schema changes
+while pooled connections are still open — for example `ALTER TABLE ... ADD COLUMN`
+during a migration — the next execution on a connection holding a stale plan or
+description fails:
+
+```
+CacheStatement: ERROR: cached plan must not change result type (SQLSTATE 0A000)
+CacheDescribe:  ERROR: bind message has N result formats but query has M columns (SQLSTATE 08P01)
+```
+
+pgx invalidates the cache on that error and self-heals on the next attempt, but
+the failing statement still surfaces an error to the caller.
+
+`QueryExecModeDescribeExec` issues a `Describe` on every execution, so the result
+shape and parameter types are always current. It is safe across live schema
+changes, and because the server resolves parameter types, it correctly encodes
+ambiguous Go values. The cost is one extra `Describe` round trip per query.
+
+**Why not `QueryExecModeExec`?** `Exec` avoids the extra round trip (measured on
+Aurora DSQL it is roughly 2x faster per query than `DescribeExec`), but it **skips
+the server-side parameter `Describe`** and infers PostgreSQL types from Go types
+alone. On Aurora DSQL this measurably breaks real cases:
+
+- a `jsonb` parameter passed as a `map` or `[]byte` is **rejected**, and
+- a `[]byte` bound to a `text` column is **silently stored as its bytea hex
+  encoding** (no error, corrupted data).
+
+Because of this it is not a safe default. If your parameter types are unambiguous
+and you need the lower latency, opt in explicitly:
+
+```go
+pool, _ := dsql.NewPool(ctx, dsql.Config{
+    Host:          "cluster.dsql.us-east-1.on.aws",
+    QueryExecMode: pgx.QueryExecModeExec,
+})
+```
+
+> Note: overriding via `pool.Config().ConnConfig.DefaultQueryExecMode` or a preset
+> `pgxpool.Config.ConnConfig` does **not** work — `Config()` returns a copy, and
+> the connector applies its own mode when each connection is established. Use
+> `Config.QueryExecMode` (above), which is honored for both pooled and single
+> connections.
+
+### Recommendation: avoid `SELECT *` on evolving tables
+
+Selecting into a fixed struct is only part of the story: a `SELECT *` result set
+will still *grow* when columns are added, so the query keeps working but now
+returns extra columns. With `database/sql`/`sqlx`-style row scanning, unmapped
+extra columns can themselves cause errors (e.g. `missing destination name`).
+Prefer explicit column
+lists (`SELECT col_a, col_b, ...`) on read paths so additive schema changes are
+transparent to the application regardless of query mode.
+
 ## DSQL Best Practices
 
 For Aurora DSQL best practices including primary key selection, concurrency handling, index creation, and transaction limits, see the [Aurora DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility.html).
