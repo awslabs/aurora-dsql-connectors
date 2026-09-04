@@ -172,6 +172,23 @@ func getRegionFromEnv() string {
 	return os.Getenv("AWS_DEFAULT_REGION")
 }
 
+func parseQueryExecMode(value string) (pgx.QueryExecMode, error) {
+	switch value {
+	case "cache_statement":
+		return pgx.QueryExecModeCacheStatement, nil
+	case "cache_describe":
+		return pgx.QueryExecModeCacheDescribe, nil
+	case "describe_exec":
+		return pgx.QueryExecModeDescribeExec, nil
+	case "exec":
+		return pgx.QueryExecModeExec, nil
+	case "simple_protocol":
+		return pgx.QueryExecModeSimpleProtocol, nil
+	default:
+		return 0, fmt.Errorf("invalid queryExecMode %q", value)
+	}
+}
+
 // ParseConnectionString parses a PostgreSQL or DSQL connection string into a Config.
 // Supported schemes: postgres://, postgresql://, dsql://
 func ParseConnectionString(connStr string) (*Config, error) {
@@ -223,6 +240,14 @@ func ParseConnectionString(connStr string) (*Config, error) {
 			return nil, fmt.Errorf("invalid tokenDurationSecs: %w", err)
 		}
 		cfg.TokenDurationSecs = duration
+	}
+
+	if queryExecMode := query.Get("queryExecMode"); queryExecMode != "" {
+		mode, err := parseQueryExecMode(queryExecMode)
+		if err != nil {
+			return nil, err
+		}
+		cfg.QueryExecMode = mode
 	}
 
 	return cfg, nil

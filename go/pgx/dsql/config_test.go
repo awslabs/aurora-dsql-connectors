@@ -318,6 +318,16 @@ func TestParseConnectionString(t *testing.T) {
 				TokenDurationSecs: 300,
 			},
 		},
+		{
+			name:    "with query exec mode",
+			connStr: "postgres://admin@mycluster.dsql.us-east-1.on.aws/postgres?queryExecMode=cache_statement",
+			expected: Config{
+				Host:          "mycluster.dsql.us-east-1.on.aws",
+				User:          "admin",
+				Database:      "postgres",
+				QueryExecMode: pgx.QueryExecModeCacheStatement,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -336,6 +346,9 @@ func TestParseConnectionString(t *testing.T) {
 			}
 			if tt.expected.TokenDurationSecs != 0 {
 				assert.Equal(t, tt.expected.TokenDurationSecs, cfg.TokenDurationSecs)
+			}
+			if tt.expected.QueryExecMode != 0 {
+				assert.Equal(t, tt.expected.QueryExecMode, cfg.QueryExecMode)
 			}
 		})
 	}
@@ -379,4 +392,10 @@ func TestConfigureConnConfigHonorsQueryExecModeOverride(t *testing.T) {
 
 	// Explicit Config.QueryExecMode is honored over the default.
 	assert.Equal(t, pgx.QueryExecModeExec, connConfig.DefaultQueryExecMode)
+}
+
+func TestParseConnectionStringInvalidQueryExecMode(t *testing.T) {
+	_, err := ParseConnectionString("postgres://admin@mycluster.dsql.us-east-1.on.aws/postgres?queryExecMode=invalid")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid queryExecMode")
 }

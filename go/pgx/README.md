@@ -51,6 +51,7 @@ go get github.com/awslabs/aurora-dsql-connectors/go/pgx/dsql
 | `Port` | `int` | `5432` | Database port |
 | `Profile` | `string` | `""` | AWS profile name for credentials |
 | `TokenDurationSecs` | `int` | `900` (15 min) | Token validity duration in seconds (max 1 week) |
+| `QueryExecMode` | `pgx.QueryExecMode` | `DescribeExec` | Query execution mode; see [Query Execution Mode and Schema Evolution](#query-execution-mode-and-schema-evolution) |
 | `CustomCredentialsProvider` | `aws.CredentialsProvider` | `nil` | Custom AWS credentials provider |
 
 Pool configuration is passed directly via `*pgxpool.Config` as a separate parameter to `NewPool`. See [Pool Configuration Tuning](#pool-configuration-tuning) for details.
@@ -101,6 +102,7 @@ postgres://[user@]host[:port]/[database][?param=value&...]
 - `region` - AWS region
 - `profile` - AWS profile name
 - `tokenDurationSecs` - Token validity duration in seconds
+- `queryExecMode` - Query execution mode: `cache_statement`, `cache_describe`, `describe_exec`, `exec`, or `simple_protocol`
 
 **Examples:**
 
@@ -113,6 +115,9 @@ pool, _ := dsql.NewPool(ctx, "postgres://admin@cluster.dsql.us-east-1.on.aws/myd
 
 // With AWS profile
 pool, _ := dsql.NewPool(ctx, "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?profile=dev")
+
+// With an explicit query execution mode
+pool, _ = dsql.NewPool(ctx, "postgres://admin@cluster.dsql.us-east-1.on.aws/postgres?queryExecMode=cache_statement")
 ```
 
 ## Advanced Usage
@@ -416,15 +421,22 @@ alone. On Aurora DSQL this measurably breaks real cases:
 - a `[]byte` bound to a `text` column is **silently stored as its bytea hex
   encoding** (no error, corrupted data).
 
-Because of this it is not a safe default. If your parameter types are unambiguous
-and you need the lower latency, opt in explicitly:
+Because of this `Exec` is not a safe general-purpose option. If you need lower
+latency and can tolerate one transient, retryable schema-change failure, prefer
+`CacheStatement`: it keeps server-resolved parameter types and completes in a
+single round trip. Ensure your application retries `40001`/`0A000` during schema
+migrations.
 
 ```go
 pool, _ := dsql.NewPool(ctx, dsql.Config{
     Host:          "cluster.dsql.us-east-1.on.aws",
-    QueryExecMode: pgx.QueryExecModeExec,
+    QueryExecMode: pgx.QueryExecModeCacheStatement,
 })
 ```
+
+Use `Exec` only after validating that your workload has no ambiguous parameter
+types, such as `jsonb` values passed as Go maps/`[]byte` or `[]byte` values bound
+to text columns.
 
 > Note: overriding via `pool.Config().ConnConfig.DefaultQueryExecMode` or a preset
 > `pgxpool.Config.ConnConfig` does **not** work — `Config()` returns a copy, and
