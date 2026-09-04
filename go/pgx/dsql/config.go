@@ -42,6 +42,11 @@ const (
 	DefaultTokenDuration = 15 * time.Minute
 )
 
+// DefaultQueryExecMode is the pgx query execution mode the connector applies
+// when Config.QueryExecMode is left unset. See configureConnConfig for the
+// rationale.
+const DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+
 // Config holds the configuration for connecting to Aurora DSQL.
 type Config struct {
 	// Host is the cluster endpoint or cluster ID. Required.
@@ -67,6 +72,22 @@ type Config struct {
 
 	// CustomCredentialsProvider is a custom AWS credentials provider. Optional.
 	CustomCredentialsProvider aws.CredentialsProvider
+
+	// QueryExecMode overrides the pgx query execution mode used for every
+	// connection the connector creates. Optional; the zero value means "use the
+	// connector default" (QueryExecModeDescribeExec).
+	//
+	// The connector defaults to QueryExecModeDescribeExec because it stays
+	// correct across live schema changes (see configureConnConfig). If your
+	// workload is latency-sensitive and you have validated it against the
+	// caveats below, you can set QueryExecModeExec here for single-round-trip
+	// execution. Note that QueryExecModeExec skips the server-side parameter
+	// Describe, so it infers PostgreSQL parameter types from Go types alone;
+	// this can reject or mis-encode values whose intended type is ambiguous
+	// (e.g. jsonb passed as map/[]byte, or []byte destined for a text column).
+	// Prefer the default unless you have measured a need and confirmed your
+	// parameter types are unambiguous.
+	QueryExecMode pgx.QueryExecMode
 }
 
 // resolvedConfig holds the validated and resolved configuration with all
@@ -80,6 +101,7 @@ type resolvedConfig struct {
 	Profile                   string
 	TokenDuration             time.Duration
 	CustomCredentialsProvider aws.CredentialsProvider
+	QueryExecMode             pgx.QueryExecMode
 }
 
 // resolve validates the configuration, applies defaults, and resolves the
@@ -97,11 +119,18 @@ func (c *Config) resolve() (*resolvedConfig, error) {
 		Port:                      c.Port,
 		Profile:                   c.Profile,
 		CustomCredentialsProvider: c.CustomCredentialsProvider,
+		QueryExecMode:             c.QueryExecMode,
 	}
 
 	// Apply defaults
 	if resolved.User == "" {
 		resolved.User = DefaultUser
+	}
+	// The zero value of pgx.QueryExecMode is not a valid mode (the pgx const
+	// block starts at iota with a blank identifier), so treat zero as "unset"
+	// and apply the connector default.
+	if resolved.QueryExecMode == 0 {
+		resolved.QueryExecMode = DefaultQueryExecMode
 	}
 	if resolved.Database == "" {
 		resolved.Database = DefaultDatabase
@@ -227,31 +256,34 @@ func (r *resolvedConfig) configureConnConfig(cfg *pgx.ConnConfig) {
 		"application_name": ApplicationName,
 	}
 
-	// Use Exec as the default query mode on Aurora DSQL.
+	// Set the pgx query execution mode. Defaults to DescribeExec (see
+	// DefaultQueryExecMode); callers can override via Config.QueryExecMode.
 	//
-	// pgx's default (QueryExecModeCacheDescribe) caches each statement's result
-	// column descriptions per connection after the first Describe, then reuses
-	// that cached column count to build the Bind result-format-codes array on
-	// subsequent executions. Likewise QueryExecModeCacheStatement caches a
-	// prepared statement. If a table's schema changes (e.g. ALTER TABLE ADD
-	// COLUMN) while pooled connections are still open, those connections hold a
-	// stale description/plan and fail on the next execution:
+	// Background: pgx's own default is QueryExecModeCacheStatement, which caches
+	// a prepared statement per connection; QueryExecModeCacheDescribe caches the
+	// statement's result-column descriptions. Either way, if a table's schema
+	// changes (e.g. ALTER TABLE ADD COLUMN) while pooled connections are still
+	// open, the next execution on a connection holding a stale plan/description
+	// fails:
 	//
-	//	CacheDescribe:  ERROR: bind message has N result formats but query has M columns (SQLSTATE 08P01)
 	//	CacheStatement: ERROR: cached plan must not change result type (SQLSTATE 0A000)
+	//	CacheDescribe:  ERROR: bind message has N result formats but query has M columns (SQLSTATE 08P01)
 	//
-	// QueryExecModeExec uses the unnamed prepared statement and does not cache a
-	// description or plan across executions, so it always reflects the current
-	// schema and neither error can occur. It also completes in a single network
-	// round trip. QueryExecModeDescribeExec is likewise schema-change safe but
-	// issues a separate Describe round trip on every execution; measured on
-	// Aurora DSQL that roughly doubles per-query latency (~2x) versus Exec, with
-	// no observed correctness advantage on DSQL's supported type surface (DSQL
-	// does not support enums or arrays, which are the main cases where the extra
-	// server-side parameter type resolution would matter). Exec is therefore the
-	// better default here.
+	// pgx invalidates the cache on that error and self-heals on the next attempt,
+	// but the failing statement still surfaces an error to the caller.
 	//
-	// Callers may override this after construction, e.g. to DescribeExec if their
-	// workload relies on server-driven parameter type resolution.
-	cfg.DefaultQueryExecMode = pgx.QueryExecModeExec
+	// DescribeExec issues a Describe on every execution, so the result shape and
+	// parameter types are always current: it is safe across live schema changes,
+	// and because the server resolves parameter types it encodes ambiguous Go
+	// values correctly (e.g. jsonb passed as map/[]byte, or []byte destined for a
+	// text vs bytea column). The cost is an extra Describe round trip per query.
+	//
+	// QueryExecModeExec avoids that round trip but SKIPS the server parameter
+	// Describe, inferring PostgreSQL types from Go types alone. On Aurora DSQL
+	// that measurably breaks real cases: a jsonb parameter passed as map/[]byte
+	// is rejected, and a []byte bound to a text column is silently stored as its
+	// bytea hex encoding. It is therefore not a safe default. Callers whose
+	// parameter types are unambiguous and who need the lower latency can opt in
+	// with Config.QueryExecMode = pgx.QueryExecModeExec.
+	cfg.DefaultQueryExecMode = r.QueryExecMode
 }

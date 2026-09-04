@@ -341,7 +341,7 @@ func TestParseConnectionString(t *testing.T) {
 	}
 }
 
-func TestConfigureConnConfigSetsExecMode(t *testing.T) {
+func TestConfigureConnConfigDefaultsToDescribeExec(t *testing.T) {
 	cfg := Config{
 		Host: "mycluster.dsql.us-east-1.on.aws",
 	}
@@ -353,11 +353,10 @@ func TestConfigureConnConfigSetsExecMode(t *testing.T) {
 
 	resolved.configureConnConfig(connConfig)
 
-	// The connector defaults to Exec: it does not cache a description or prepared
-	// statement across executions, so it stays correct after a live schema change
-	// (e.g. ALTER TABLE ADD COLUMN) without the extra Describe round trip that
-	// DescribeExec incurs. See configureConnConfig.
-	assert.Equal(t, pgx.QueryExecModeExec, connConfig.DefaultQueryExecMode)
+	// With Config.QueryExecMode unset, the connector applies DescribeExec, which
+	// stays correct across live schema changes and correctly resolves ambiguous
+	// parameter types (jsonb, []byte). See configureConnConfig.
+	assert.Equal(t, pgx.QueryExecModeDescribeExec, connConfig.DefaultQueryExecMode)
 
 	// Sanity: the other connection settings are still applied.
 	assert.Equal(t, "mycluster.dsql.us-east-1.on.aws", connConfig.Host)
@@ -365,4 +364,22 @@ func TestConfigureConnConfigSetsExecMode(t *testing.T) {
 	assert.Equal(t, "postgres", connConfig.Database)
 	assert.Equal(t, "admin", connConfig.User)
 	assert.Equal(t, ApplicationName, connConfig.RuntimeParams["application_name"])
+}
+
+func TestConfigureConnConfigHonorsQueryExecModeOverride(t *testing.T) {
+	cfg := Config{
+		Host:          "mycluster.dsql.us-east-1.on.aws",
+		QueryExecMode: pgx.QueryExecModeExec,
+	}
+	resolved, err := cfg.resolve()
+	require.NoError(t, err)
+
+	connConfig, err := pgx.ParseConfig("")
+	require.NoError(t, err)
+
+	resolved.configureConnConfig(connConfig)
+
+	// A caller that explicitly sets Config.QueryExecMode gets that mode, not the
+	// connector default.
+	assert.Equal(t, pgx.QueryExecModeExec, connConfig.DefaultQueryExecMode)
 }
