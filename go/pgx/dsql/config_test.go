@@ -353,9 +353,7 @@ func TestConfigureConnConfigDefaultsToDescribeExec(t *testing.T) {
 
 	resolved.configureConnConfig(connConfig)
 
-	// With Config.QueryExecMode unset, the connector applies DescribeExec, which
-	// stays correct across live schema changes and correctly resolves ambiguous
-	// parameter types (jsonb, []byte). See configureConnConfig.
+	// Unset Config.QueryExecMode -> connector default (DescribeExec).
 	assert.Equal(t, pgx.QueryExecModeDescribeExec, connConfig.DefaultQueryExecMode)
 
 	// Sanity: the other connection settings are still applied.
@@ -379,7 +377,6 @@ func TestConfigureConnConfigHonorsQueryExecModeOverride(t *testing.T) {
 
 	resolved.configureConnConfig(connConfig)
 
-	// A caller that explicitly sets Config.QueryExecMode gets that mode, not the
-	// connector default.
+	// Explicit Config.QueryExecMode is honored over the default.
 	assert.Equal(t, pgx.QueryExecModeExec, connConfig.DefaultQueryExecMode)
 }
