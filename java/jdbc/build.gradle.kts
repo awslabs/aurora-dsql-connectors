@@ -48,7 +48,7 @@ dependencies {
     implementation("org.postgresql:postgresql:$pgjdbcVersion")
 
     // Annotation dependencies for @Nullable, @Nonnull, etc.
-    compileOnly("com.github.spotbugs:spotbugs-annotations:4.10.3")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.10.4")
 
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.4")
