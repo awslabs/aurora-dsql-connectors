@@ -199,6 +199,9 @@ public class DSQLConnector implements java.sql.Driver {
      *
      * <h3>Error Scenarios</h3>
      *
+     * <p>Returns {@code null} for URLs this driver does not accept, allowing {@link DriverManager}
+     * to try the next registered driver.
+     *
      * <p>Throws {@link SQLException} for:
      *
      * <ul>
@@ -213,13 +216,21 @@ public class DSQLConnector implements java.sql.Driver {
      *     jdbc:aws-dsql:postgresql://cluster.dsql.region.on.aws} with optional database and
      *     property definitions
      * @param info connection properties which augment those provided in the URL
-     * @return a {@link Connection} to the Aurora DSQL cluster
+     * @return a {@link Connection} to the Aurora DSQL cluster, or {@code null} if this driver does
+     *     not accept the URL
      * @throws SQLException if connection cannot be established due to invalid input, credential
      *     issues, or connection failures
      * @see PropertyDefinition
      */
     @Override
     public Connection connect(final String url, final Properties info) throws SQLException {
+        if (url == null) {
+            throw new SQLException("URL is null");
+        }
+        if (!acceptsURL(url)) {
+            return null;
+        }
+
         // Parse properties from URL if provided
         final Properties props = PropertyUtils.copyProperties(info);
         try {
