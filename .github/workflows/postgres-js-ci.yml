@@ -3,8 +3,18 @@ name: Postgres.js CI
 permissions: {}
 
 on:
-  workflow_call: {}
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: true
   push:
     branches: [main]
 
@@ -25,6 +35,8 @@ jobs:
         run: echo "matrix=[20, 22, 24]" >> "$GITHUB_OUTPUT"
 
   create-cluster:
+    if: github.event_name != 'pull_request' || inputs.run-integration
+    needs: run-tests
     uses: ./.github/workflows/dsql-cluster-create.yml
     with:
       workflow_name: postgres-js-tests
@@ -35,6 +47,32 @@ jobs:
 
   run-tests:
     name: Postgres.js tests
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        node-version: ${{ fromJson(needs.setup.outputs.target-versions) }}
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests
+        run: |
+          npm ci
+          npm run lint
+          npm run test:unit
+
+  integration-tests:
+    name: Postgres.js integration tests
     needs: [setup, create-cluster]
     runs-on: ubuntu-latest
     permissions:
@@ -47,6 +85,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up Node
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
@@ -59,14 +99,13 @@ jobs:
           role-to-assume: ${{ secrets.IAM_ROLE }}
           aws-region: ${{ needs.create-cluster.outputs.region }}
 
-      - name: Run tests
+      - name: Run integration tests
         env:
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           REGION: ${{ needs.create-cluster.outputs.region }}
         run: |
           npm ci
-          npm run lint
-          npm run test
+          npm run test:integration
 
       - name: Run example smoke test
         env:
@@ -107,7 +146,7 @@ jobs:
 
   delete-cluster:
     if: always() && needs.create-cluster.result == 'success'
-    needs: [create-cluster, run-tests]
+    needs: [create-cluster, integration-tests]
     uses: ./.github/workflows/dsql-cluster-delete.yml
     with:
       cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}

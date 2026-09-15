@@ -3,8 +3,19 @@ name: .NET Npgsql CI
 permissions: {}
 
 on:
-  workflow_call: {}
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: true
   push:
     branches: [main]
     paths:
@@ -16,6 +27,8 @@ defaults:
 
 jobs:
   create-cluster:
+    if: github.event_name != 'pull_request' || inputs.run-integration
+    needs: build
     uses: ./.github/workflows/dsql-cluster-create.yml
     with:
       workflow_name: dotnet-npgsql
@@ -25,13 +38,12 @@ jobs:
       id-token: write # required by aws-actions/configure-aws-credentials
 
   build:
-    needs: create-cluster
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
@@ -68,6 +80,22 @@ jobs:
       - name: Run unit tests
         run: dotnet test test/unit/Amazon.AuroraDsql.Npgsql.Tests --no-build
 
+  integration-tests:
+    needs: create-cluster
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: "8.0.x"
+
       - name: Download Amazon root certificate
         run: curl -o /tmp/global-bundle.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem
 
@@ -82,18 +110,18 @@ jobs:
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           CLUSTER_USER: "admin"
           REGION: ${{ needs.create-cluster.outputs.region }}
-        run: dotnet test test/integration/Amazon.AuroraDsql.Npgsql.IntegrationTests --no-build
+        run: dotnet test test/integration/Amazon.AuroraDsql.Npgsql.IntegrationTests
 
       - name: Run example tests
         env:
           CLUSTER_ENDPOINT: ${{ needs.create-cluster.outputs.cluster-endpoint }}
           CLUSTER_USER: "admin"
           REGION: ${{ needs.create-cluster.outputs.region }}
-        run: dotnet test example --no-build
+        run: dotnet test example
 
   delete-cluster:
     if: always() && needs.create-cluster.result == 'success'
-    needs: [create-cluster, build]
+    needs: [create-cluster, integration-tests]
     uses: ./.github/workflows/dsql-cluster-delete.yml
     with:
       cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}

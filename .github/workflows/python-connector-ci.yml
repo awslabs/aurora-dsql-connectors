@@ -3,8 +3,19 @@ name: Python Connector CI
 permissions: {}
 
 on:
-  workflow_call: {}
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: true
   push:
     branches: [main]
 
@@ -13,7 +24,30 @@ defaults:
     working-directory: python/connector
 
 jobs:
+  unit-tests:
+    name: Python connector unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run unit tests
+        run: |
+          uv sync
+          uv run pytest tests/unit
+
   create-cluster:
+    if: github.event_name != 'pull_request' || inputs.run-integration
+    needs: unit-tests
     uses: ./.github/workflows/dsql-cluster-create.yml
     with:
       workflow_name: python-connector-integ
@@ -36,6 +70,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6

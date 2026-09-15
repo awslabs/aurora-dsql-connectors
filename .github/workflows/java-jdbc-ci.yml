@@ -3,8 +3,18 @@ name: Java JDBC CI
 permissions: {}
 
 on:
-  workflow_call: {}
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: true
   push:
     branches: [main]
 
@@ -30,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ needs.setup.outputs.build-version }}
         uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
@@ -54,6 +66,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ needs.setup.outputs.build-version }}
         uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
@@ -67,6 +81,7 @@ jobs:
         run: ./gradlew test
 
   create-cluster:
+    if: github.event_name != 'pull_request' || inputs.run-integration
     needs: [setup, unit-tests]
     uses: ./.github/workflows/dsql-cluster-create.yml
     with:
@@ -85,6 +100,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ needs.setup.outputs.build-version }}
         uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
@@ -132,6 +149,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ matrix.jvm-version }}
         uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5

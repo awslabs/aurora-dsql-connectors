@@ -1,0 +1,16 @@
+name: Manual CI
+
+permissions: {}
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: awslabs/aurora-dsql-connectors/.github/workflows/ci-gate.yml@main
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: read
+      statuses: write
