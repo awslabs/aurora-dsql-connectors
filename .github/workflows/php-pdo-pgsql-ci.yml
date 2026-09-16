@@ -3,8 +3,19 @@ name: PHP PDO_PGSQL CI
 permissions: {}
 
 on:
-  workflow_call: {}
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: true
   push:
     branches: [main]
     paths:
@@ -15,23 +26,13 @@ defaults:
     working-directory: php/pdo_pgsql
 
 jobs:
-  create-cluster:
-    uses: ./.github/workflows/dsql-cluster-create.yml
-    with:
-      workflow_name: php-pdo-pgsql
-    secrets:
-      IAM_ROLE: ${{ secrets.IAM_ROLE }}
-    permissions:
-      id-token: write
-
   build:
-    needs: create-cluster
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up PHP
         uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
@@ -45,6 +46,38 @@ jobs:
 
       - name: Run connector unit tests
         run: vendor/bin/phpunit --testsuite unit
+
+  create-cluster:
+    if: github.event_name != 'pull_request' || inputs.run-integration
+    needs: build
+    uses: ./.github/workflows/dsql-cluster-create.yml
+    with:
+      workflow_name: php-pdo-pgsql
+    secrets:
+      IAM_ROLE: ${{ secrets.IAM_ROLE }}
+    permissions:
+      id-token: write
+
+  integration-tests:
+    needs: create-cluster
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_pgsql
+          tools: composer
+
+      - name: Install connector dependencies
+        run: composer install --no-interaction --prefer-dist
 
       - name: Download Amazon root certificate
         run: |
@@ -78,7 +111,7 @@ jobs:
 
   delete-cluster:
     if: always() && needs.create-cluster.result == 'success'
-    needs: [create-cluster, build]
+    needs: [create-cluster, integration-tests]
     uses: ./.github/workflows/dsql-cluster-delete.yml
     with:
       cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}

@@ -3,11 +3,34 @@
 # the single required status check in GitHub branch protection.
 name: CI Gate
 
-permissions: {}
+permissions:
+  contents: read
+  pull-requests: read
 
 on:
   pull_request:
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      base-sha:
+        description: "Exact pull request base commit used for changed-path detection"
+        required: false
+        type: string
+        default: ""
+      pull-request-number:
+        description: "Pull request used for changed-path detection"
+        required: false
+        type: number
+        default: 0
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   changes:
@@ -22,9 +45,15 @@ jobs:
       ruby-pg: ${{ steps.detect.outputs.ruby-pg }}
       rust-sqlx: ${{ steps.detect.outputs.rust-sqlx }}
       dotnet-npgsql: ${{ steps.detect.outputs.dotnet-npgsql }}
+      run-integration: ${{ steps.detect.outputs.run-integration }}
     steps:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         id: detect
+        env:
+          CHECKOUT_REF: ${{ inputs.checkout-ref }}
+          BASE_SHA: ${{ inputs.base-sha }}
+          PULL_REQUEST_NUMBER: ${{ inputs.pull-request-number }}
+          RUN_INTEGRATION: ${{ inputs.run-integration }}
         with:
           script: |
             const config = {
@@ -42,10 +71,28 @@ jobs:
               '.github/workflows/ci-gate.yml',
               '.github/workflows/dsql-cluster-create.yml',
               '.github/workflows/dsql-cluster-delete.yml',
+              '.github/workflows/manual-ci.yml',
+              '.github/workflows/trusted-pr-integration.yml',
+              '.github/workflows/trusted-pr-integration-runner.yml',
               '.pre-commit-config.yaml',
             ];
 
-            const pr = context.payload.pull_request;
+            let pr = context.payload.pull_request;
+            const pullNumber = Number(process.env.PULL_REQUEST_NUMBER);
+            if (!pr && pullNumber) {
+              const response = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullNumber,
+              });
+              pr = response.data;
+            }
+
+            const sameRepository = !pr ||
+              pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`;
+            const runIntegration =
+              process.env.RUN_INTEGRATION === 'true' || sameRepository;
+            core.setOutput('run-integration', String(runIntegration));
 
             // Manual dispatch: run all CI
             if (!pr) {
@@ -55,20 +102,40 @@ jobs:
               return;
             }
 
-            let files = [];
-            const paginator = github.paginate.iterator(github.rest.pulls.listFiles, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: pr.number,
-              per_page: 100,
-            });
-            for await (const resp of paginator) {
-              files.push(...resp.data.map(f => f.filename));
+            const requestedHead = process.env.CHECKOUT_REF.toLowerCase();
+            const requestedBase = process.env.BASE_SHA.toLowerCase();
+            if (Boolean(requestedHead) !== Boolean(requestedBase)) {
+              core.setFailed('checkout-ref and base-sha must be provided together');
+              return;
             }
 
-            // If API truncated results, run everything to be safe
-            let runAll = files.length < pr.changed_files;
+            const checkoutRef = requestedHead || pr.head.sha;
+            const baseSha = requestedBase || pr.base.sha;
+            if (!/^[0-9a-f]{40}$/.test(checkoutRef) ||
+                !/^[0-9a-f]{40}$/.test(baseSha)) {
+              core.setFailed('Changed-path detection requires full commit SHAs');
+              return;
+            }
+            if (pr.head.sha !== checkoutRef || pr.base.sha !== baseSha) {
+              core.setFailed(
+                `Pull request revisions changed: expected ${baseSha}...${checkoutRef}, ` +
+                `found ${pr.base.sha}...${pr.head.sha}`
+              );
+              return;
+            }
 
+            const response = await github.rest.repos.compareCommitsWithBasehead({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              basehead: `${baseSha}...${checkoutRef}`,
+            });
+            const changedFiles = response.data.files || [];
+            const files = changedFiles.flatMap(f =>
+              [f.filename, f.previous_filename].filter(Boolean)
+            );
+
+            // The compare API returns at most 300 files.
+            let runAll = changedFiles.length >= 300;
             if (!runAll) {
               runAll = files.some(f => runAllPaths.some(p => f === p || f.startsWith(p)));
             }
@@ -81,11 +148,16 @@ jobs:
   pre-commit:
     needs: changes
     uses: ./.github/workflows/pre-commit.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
 
   java-jdbc:
     needs: changes
     if: needs.changes.outputs.java-jdbc == 'true'
     uses: ./.github/workflows/java-jdbc-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -94,6 +166,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.go-pgx == 'true'
     uses: ./.github/workflows/go-pgx-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -102,6 +177,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.python-connector == 'true'
     uses: ./.github/workflows/python-connector-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -110,6 +188,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.node-postgres == 'true'
     uses: ./.github/workflows/node-postgres-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -118,6 +199,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.postgres-js == 'true'
     uses: ./.github/workflows/postgres-js-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -126,6 +210,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.php-pdo-pgsql == 'true'
     uses: ./.github/workflows/php-pdo-pgsql-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -134,6 +221,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.ruby-pg == 'true'
     uses: ./.github/workflows/ruby-pg-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -142,6 +232,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.rust-sqlx == 'true'
     uses: ./.github/workflows/rust-sqlx-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -150,6 +243,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.dotnet-npgsql == 'true'
     uses: ./.github/workflows/dotnet-npgsql-ci.yml
+    with:
+      checkout-ref: ${{ inputs.checkout-ref }}
+      run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
       id-token: write # required by aws-actions/configure-aws-credentials
@@ -158,6 +254,7 @@ jobs:
     name: gate
     runs-on: ubuntu-latest
     needs:
+      - changes
       - pre-commit
       - java-jdbc
       - go-pgx
@@ -178,4 +275,42 @@ jobs:
               if (result.result === 'failure' || result.result === 'cancelled') {
                 core.setFailed(`Job ${job} ${result.result}`);
               }
+            }
+
+  integration-status:
+    name: Report DSQL integration result
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: [changes, gate]
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          GATE_RESULT: ${{ needs.gate.result }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_INTEGRATION: ${{ needs.changes.outputs.run-integration }}
+        with:
+          script: |
+            const passed =
+              process.env.RUN_INTEGRATION === 'true' &&
+              process.env.GATE_RESULT === 'success';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.HEAD_SHA,
+              state: passed ? 'success' : 'failure',
+              context: 'dsql-integration',
+              description: passed
+                ? 'DSQL integration tests passed'
+                : 'DSQL integration tests failed',
+              target_url:
+                `https://github.com/${context.repo.owner}/${context.repo.repo}` +
+                `/actions/runs/${context.runId}`,
+            });
+            if (!passed) {
+              core.setFailed(`CI gate ${process.env.GATE_RESULT}`);
             }
