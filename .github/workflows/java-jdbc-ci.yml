@@ -44,7 +44,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ needs.setup.outputs.build-version }}
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
         with:
           java-version: ${{ needs.setup.outputs.build-version }}
           distribution: "corretto"
@@ -70,7 +70,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ needs.setup.outputs.build-version }}
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
         with:
           java-version: ${{ needs.setup.outputs.build-version }}
           distribution: "corretto"
@@ -104,7 +104,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ needs.setup.outputs.build-version }}
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
         with:
           java-version: ${{ needs.setup.outputs.build-version }}
           distribution: "corretto"
@@ -153,7 +153,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Set up JDK ${{ matrix.jvm-version }}
-        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v5
         with:
           java-version: ${{ matrix.jvm-version }}
           distribution: "corretto"
