@@ -3,7 +3,6 @@ name: .NET Npgsql CI
 permissions: {}
 
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
       checkout-ref:

@@ -45,6 +45,7 @@ jobs:
       ruby-pg: ${{ steps.detect.outputs.ruby-pg }}
       rust-sqlx: ${{ steps.detect.outputs.rust-sqlx }}
       dotnet-npgsql: ${{ steps.detect.outputs.dotnet-npgsql }}
+      checkout-ref: ${{ steps.detect.outputs.checkout-ref }}
       run-integration: ${{ steps.detect.outputs.run-integration }}
     steps:
       - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -78,6 +79,11 @@ jobs:
             ];
 
             let pr = context.payload.pull_request;
+            if (!pr && context.ref !== 'refs/heads/main') {
+              core.setFailed('Reusable CI calls without a PR event must run from main');
+              return;
+            }
+
             const pullNumber = Number(process.env.PULL_REQUEST_NUMBER);
             if (!pr && pullNumber) {
               const response = await github.rest.pulls.get({
@@ -88,6 +94,13 @@ jobs:
               pr = response.data;
             }
 
+            const requestedHead = process.env.CHECKOUT_REF.toLowerCase();
+            const requestedBase = process.env.BASE_SHA.toLowerCase();
+            if (Boolean(requestedHead) !== Boolean(requestedBase)) {
+              core.setFailed('checkout-ref and base-sha must be provided together');
+              return;
+            }
+
             const sameRepository = !pr ||
               pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`;
             const runIntegration =
@@ -96,38 +109,34 @@ jobs:
 
             // Manual dispatch: run all CI
             if (!pr) {
+              core.setOutput('checkout-ref', context.sha);
               for (const name of Object.keys(config)) {
                 core.setOutput(name, 'true');
               }
               return;
             }
 
-            const requestedHead = process.env.CHECKOUT_REF.toLowerCase();
-            const requestedBase = process.env.BASE_SHA.toLowerCase();
-            if (Boolean(requestedHead) !== Boolean(requestedBase)) {
-              core.setFailed('checkout-ref and base-sha must be provided together');
-              return;
-            }
-
-            const checkoutRef = requestedHead || pr.head.sha;
+            const compareHead = requestedHead || pr.head.sha;
             const baseSha = requestedBase || pr.base.sha;
-            if (!/^[0-9a-f]{40}$/.test(checkoutRef) ||
+            const checkoutRef = requestedHead || context.sha;
+            if (!/^[0-9a-f]{40}$/.test(compareHead) ||
                 !/^[0-9a-f]{40}$/.test(baseSha)) {
               core.setFailed('Changed-path detection requires full commit SHAs');
               return;
             }
-            if (pr.head.sha !== checkoutRef || pr.base.sha !== baseSha) {
+            if (pr.head.sha !== compareHead || pr.base.sha !== baseSha) {
               core.setFailed(
-                `Pull request revisions changed: expected ${baseSha}...${checkoutRef}, ` +
+                `Pull request revisions changed: expected ${baseSha}...${compareHead}, ` +
                 `found ${pr.base.sha}...${pr.head.sha}`
               );
               return;
             }
+            core.setOutput('checkout-ref', checkoutRef);
 
             const response = await github.rest.repos.compareCommitsWithBasehead({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              basehead: `${baseSha}...${checkoutRef}`,
+              basehead: `${baseSha}...${compareHead}`,
             });
             const changedFiles = response.data.files || [];
             const files = changedFiles.flatMap(f =>
@@ -149,14 +158,14 @@ jobs:
     needs: changes
     uses: ./.github/workflows/pre-commit.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
 
   java-jdbc:
     needs: changes
     if: needs.changes.outputs.java-jdbc == 'true'
     uses: ./.github/workflows/java-jdbc-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -167,7 +176,7 @@ jobs:
     if: needs.changes.outputs.go-pgx == 'true'
     uses: ./.github/workflows/go-pgx-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -178,7 +187,7 @@ jobs:
     if: needs.changes.outputs.python-connector == 'true'
     uses: ./.github/workflows/python-connector-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -189,7 +198,7 @@ jobs:
     if: needs.changes.outputs.node-postgres == 'true'
     uses: ./.github/workflows/node-postgres-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -200,7 +209,7 @@ jobs:
     if: needs.changes.outputs.postgres-js == 'true'
     uses: ./.github/workflows/postgres-js-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -211,7 +220,7 @@ jobs:
     if: needs.changes.outputs.php-pdo-pgsql == 'true'
     uses: ./.github/workflows/php-pdo-pgsql-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -222,7 +231,7 @@ jobs:
     if: needs.changes.outputs.ruby-pg == 'true'
     uses: ./.github/workflows/ruby-pg-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -233,7 +242,7 @@ jobs:
     if: needs.changes.outputs.rust-sqlx == 'true'
     uses: ./.github/workflows/rust-sqlx-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:
@@ -244,7 +253,7 @@ jobs:
     if: needs.changes.outputs.dotnet-npgsql == 'true'
     uses: ./.github/workflows/dotnet-npgsql-ci.yml
     with:
-      checkout-ref: ${{ inputs.checkout-ref }}
+      checkout-ref: ${{ needs.changes.outputs.checkout-ref }}
       run-integration: ${{ needs.changes.outputs.run-integration == 'true' }}
     secrets: inherit
     permissions:

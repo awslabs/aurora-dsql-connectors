@@ -6,7 +6,19 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate:
+    name: Require main branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            if (context.ref !== 'refs/heads/main') {
+              core.setFailed('Manual CI must be run from main');
+            }
+
   ci:
+    needs: validate
     uses: awslabs/aurora-dsql-connectors/.github/workflows/ci-gate.yml@main
     secrets: inherit
     permissions:

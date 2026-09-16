@@ -3,7 +3,6 @@ name: Python Connector CI
 permissions: {}
 
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
       checkout-ref:
