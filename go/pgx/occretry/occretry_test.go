@@ -42,21 +42,16 @@ func fastConfig() Config {
 	}
 }
 
-func TestRetry_PartialConfigUsesDefaults(t *testing.T) {
-	calls := 0
-	err := Retry(context.Background(), Config{MaxRetries: 2}, func() error {
-		calls++
-		if calls < 3 {
-			return &pgconn.PgError{Code: ErrorCodeMutation, Message: "conflict"}
-		}
-		return nil
-	})
-
+func TestResolveConfig_PartialConfigUsesDefaults(t *testing.T) {
+	got, err := resolveConfig(Config{MaxRetries: 2})
 	if err != nil {
-		t.Fatalf("expected retry to succeed, got %v", err)
+		t.Fatalf("expected valid configuration, got %v", err)
 	}
-	if calls != 3 {
-		t.Fatalf("expected 3 attempts, got %d", calls)
+
+	want := DefaultConfig()
+	want.MaxRetries = 2
+	if got != want {
+		t.Fatalf("expected %#v, got %#v", want, got)
 	}
 }
 

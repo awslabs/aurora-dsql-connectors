@@ -29,7 +29,8 @@ func TestManualTokenExample(t *testing.T) {
 		cancel()
 	})
 
-	err = occretry.Retry(ctx, occretry.DefaultConfig(), func() error {
+	retryConfig := occretry.DefaultConfig()
+	err = occretry.Retry(ctx, retryConfig, func() error {
 		_, execErr := pool.Exec(ctx, `
 			CREATE TABLE IF NOT EXISTS owner (
 				id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,16 +46,22 @@ func TestManualTokenExample(t *testing.T) {
 	}
 
 	var existingOwnerID string
-	err = pool.QueryRow(ctx, `
-		INSERT INTO owner (name, city, telephone)
-		VALUES ($1, $2, NULL)
-		RETURNING id
-	`, "John Doe", "Existing City").Scan(&existingOwnerID)
+	err = occretry.Retry(ctx, retryConfig, func() error {
+		return pool.QueryRow(ctx, `
+			INSERT INTO owner (name, city, telephone)
+			VALUES ($1, $2, NULL)
+			RETURNING id
+		`, "John Doe", "Existing City").Scan(&existingOwnerID)
+	})
 	if err != nil {
 		t.Fatalf("Unable to insert existing owner: %v", err)
 	}
 	t.Cleanup(func() {
-		if _, cleanupErr := pool.Exec(ctx, `DELETE FROM owner WHERE id = $1`, existingOwnerID); cleanupErr != nil {
+		cleanupErr := occretry.Retry(ctx, retryConfig, func() error {
+			_, execErr := pool.Exec(ctx, `DELETE FROM owner WHERE id = $1`, existingOwnerID)
+			return execErr
+		})
+		if cleanupErr != nil {
 			t.Errorf("Unable to clean existing owner: %v", cleanupErr)
 		}
 	})

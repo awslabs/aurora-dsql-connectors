@@ -53,20 +53,16 @@ const (
 
 // Config holds configuration for retry behavior.
 type Config struct {
-	// MaxRetries is the maximum number of retry attempts.
-	// Zero disables retries. DefaultConfig sets this to 3.
+	// MaxRetries is the maximum number of retry attempts (default: 3)
 	MaxRetries int
 
-	// InitialWait is the initial wait duration before first retry.
-	// A zero value uses the default of 100ms.
+	// InitialWait is the initial wait duration before first retry (default: 100ms)
 	InitialWait time.Duration
 
-	// MaxWait is the maximum wait duration between retries.
-	// A zero value uses the default of 5s.
+	// MaxWait is the maximum wait duration between retries (default: 5s)
 	MaxWait time.Duration
 
-	// Multiplier is the exponential backoff multiplier.
-	// A zero value uses the default of 2.0.
+	// Multiplier is the exponential backoff multiplier (default: 2.0)
 	Multiplier float64
 }
 
