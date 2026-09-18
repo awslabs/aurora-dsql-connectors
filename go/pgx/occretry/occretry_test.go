@@ -8,6 +8,8 @@ package occretry
 import (
 	"context"
 	"errors"
+	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -37,6 +39,127 @@ func fastConfig() Config {
 		InitialWait: 1 * time.Millisecond,
 		MaxWait:     5 * time.Millisecond,
 		Multiplier:  2.0,
+	}
+}
+
+func TestResolveConfig_PartialConfigUsesDefaults(t *testing.T) {
+	got, err := resolveConfig(Config{MaxRetries: 2})
+	if err != nil {
+		t.Fatalf("expected valid configuration, got %v", err)
+	}
+
+	want := DefaultConfig()
+	want.MaxRetries = 2
+	if got != want {
+		t.Fatalf("expected %#v, got %#v", want, got)
+	}
+}
+
+func TestRetry_ZeroRetriesExecutesOnce(t *testing.T) {
+	calls := 0
+	err := Retry(context.Background(), Config{}, func() error {
+		calls++
+		return &pgconn.PgError{Code: ErrorCodeMutation, Message: "conflict"}
+	})
+
+	if err == nil {
+		t.Fatal("expected OCC error")
+	}
+	if calls != 1 {
+		t.Fatalf("expected 1 attempt, got %d", calls)
+	}
+}
+
+func TestRetry_InvalidConfigReturnsBeforeExecuting(t *testing.T) {
+	tests := []struct {
+		name       string
+		config     Config
+		wantErrMsg string
+	}{
+		{
+			name:       "negative max retries",
+			config:     Config{MaxRetries: -1},
+			wantErrMsg: "max retries must be non-negative",
+		},
+		{
+			name:       "negative initial wait with retries disabled",
+			config:     Config{InitialWait: -time.Millisecond},
+			wantErrMsg: "initial wait must be positive",
+		},
+		{
+			name: "max wait below initial wait",
+			config: Config{
+				MaxRetries:  1,
+				InitialWait: 2 * time.Second,
+				MaxWait:     time.Second,
+				Multiplier:  2,
+			},
+			wantErrMsg: "max wait must be at least initial wait",
+		},
+		{
+			name: "multiplier below one",
+			config: Config{
+				MaxRetries:  1,
+				InitialWait: time.Millisecond,
+				MaxWait:     time.Second,
+				Multiplier:  0.5,
+			},
+			wantErrMsg: "multiplier must be finite and at least 1",
+		},
+		{
+			name: "multiplier is NaN",
+			config: Config{
+				MaxRetries:  1,
+				InitialWait: time.Millisecond,
+				MaxWait:     time.Second,
+				Multiplier:  math.NaN(),
+			},
+			wantErrMsg: "multiplier must be finite and at least 1",
+		},
+		{
+			name: "multiplier is infinite",
+			config: Config{
+				MaxRetries:  1,
+				InitialWait: time.Millisecond,
+				MaxWait:     time.Second,
+				Multiplier:  math.Inf(1),
+			},
+			wantErrMsg: "multiplier must be finite and at least 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			calls := 0
+			err := Retry(context.Background(), tt.config, func() error {
+				calls++
+				return nil
+			})
+
+			if err == nil {
+				t.Fatal("expected invalid configuration error")
+			}
+			if !strings.Contains(err.Error(), tt.wantErrMsg) {
+				t.Fatalf("expected error containing %q, got %v", tt.wantErrMsg, err)
+			}
+			if calls != 0 {
+				t.Fatalf("expected no attempts with invalid configuration, got %d", calls)
+			}
+		})
+	}
+}
+
+func TestBackoffWait_OneNanosecondWaitDoesNotPanic(t *testing.T) {
+	wait := time.Nanosecond
+	nextWait, err := backoffWait(context.Background(), wait, Config{
+		MaxWait:    10 * time.Nanosecond,
+		Multiplier: 2,
+	})
+	if err != nil {
+		t.Fatalf("expected nil error, got %v", err)
+	}
+	if nextWait != 2*time.Nanosecond {
+		t.Fatalf("expected next wait %s, got %s", 2*time.Nanosecond, nextWait)
 	}
 }
 
