@@ -1,3 +1,17 @@
+<a id="node/postgres-js/v0.3.1"></a>
+# [Aurora DSQL Connector for Postgres.js v0.3.1 (node/postgres-js/v0.3.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/node/postgres-js/v0.3.1) - 2026-09-21
+
+## What's Changed
+
+### Bug Fixes
+- Reject WebSocket handshake failures before exposing the socket, preventing unhandled errors and hung connections in postgres.js ([#814](https://github.com/awslabs/aurora-dsql-connectors/issues/814))
+
+### Full Changelog
+https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.3.0...node/postgres-js/v0.3.1
+
+[Changes][node/postgres-js/v0.3.1]
+
+
 <a id="node/postgres-js/v0.3.0"></a>
 # [Aurora DSQL Connector for Postgres.js v0.3.0 (node/postgres-js/v0.3.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/node/postgres-js/v0.3.0) - 2026-05-22
 
@@ -186,6 +200,7 @@ Initial release of Aurora DSQL Connector for Postgres.js
 [Changes][node/postgres-js/v0.1.0]
 
 
+[node/postgres-js/v0.3.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.3.0...node/postgres-js/v0.3.1
 [node/postgres-js/v0.3.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.2.1...node/postgres-js/v0.3.0
 [node/postgres-js/v0.2.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.2.0...node/postgres-js/v0.2.1
 [node/postgres-js/v0.2.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/node/postgres-js/v0.1.3...node/postgres-js/v0.2.0
