@@ -39,6 +39,19 @@ To send us a pull request, please:
 GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
 [creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
 
+### CI for Fork Pull Requests
+
+GitHub does not provide repository secrets to workflows from forks. Fork pull
+requests therefore run formatting and the build or unit checks that do not
+need credentials, without the live Aurora DSQL integration jobs.
+
+After reviewing the exact pull request commit, a maintainer can run the
+**Trusted PR Integration** workflow with the pull request number and its full
+head SHA from the `main` workflow ref. Approving the `pr-integration`
+environment runs the existing CI against that commit with the credentials
+required for live Aurora DSQL tests. This workflow approval is separate from
+approving the pull request review.
+
 
 ## Finding contributions to work on
 Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
