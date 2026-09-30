@@ -81,7 +81,7 @@ spotless {
     java {
         target("src/**/*.java", "integration-tests/src/**/*.java")
         licenseHeaderFile(".license-headers/java.txt")
-        googleJavaFormat("1.29.0").aosp()
+        googleJavaFormat("1.30.0").aosp()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
