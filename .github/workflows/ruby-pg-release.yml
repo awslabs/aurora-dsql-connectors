@@ -16,7 +16,7 @@ jobs:
     name: Wait for CI to pass
     runs-on: ubuntu-latest
     steps:
-      - uses: lewagon/wait-on-check-action@1d57e2c51a58d812d2765e036a028b6bdb5a6154 # v1.8.1
+      - uses: lewagon/wait-on-check-action@369769072fe522a3a8a85c03c96af1e5242a1994 # v1.9.1
         with:
           ref: ${{ github.sha }}
           running-workflow-name: "Wait for CI to pass"
@@ -32,10 +32,10 @@ jobs:
       id-token: write # required for requesting the JWT
       contents: read # required for actions/checkout
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
+      - uses: actions/checkoutd3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@0dafeac902942906541bc140009cdbf32665b601 # v1
+        uses: ruby/setup-ruby@a0102e0972be65f351c307e2d64b9314a57c8073 # v1
         with:
           ruby-version: "3.3"
           working-directory: ruby/pg

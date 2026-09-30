@@ -42,6 +42,11 @@ const (
 	DefaultTokenDuration = 15 * time.Minute
 )
 
+// DefaultQueryExecMode is the pgx query execution mode the connector applies
+// when Config.QueryExecMode is left unset. See configureConnConfig for the
+// rationale.
+const DefaultQueryExecMode = pgx.QueryExecModeDescribeExec
+
 // Config holds the configuration for connecting to Aurora DSQL.
 type Config struct {
 	// Host is the cluster endpoint or cluster ID. Required.
@@ -67,6 +72,10 @@ type Config struct {
 
 	// CustomCredentialsProvider is a custom AWS credentials provider. Optional.
 	CustomCredentialsProvider aws.CredentialsProvider
+
+	// QueryExecMode overrides the pgx query execution mode. Optional; zero means
+	// the connector default (QueryExecModeDescribeExec). See configureConnConfig.
+	QueryExecMode pgx.QueryExecMode
 }
 
 // resolvedConfig holds the validated and resolved configuration with all
@@ -80,6 +89,7 @@ type resolvedConfig struct {
 	Profile                   string
 	TokenDuration             time.Duration
 	CustomCredentialsProvider aws.CredentialsProvider
+	QueryExecMode             pgx.QueryExecMode
 }
 
 // resolve validates the configuration, applies defaults, and resolves the
@@ -97,11 +107,16 @@ func (c *Config) resolve() (*resolvedConfig, error) {
 		Port:                      c.Port,
 		Profile:                   c.Profile,
 		CustomCredentialsProvider: c.CustomCredentialsProvider,
+		QueryExecMode:             c.QueryExecMode,
 	}
 
 	// Apply defaults
 	if resolved.User == "" {
 		resolved.User = DefaultUser
+	}
+	// Zero is not a valid pgx.QueryExecMode, so treat it as "unset".
+	if resolved.QueryExecMode == 0 {
+		resolved.QueryExecMode = DefaultQueryExecMode
 	}
 	if resolved.Database == "" {
 		resolved.Database = DefaultDatabase
@@ -226,4 +241,14 @@ func (r *resolvedConfig) configureConnConfig(cfg *pgx.ConnConfig) {
 	cfg.RuntimeParams = map[string]string{
 		"application_name": ApplicationName,
 	}
+
+	// Default to DescribeExec (overridable via Config.QueryExecMode). pgx's
+	// caching modes (CacheStatement, CacheDescribe) fail after a live schema
+	// change on connections holding a stale plan/description (0A000 / 08P01).
+	// DescribeExec re-Describes each execution, so it is schema-change safe and
+	// resolves parameter types server-side. Exec avoids the extra round trip but
+	// infers param types from Go types alone, which on DSQL rejects jsonb
+	// map/[]byte params and silently corrupts []byte into text columns, so it is
+	// opt-in only.
+	cfg.DefaultQueryExecMode = r.QueryExecMode
 }
