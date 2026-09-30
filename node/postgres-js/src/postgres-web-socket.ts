@@ -94,9 +94,17 @@ export class PostgresWs extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       if (this.ws != null) {
+        // Until connect() settles, the consumer (postgres.js) has not received this socket
+        // and so has had no opportunity to attach an "error" listener. Emitting "error" with
+        // no listener attached makes EventEmitter throw out of the WebSocket event handler,
+        // where no caller can catch it, and skips the reject() below - leaving the promise
+        // returned by connect() unsettled. During the handshake we reject instead of emitting.
+        let handshakeSettled = false;
+
         this.ws.onopen = () => {
           this.connected = true;
           this.readyState = ReadyState.Open;
+          handshakeSettled = true;
           resolve(this);
         };
 
@@ -129,8 +137,14 @@ export class PostgresWs extends EventEmitter {
         this.ws.onerror = (event: Event) => {
           const msg = (event as ErrorEvent).message || "WebSocket error";
           const error = new Error(`${msg} ${this.host}:${this.port}`);
+
+          if (!handshakeSettled) {
+            handshakeSettled = true;
+            reject(error);
+            return;
+          }
+
           this.emit("error", error);
-          reject(error);
         };
 
         this.ws.onclose = () => {
