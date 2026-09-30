@@ -3,8 +3,18 @@ name: Rust sqlx CI
 permissions: {}
 
 on:
-  workflow_call: {}
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      checkout-ref:
+        description: "Exact commit to test; defaults to the triggering ref"
+        required: false
+        type: string
+        default: ""
+      run-integration:
+        description: "Allow jobs that use AWS credentials"
+        required: false
+        type: boolean
+        default: true
   push:
     branches: [main]
 
@@ -14,6 +24,8 @@ defaults:
 
 jobs:
   create-cluster:
+    if: github.event_name != 'pull_request' || inputs.run-integration
+    needs: build
     uses: ./.github/workflows/dsql-cluster-create.yml
     with:
       workflow_name: rust-sqlx
@@ -23,13 +35,12 @@ jobs:
       id-token: write # required by aws-actions/configure-aws-credentials
 
   build:
-    needs: create-cluster
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # required by aws-actions/configure-aws-credentials
 
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -54,6 +65,33 @@ jobs:
       - name: Run connector unit tests
         run: "cargo test --features pool,occ --lib"
 
+      - name: Build examples
+        working-directory: rust/sqlx/example
+        run: cargo build
+
+  integration-tests:
+    needs: create-cluster
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # required by aws-actions/configure-aws-credentials
+
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/sqlx/target
+          key: rust-sqlx-${{ runner.os }}-${{ hashFiles('rust/sqlx/Cargo.lock') }}
+
       - name: Download Amazon root certificate
         run: |
           mkdir -p ~/.postgresql
@@ -72,10 +110,6 @@ jobs:
           REGION: ${{ needs.create-cluster.outputs.region }}
         run: "cargo test --features pool,occ --test tests"
 
-      - name: Build examples
-        working-directory: rust/sqlx/example
-        run: cargo build
-
       - name: Run example integration tests
         working-directory: rust/sqlx/example
         env:
@@ -86,7 +120,7 @@ jobs:
 
   delete-cluster:
     if: always() && needs.create-cluster.result == 'success'
-    needs: [create-cluster, build]
+    needs: [create-cluster, integration-tests]
     uses: ./.github/workflows/dsql-cluster-delete.yml
     with:
       cluster-id: ${{ needs.create-cluster.outputs.cluster-id }}
