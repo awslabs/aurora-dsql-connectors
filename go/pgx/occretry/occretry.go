@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"math/rand"
 	"time"
 
@@ -75,6 +76,39 @@ func DefaultConfig() Config {
 	}
 }
 
+// resolveConfig applies defaults to omitted backoff settings and validates
+// values before any user operation is executed.
+func resolveConfig(config Config) (Config, error) {
+	if config.MaxRetries < 0 {
+		return Config{}, fmt.Errorf("max retries must be non-negative, got %d", config.MaxRetries)
+	}
+
+	defaults := DefaultConfig()
+	if config.InitialWait == 0 {
+		config.InitialWait = defaults.InitialWait
+	}
+	if config.MaxWait == 0 {
+		config.MaxWait = defaults.MaxWait
+	}
+	if config.Multiplier == 0 {
+		config.Multiplier = defaults.Multiplier
+	}
+	if config.InitialWait < 0 {
+		return Config{}, fmt.Errorf("initial wait must be positive, got %s", config.InitialWait)
+	}
+	if config.MaxWait < config.InitialWait {
+		return Config{}, fmt.Errorf(
+			"max wait must be at least initial wait, got max wait %s and initial wait %s",
+			config.MaxWait,
+			config.InitialWait,
+		)
+	}
+	if math.IsNaN(config.Multiplier) || math.IsInf(config.Multiplier, 0) || config.Multiplier < 1 {
+		return Config{}, fmt.Errorf("multiplier must be finite and at least 1, got %v", config.Multiplier)
+	}
+	return config, nil
+}
+
 // IsOCCError checks if an error is a DSQL OCC conflict error.
 // Returns true for OC000 (mutation conflict), OC001 (schema conflict),
 // and 40001 (serialization failure) errors.
@@ -91,7 +125,14 @@ func IsOCCError(err error) bool {
 
 // backoffWait waits with exponential backoff and jitter. Returns the next wait duration.
 func backoffWait(ctx context.Context, wait time.Duration, config Config) (time.Duration, error) {
-	jitter := time.Duration(rand.Int63n(int64(wait / 4)))
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+
+	var jitter time.Duration
+	if jitterLimit := wait / 4; jitterLimit > 0 {
+		jitter = time.Duration(rand.Int63n(int64(jitterLimit)))
+	}
 	sleepTime := wait + jitter
 
 	// Use select to allow cancellation during the backoff wait.
@@ -121,6 +162,11 @@ func backoffWait(ctx context.Context, wait time.Duration, config Config) (time.D
 //	    return err
 //	})
 func Retry(ctx context.Context, config Config, fn func() error) error {
+	config, err := resolveConfig(config)
+	if err != nil {
+		return fmt.Errorf("invalid retry config: %w", err)
+	}
+
 	var lastErr error
 	wait := config.InitialWait
 
