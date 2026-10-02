@@ -5,10 +5,8 @@
 import js from '@eslint/js';
 import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
-import header from 'eslint-plugin-header';
+import header from '@tony.ganchev/eslint-plugin-header';
 import importPlugin from 'eslint-plugin-import-x';
-
-header.rules.header.meta.schema = false;
 
 export default [
   js.configs.recommended,
