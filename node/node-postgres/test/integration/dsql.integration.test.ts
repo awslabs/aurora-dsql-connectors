@@ -378,7 +378,12 @@ describe("DSQL Integration Tests", () => {
           })
         );
 
-        await Promise.all(updatePromises);
+        // Let every transaction settle before the finally block drops the table.
+        // A DROP that races still-running transactions fails with OC000 and
+        // hides the error that actually failed the test.
+        const outcomes = await Promise.allSettled(updatePromises);
+        const failed = outcomes.find((o): o is PromiseRejectedResult => o.status === "rejected");
+        if (failed) throw failed.reason;
 
         const finalResult = await pool.query("SELECT value FROM occ_test_pool WHERE id = 1");
         expect(finalResult.rows[0].value).toBe(10);
