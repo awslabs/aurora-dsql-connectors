@@ -1,3 +1,34 @@
+<a id="java/jdbc/v1.5.0"></a>
+# [Aurora DSQL Connector for JDBC v1.5.0 (java/jdbc/v1.5.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/java/jdbc/v1.5.0) - 2026-06-02
+
+## What's Changed
+
+### New Features
+- Added OCC (Optimistic Concurrency Control) retry with exponential backoff ([#542](https://github.com/awslabs/aurora-dsql-connectors/issues/542))
+  - `OCCRetry`: static `execute()` methods with `isOCCError()` detection and configurable backoff
+  - `OCCRetryConfig`: immutable builder with validated parameters (maxRetries, baseDelay, jitter, etc.)
+  - `OCCTransactionRunner`: bind-once convenience wrapper with `run()`/`runVoid()`
+  - `VoidTransactionCallback`: ergonomic void lambda interface
+- Added per-connection credentials provider support ([#451](https://github.com/awslabs/aurora-dsql-connectors/issues/451))
+
+### Bug Fixes
+- Use PreparedStatement in example code ([#520](https://github.com/awslabs/aurora-dsql-connectors/issues/520))
+
+### Dependency Updates
+- Bumped AWS SDK (auth, dsql, regions) to 2.44.13
+- Bumped PostgreSQL JDBC driver to 42.7.11
+- Bumped JReleaser to 1.24.0
+- Bumped Gradle wrapper to 9.5.1
+- Bumped Spotless to 8.5.1
+- Bumped JUnit Jupiter to 5.14.4
+- Bumped JUnit BOM to 6.1.0
+
+### Full Changelog
+https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.1...java/jdbc/v1.5.0
+
+[Changes][java/jdbc/v1.5.0]
+
+
 <a id="java/jdbc/v1.4.1"></a>
 # [Aurora DSQL Connector for JDBC v1.4.1 (java/jdbc/v1.4.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/java/jdbc/v1.4.1) - 2026-03-19
 
@@ -189,6 +220,7 @@ Initial release of Aurora DSQL JDBC Connector
 [Changes][java/jdbc/v1.0.0]
 
 
+[java/jdbc/v1.5.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.1...java/jdbc/v1.5.0
 [java/jdbc/v1.4.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.0...java/jdbc/v1.4.1
 [java/jdbc/v1.4.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.3.0...java/jdbc/v1.4.0
 [java/jdbc/v1.3.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.2.0...java/jdbc/v1.3.0
