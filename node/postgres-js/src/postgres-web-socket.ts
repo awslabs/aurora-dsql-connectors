@@ -36,6 +36,7 @@ export class PostgresWs extends EventEmitter {
   private disableHeartBeat: boolean = false;
   private heartBeatTimeout: NodeJS.Timeout | null = null;
   private pendingQueries: Query[] = [];
+  private partialMessage: Uint8Array = new Uint8Array(0);
 
   public readyState: ReadyState = ReadyState.Closed;
 
@@ -87,6 +88,48 @@ export class PostgresWs extends EventEmitter {
     return true;
   }
 
+  // The server can pack several messages into one frame and split a message
+  // across frames, so heartbeat and ReadyForQuery tracking must look at each
+  // message rather than at the first byte of a frame.
+  private handleFrame(frame: Uint8Array) {
+    const data =
+      this.partialMessage.length > 0
+        ? new Uint8Array(Buffer.concat([this.partialMessage, frame]))
+        : frame;
+    const forward: Uint8Array[] = [];
+    let offset = 0;
+
+    while (offset + 5 <= data.length) {
+      const length = new DataView(data.buffer, data.byteOffset + offset + 1, 4).getInt32(0, false);
+      const end = offset + 1 + length;
+      if (end > data.length) break;
+
+      const message = data.subarray(offset, end);
+      offset = end;
+
+      if (this.handleHeartBeatResponse(message)) continue;
+
+      forward.push(message);
+      if (message[0] === MESSAGE_CODE_RFQ && message.length > 5) {
+        const status = String.fromCharCode(message[5]);
+
+        if (status === "E") {
+          // temporarily disable heart beat when the connection has a transaction error
+          this.disableHeartBeat = true;
+          this.cleanUpTxErrorState();
+        } else {
+          // I (IDLE) or T (Transaction)
+          this.onReadyForQuery();
+        }
+      }
+    }
+
+    this.partialMessage = data.slice(offset);
+    if (forward.length > 0) {
+      this.emit("data", Buffer.concat(forward));
+    }
+  }
+
   async connect(): Promise<this> {
     const url = `wss://${this.config.host}:${this.port}`;
     this.ws = new WebSocket(url);
@@ -112,23 +155,8 @@ export class PostgresWs extends EventEmitter {
           const data = new Uint8Array(event.data);
 
           if (this.config.connectionCheck) {
-            if (this.handleHeartBeatResponse(data)) return;
-
-            if (data.length > 0 && data[0] === MESSAGE_CODE_RFQ) {
-
-              if (data.length > 5) {
-                const status = String.fromCharCode(data[5]);
-
-                if (status === "E") {
-                  // temporarily disable heart beat when the connection has a transaction error
-                  this.disableHeartBeat = true;
-                  this.cleanUpTxErrorState();
-                } else {
-                  // I (IDLE) or T (Transaction) 
-                  this.onReadyForQuery();
-                }
-              }
-            }
+            this.handleFrame(data);
+            return;
           }
 
           this.emit("data", Buffer.from(data));
@@ -156,6 +184,7 @@ export class PostgresWs extends EventEmitter {
           this.releaseMutex();
 
           this.connected = false;
+          this.partialMessage = new Uint8Array(0);
           this.readyState = ReadyState.Closed;
           this.ws = null;
           this.emit("close");
