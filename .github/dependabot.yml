@@ -31,6 +31,10 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    ignore:
+      # typescript-eslint and ts-jest do not support TypeScript 7 yet.
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
   - package-ecosystem: "npm"
     directories:
       - "/node/postgres-js"
@@ -41,6 +45,10 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    ignore:
+      # typescript-eslint and ts-jest do not support TypeScript 7 yet.
+      - dependency-name: "typescript"
+        versions: [">=7.0.0"]
 
   # Java connector
   - package-ecosystem: "gradle"
