@@ -154,7 +154,9 @@ describe('PostgresWs with connectionCheck', () => {
   });
 
   test('forwards a reply that arrives as one frame and accepts the next query', async () => {
-    socket.write(socket.createQueryBuffer('select 2;'));
+    const heartbeat = socket.createQueryBuffer('select 1;');
+    const query = socket.createQueryBuffer('select 2;');
+    socket.write(query);
     await flush();
     deliver(queryReply('1'));
     await flush();
@@ -166,7 +168,20 @@ describe('PostgresWs with connectionCheck', () => {
     await flush();
 
     expect(Buffer.concat(received)).toEqual(Buffer.from(queryReply('2')));
-    expect(ws.sent).toHaveLength(3);
+    // The next query starts with its own heartbeat.
+    expect(ws.sent).toEqual([heartbeat, query, heartbeat]);
+  });
+
+  test('does not forward a heartbeat reply to postgres.js', async () => {
+    socket.write(socket.createQueryBuffer('select 2;'));
+    await flush();
+    const received: Buffer[] = [];
+    socket.on('data', (chunk: Buffer) => received.push(chunk));
+
+    deliver(queryReply('1'));
+    await flush();
+
+    expect(received).toEqual([]);
   });
 
   test('reassembles a heartbeat reply split across frames', async () => {
