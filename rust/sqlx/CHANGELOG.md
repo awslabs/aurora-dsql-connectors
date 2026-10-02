@@ -1,3 +1,17 @@
+<a id="rust/sqlx/v0.2.2"></a>
+# [Aurora DSQL SQLx Connector for Rust v0.2.2 (rust/sqlx/v0.2.2)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.2.2) - 2026-07-14
+
+Disable `aws-sdk-dsql` default features to drop the legacy rustls 0.21 stack (GHSA-82j2-j2ch-gfr8).
+
+The connector only uses `aws_sdk_dsql::auth_token` for request signing; the SDK's HTTP client and TLS features are never used at runtime, so `default-features = false` removes the vulnerable `hyper-rustls 0.24` / `rustls 0.21` dependencies with no functional change.
+
+### Changes since v0.2.1
+
+- fix(rust): disable aws-sdk-dsql default features to drop legacy rustls 0.21 ([#516](https://github.com/awslabs/aurora-dsql-connectors/issues/516))
+
+[Changes][rust/sqlx/v0.2.2]
+
+
 <a id="rust/sqlx/v0.2.1"></a>
 # [Aurora DSQL SQLx Connector for Rust v0.2.1 (rust/sqlx/v0.2.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.2.1) - 2026-06-05
 
@@ -34,8 +48,25 @@ aurora-dsql-sqlx-connector = { version = "0.2.1", features = ["pool", "occ"] }
 [Changes][rust/sqlx/v0.2.1]
 
 
+<a id="rust/sqlx/v0.2.0"></a>
+# [Aurora DSQL SQLx Connector for Rust v0.2.0 (rust/sqlx/v0.2.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.2.0) - 2026-10-02
+
+_Tagged on 2026-04-29. This GitHub Release was added later._
+
+## What's Changed
+
+- feat(rust): allow custom credentials provider on connector ([#428](https://github.com/awslabs/aurora-dsql-connectors/issues/428))
+
+**Full Changelog**: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.3...rust/sqlx/v0.2.0
+
+
+[Changes][rust/sqlx/v0.2.0]
+
+
 <a id="rust/sqlx/v0.1.3"></a>
-# [Aurora DSQL SQLx Connector for Rust v0.1.3 (rust/sqlx/v0.1.3)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.1.3) - 2026-04-10
+# [Aurora DSQL SQLx Connector for Rust v0.1.3 (rust/sqlx/v0.1.3)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.1.3) - 2026-10-02
+
+_Tagged on 2026-04-10. This GitHub Release was added later._
 
 Added automatic OCC retry support for transactional workloads on both pool and single-connection modes.
 
@@ -61,6 +92,7 @@ aurora-dsql-sqlx-connector = { version = "0.1.3", features = ["pool", "occ"] }
 
 **Full Changelog**: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.2...rust/sqlx/v0.1.3
 
+
 [Changes][rust/sqlx/v0.1.3]
 
 
@@ -84,13 +116,12 @@ First release of `aurora-dsql-sqlx-connector` on [crates.io](https://crates.io/c
 
 ### Installation
 
-```toml
+toml
 [dependencies]
 aurora-dsql-sqlx-connector = "0.1.2"
 
 # With all features
 aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
-```
 
 ### Changes since v0.1.1
 
@@ -101,8 +132,30 @@ aurora-dsql-sqlx-connector = { version = "0.1.2", features = ["pool", "occ"] }
 [Changes][rust/sqlx/v0.1.2]
 
 
+<a id="rust/sqlx/v0.1.1"></a>
+# [Aurora DSQL SQLx Connector for Rust v0.1.1 (rust/sqlx/v0.1.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.1.1) - 2026-10-02
+
+_Tagged on 2026-03-27. This GitHub Release was added later._
+
+## What's Changed
+
+- fix(rust):Add ormPrefix option to Rust SQLx connector ([#313](https://github.com/awslabs/aurora-dsql-connectors/issues/313))
+- feat(rust): Add SQLx connector for Aurora DSQL ([#277](https://github.com/awslabs/aurora-dsql-connectors/issues/277))
+
+### Dependency Updates
+
+- 3 dependency update(s).
+
+**Full Changelog**: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.0...rust/sqlx/v0.1.1
+
+
+[Changes][rust/sqlx/v0.1.1]
+
+
 <a id="rust/sqlx/v0.1.0"></a>
-# [Aurora DSQL SQLx Connector for Rust v0.1.0 (rust/sqlx/v0.1.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.1.0) - 2026-03-19
+# [Aurora DSQL SQLx Connector for Rust v0.1.0 (rust/sqlx/v0.1.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.1.0) - 2026-10-02
+
+_Tagged on 2026-03-19. This GitHub Release was added later._
 
 Initial release of the Rust SQLx connector with core Aurora DSQL connection support.
 
@@ -121,11 +174,14 @@ Initial release of the Rust SQLx connector with core Aurora DSQL connection supp
 aurora-dsql-sqlx-connector = "0.0.1"
 ```
 
+
 [Changes][rust/sqlx/v0.1.0]
 
 
 <a id="rust/sqlx/v0.0.1"></a>
-# [Aurora DSQL SQLx Connector for Rust v0.0.1 (rust/sqlx/v0.0.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.0.1) - 2026-03-03
+# [Aurora DSQL SQLx Connector for Rust v0.0.1 (rust/sqlx/v0.0.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/rust/sqlx/v0.0.1) - 2026-10-02
+
+_Tagged on 2026-03-02. This GitHub Release was added later._
 
 Initial preview release of the Rust SQLx connector for Aurora DSQL.
 
@@ -142,13 +198,17 @@ Initial preview release of the Rust SQLx connector for Aurora DSQL.
 aurora-dsql-sqlx-connector = "0.0.1"
 ```
 
+
 [Changes][rust/sqlx/v0.0.1]
 
 
-[rust/sqlx/v0.2.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.2...rust/sqlx/v0.2.1
+[rust/sqlx/v0.2.2]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.2.1...rust/sqlx/v0.2.2
+[rust/sqlx/v0.2.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.2.0...rust/sqlx/v0.2.1
+[rust/sqlx/v0.2.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.3...rust/sqlx/v0.2.0
 [rust/sqlx/v0.1.3]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.2...rust/sqlx/v0.1.3
-[rust/sqlx/v0.1.2]: https://github.com/awslabs/aurora-dsql-connectors/tree/rust/sqlx/v0.1.2
-[rust/sqlx/v0.1.0]: https://github.com/awslabs/aurora-dsql-connectors/tree/rust/sqlx/v0.1.0
+[rust/sqlx/v0.1.2]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.1...rust/sqlx/v0.1.2
+[rust/sqlx/v0.1.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.1.0...rust/sqlx/v0.1.1
+[rust/sqlx/v0.1.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/rust/sqlx/v0.0.1...rust/sqlx/v0.1.0
 [rust/sqlx/v0.0.1]: https://github.com/awslabs/aurora-dsql-connectors/tree/rust/sqlx/v0.0.1
 
 <!-- Generated by https://github.com/rhysd/changelog-from-release v3.9.1 -->
