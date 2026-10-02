@@ -25,7 +25,10 @@ class AuroraDSQLClient extends Client {
     }
   }
 
-  override async connect(callback?: (err: Error) => void) {
+  connect(): Promise<Client>;
+  connect(callback: (err: Error) => void): void;
+
+  override async connect(callback?: (err: Error) => void): Promise<Client | void> {
     if (this.dsqlConfig !== undefined) {
       try {
         this.password = await AuroraDSQLUtil.getDSQLToken(
