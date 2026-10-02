@@ -83,9 +83,9 @@
     "pg": "^8.16.3",
     "publint": "^0.3.16",
     "ts-jest": "^29.4.5",
-    "tsdown": "^0.23.0",
+    "tsdown": "^0.21.1",
     "tsx": "^4.20.6",
-    "typescript": "^6.0.3"
+    "typescript": "^5.9.3"
   },
   "overrides": {
     "fast-xml-parser": "^5.4.1"

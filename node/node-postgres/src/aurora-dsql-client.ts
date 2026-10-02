@@ -25,9 +25,14 @@ class AuroraDSQLClient extends Client {
     }
   }
 
-  override async connect(callback?: (err: Error) => void) {
-    if (this.dsqlConfig !== undefined) {
-      try {
+  override connect(): Promise<Client>;
+  override connect(callback: (err: Error) => void): void;
+  override connect(callback: (err: null, client: Client) => void): void;
+  override connect(
+    callback?: ((err: Error) => void) | ((err: null, client: Client) => void),
+  ): Promise<Client> | void {
+    const refreshPassword = async (): Promise<void> => {
+      if (this.dsqlConfig !== undefined) {
         this.password = await AuroraDSQLUtil.getDSQLToken(
           this.dsqlConfig.host!,
           this.dsqlConfig.user!,
@@ -36,18 +41,18 @@ class AuroraDSQLClient extends Client {
           this.dsqlConfig.tokenDurationSecs,
           this.dsqlConfig.customCredentialsProvider,
         );
-      } catch (error) {
-        if (callback) {
-          callback(error as Error);
-          return;
-        }
-        throw error;
       }
-    }
+    };
+
     if (callback) {
-      return super.connect(callback);
+      refreshPassword()
+        .then(() => super.connect(callback as (err: Error) => void))
+        .catch((error: unknown) =>
+          (callback as (err: Error) => void)(error as Error),
+        );
+      return;
     }
-    return super.connect();
+    return refreshPassword().then(() => super.connect());
   }
 
   /**
