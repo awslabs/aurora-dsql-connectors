@@ -31,6 +31,13 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    ignore:
+      # tsdown 0.22+ drops Node 20; its TypeScript 6 support starts on
+      # that Node-22-only line. Keep the connector's Node 20 contract.
+      - dependency-name: "tsdown"
+        versions: [">=0.22.0"]
+      - dependency-name: "typescript"
+        versions: [">=6.0.0"]
   - package-ecosystem: "npm"
     directories:
       - "/node/postgres-js"

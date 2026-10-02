@@ -89,7 +89,9 @@ export class AuroraDSQLUtil {
         token = await signer.getDbConnectAuthToken();
       }
     } catch (error) {
-      throw new Error(`Failed to generate DSQL token: ${error}`);
+      throw new Error(`Failed to generate DSQL token: ${error}`, {
+        cause: error,
+      });
     }
 
     if (!token || token.trim() === "") {
