@@ -345,13 +345,26 @@ describe('OCC Retry', () => {
             await sql`CREATE TABLE IF NOT EXISTS occ_test_percall (id INT PRIMARY KEY, value INT)`;
             await sql`INSERT INTO occ_test_percall (id, value) VALUES (1, 0) ON CONFLICT (id) DO UPDATE SET value = 0`;
 
-            const updatePromises = Array.from({ length: 3 }, () =>
-                sql.begin(async (tx: any) => {
+            // Each transaction's first read waits until all three have read, so
+            // their first commits always overlap and at least two must retry.
+            const writers = 3;
+            let readers = 0;
+            let releaseReaders!: () => void;
+            const allHaveRead = new Promise<void>((resolve) => (releaseReaders = resolve));
+
+            const updatePromises = Array.from({ length: writers }, () => {
+                let waited = false;
+                return sql.begin(async (tx: any) => {
                     const result = await tx`SELECT value FROM occ_test_percall WHERE id = 1`;
                     const currentValue = result[0].value;
+                    if (!waited) {
+                        waited = true;
+                        if (++readers === writers) releaseReaders();
+                        await allHaveRead;
+                    }
                     await tx`UPDATE occ_test_percall SET value = ${currentValue + 1} WHERE id = 1`;
-                }, { retry: { maxRetries: 5 } })
-            );
+                }, { retry: { maxRetries: 5 } });
+            });
 
             await Promise.all(updatePromises);
 
