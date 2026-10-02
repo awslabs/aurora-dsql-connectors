@@ -57,8 +57,8 @@ dependencies {
     testImplementation("software.amazon.awssdk:regions:2.55.6")
 
     // Agent recommended for Java 21+ inline mocking.
-    testImplementation("org.mockito:mockito-junit-jupiter:5.23.0")
-    mockitoAgent("org.mockito:mockito-core:5.23.0") { isTransitive = false }
+    testImplementation("org.mockito:mockito-junit-jupiter:5.24.0")
+    mockitoAgent("org.mockito:mockito-core:5.24.0") { isTransitive = false }
 
     // Runtime dependencies for tests
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
