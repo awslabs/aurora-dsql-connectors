@@ -18,14 +18,14 @@ class MockWebSocket {
   onclose: (() => void) | null = null;
 
   readonly url: string;
-  readonly sent: Uint8Array[] = [];
+  readonly sent: ArrayBuffer[] = [];
 
   constructor(url: string) {
     this.url = url;
     MockWebSocket.instances.push(this);
   }
 
-  send(data: Uint8Array): void {
+  send(data: ArrayBuffer): void {
     this.sent.push(data);
   }
 
@@ -145,12 +145,12 @@ describe('PostgresWs with connectionCheck', () => {
     const query = socket.createQueryBuffer('select 2;');
     socket.write(query);
     await flush();
-    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;')]);
+    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;').buffer]);
 
     deliver(queryReply('1'));
     await flush();
 
-    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;'), query]);
+    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;').buffer, query.buffer]);
   });
 
   test('forwards a reply that arrives as one frame and accepts the next query', async () => {
@@ -169,7 +169,7 @@ describe('PostgresWs with connectionCheck', () => {
 
     expect(Buffer.concat(received)).toEqual(Buffer.from(queryReply('2')));
     // The next query starts with its own heartbeat.
-    expect(ws.sent).toEqual([heartbeat, query, heartbeat]);
+    expect(ws.sent).toEqual([heartbeat.buffer, query.buffer, heartbeat.buffer]);
   });
 
   test('does not forward a heartbeat reply to postgres.js', async () => {
@@ -194,6 +194,6 @@ describe('PostgresWs with connectionCheck', () => {
     deliver(reply.subarray(9));
     await flush();
 
-    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;'), query]);
+    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;').buffer, query.buffer]);
   });
 });
