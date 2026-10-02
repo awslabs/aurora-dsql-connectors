@@ -1,5 +1,5 @@
 <a id="python/connector/v0.2.7"></a>
-# [Aurora DSQL Connector for Python v0.2.7 (python/connector/v0.2.7)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/python/connector/v0.2.7) - 2026-05-27
+# [Aurora DSQL Connector for Python v0.2.7 (python/connector/v0.2.7)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/python/connector/v0.2.7) - 2026-05-28
 
 This release adds OCC (Optimistic Concurrency Control) retry with exponential backoff support for all drivers (psycopg, psycopg2, asyncpg).
 
