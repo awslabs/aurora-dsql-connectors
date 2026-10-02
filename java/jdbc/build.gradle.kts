@@ -20,7 +20,7 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("jacoco")
-    id("com.diffplug.spotless") version "8.9.0"
+    id("com.diffplug.spotless") version "8.10.3"
     id("com.github.spotbugs") version "6.4.+"
     id("org.jreleaser") version "1.26.0"
 }
@@ -38,7 +38,7 @@ val mockitoAgent = configurations.create("mockitoAgent")
 
 dependencies {
     // AWS SDK for Aurora DSQL
-    implementation("software.amazon.awssdk:dsql:2.55.1")
+    implementation("software.amazon.awssdk:dsql:2.55.6")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector.
     // Override with -PpgjdbcVersion=... (the compat-canary workflow passes `+`
@@ -48,13 +48,13 @@ dependencies {
     implementation("org.postgresql:postgresql:$pgjdbcVersion")
 
     // Annotation dependencies for @Nullable, @Nonnull, etc.
-    compileOnly("com.github.spotbugs:spotbugs-annotations:4.10.3")
+    compileOnly("com.github.spotbugs:spotbugs-annotations:4.10.4")
 
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.4")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.14.4")
     testImplementation("org.junit.jupiter:junit-jupiter:5.14.4")
-    testImplementation("software.amazon.awssdk:regions:2.55.1")
+    testImplementation("software.amazon.awssdk:regions:2.55.6")
 
     // Agent recommended for Java 21+ inline mocking.
     testImplementation("org.mockito:mockito-junit-jupiter:5.23.0")
@@ -81,7 +81,7 @@ spotless {
     java {
         target("src/**/*.java", "integration-tests/src/**/*.java")
         licenseHeaderFile(".license-headers/java.txt")
-        googleJavaFormat("1.29.0").aosp()
+        googleJavaFormat("1.30.0").aosp()
         removeUnusedImports()
         trimTrailingWhitespace()
         endWithNewline()
