@@ -275,7 +275,7 @@ export class PostgresWs extends EventEmitter {
     // * Z (ReadyForQuery) message is not expected to be returned
     if (!this.config.connectionCheck || (queryCount == 0 && hasSync === false)) {
       try {
-        this.ws.send(sendData);
+        this.ws.send(Uint8Array.from(sendData).buffer);
         if (callbackFn) {
           callbackFn();
         }
@@ -367,7 +367,7 @@ export class PostgresWs extends EventEmitter {
     }
 
     if (this.ws) {
-      this.ws.send(data.buffer);
+      this.ws.send(Uint8Array.from(data.buffer).buffer);
     } else {
       throw Error("Websocket is not initialized");
     }

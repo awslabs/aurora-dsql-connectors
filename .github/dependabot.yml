@@ -41,6 +41,13 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    # tsdown 0.22+ drops Node 20, while its TypeScript 6 support starts at
+    # 0.22. Keep these upgrades paired with the connector's Node 20 policy.
+    ignore:
+      - dependency-name: "tsdown"
+        versions: [">= 0.22.0"]
+      - dependency-name: "typescript"
+        versions: [">= 6.0.0"]
 
   # Java connector
   - package-ecosystem: "gradle"
