@@ -18,14 +18,15 @@ class MockWebSocket {
   onclose: (() => void) | null = null;
 
   readonly url: string;
+  readonly sent: Uint8Array[] = [];
 
   constructor(url: string) {
     this.url = url;
     MockWebSocket.instances.push(this);
   }
 
-  send(): void {
-    // no-op
+  send(data: Uint8Array): void {
+    this.sent.push(data);
   }
 
   close(): void {
@@ -94,5 +95,90 @@ describe('PostgresWs handshake failures', () => {
     ws.onerror!({} as unknown as Event);
 
     await expect(connecting).rejects.toThrow(`WebSocket error ${HOST}:443`);
+  });
+});
+
+function pgMessage(type: string, body: string = ''): Uint8Array {
+  const bytes = new TextEncoder().encode(body);
+  const buf = new Uint8Array(5 + bytes.length);
+  buf[0] = type.charCodeAt(0);
+  new DataView(buf.buffer).setInt32(1, 4 + bytes.length, false);
+  buf.set(bytes, 5);
+  return buf;
+}
+
+function concat(...parts: Uint8Array[]): Uint8Array {
+  return new Uint8Array(Buffer.concat(parts));
+}
+
+// A complete simple-query reply: RowDescription, DataRow, CommandComplete, ReadyForQuery.
+function queryReply(value: string): Uint8Array {
+  return concat(pgMessage('T', 'x'), pgMessage('D', value), pgMessage('C', 'SELECT 1\0'), pgMessage('Z', 'I'));
+}
+
+const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+describe('PostgresWs with connectionCheck', () => {
+  let socket: PostgresWs;
+  let ws: MockWebSocket;
+
+  beforeEach(async () => {
+    MockWebSocket.instances = [];
+    globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+    const config = { host: HOST, connectionCheck: true } as AuroraDSQLWsConfig<Record<string, never>>;
+    socket = new PostgresWs(config as AuroraDSQLWsConfig<{}>);
+    const connecting = socket.connect();
+    ws = MockWebSocket.instances[0];
+    ws.onopen!();
+    await connecting;
+  });
+
+  afterEach(() => {
+    ws.onclose?.();
+    globalThis.WebSocket = originalWebSocket;
+  });
+
+  const deliver = (data: Uint8Array) =>
+    ws.onmessage!({ data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) } as MessageEvent);
+
+  test('sends the query once a heartbeat reply arrives as one frame', async () => {
+    const query = socket.createQueryBuffer('select 2;');
+    socket.write(query);
+    await flush();
+    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;')]);
+
+    deliver(queryReply('1'));
+    await flush();
+
+    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;'), query]);
+  });
+
+  test('forwards a reply that arrives as one frame and accepts the next query', async () => {
+    socket.write(socket.createQueryBuffer('select 2;'));
+    await flush();
+    deliver(queryReply('1'));
+    await flush();
+    const received: Buffer[] = [];
+    socket.on('data', (chunk: Buffer) => received.push(chunk));
+
+    deliver(queryReply('2'));
+    socket.write(socket.createQueryBuffer('select 3;'));
+    await flush();
+
+    expect(Buffer.concat(received)).toEqual(Buffer.from(queryReply('2')));
+    expect(ws.sent).toHaveLength(3);
+  });
+
+  test('reassembles a heartbeat reply split across frames', async () => {
+    const query = socket.createQueryBuffer('select 2;');
+    socket.write(query);
+    await flush();
+    const reply = queryReply('1');
+
+    deliver(reply.subarray(0, 9));
+    deliver(reply.subarray(9));
+    await flush();
+
+    expect(ws.sent).toEqual([socket.createQueryBuffer('select 1;'), query]);
   });
 });
