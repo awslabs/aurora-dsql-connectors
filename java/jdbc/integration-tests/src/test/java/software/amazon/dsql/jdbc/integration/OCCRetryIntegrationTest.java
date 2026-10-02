@@ -264,6 +264,9 @@ public class OCCRetryIntegrationTest {
         int numThreads = 3;
         AtomicInteger totalAttempts = new AtomicInteger(0);
         AtomicReference<Exception> firstError = new AtomicReference<>();
+        // Every thread's first attempt waits until all of them have read the row,
+        // so the first commits always overlap and contention is guaranteed.
+        CountDownLatch allHaveRead = new CountDownLatch(numThreads);
         Thread[] threads = new Thread[numThreads];
 
         for (int i = 0; i < numThreads; i++) {
@@ -271,6 +274,7 @@ public class OCCRetryIntegrationTest {
                     new Thread(
                             () -> {
                                 try (Connection conn = createConnection()) {
+                                    AtomicInteger threadAttempts = new AtomicInteger(0);
                                     OCCRetry.execute(
                                             conn,
                                             config,
@@ -285,6 +289,18 @@ public class OCCRetryIntegrationTest {
                                                                                 + " WHERE id = 2")) {
                                                     assertTrue(rs.next());
                                                     current = rs.getInt("value");
+                                                }
+                                                if (threadAttempts.incrementAndGet() == 1) {
+                                                    allHaveRead.countDown();
+                                                    try {
+                                                        assertTrue(
+                                                                allHaveRead.await(
+                                                                        30, TimeUnit.SECONDS),
+                                                                "All threads should have read");
+                                                    } catch (InterruptedException ie) {
+                                                        Thread.currentThread().interrupt();
+                                                        throw new SQLException("interrupted", ie);
+                                                    }
                                                 }
                                                 try (Statement stmt = c.createStatement()) {
                                                     stmt.executeUpdate(
