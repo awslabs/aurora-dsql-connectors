@@ -19,6 +19,7 @@ package software.amazon.dsql.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -269,6 +270,22 @@ class DSQLConnectorTest {
                 exception.getMessage().contains("URL")
                         || exception.getMessage().contains("null")
                         || exception.getMessage().contains("Invalid"));
+    }
+
+    @Test
+    void testConnect_NonDsqlUrl_ReturnsNull() throws SQLException {
+        // Arrange
+        String url = "jdbc:postgresql://localhost:5432/postgres";
+        Properties info = new Properties();
+        info.setProperty("user", "testuser");
+
+        // Act
+        Connection result = driver.connect(url, info);
+
+        // Assert
+        assertNull(result);
+        propertyUtilsMock.verifyNoInteractions();
+        credentialsManagerMock.verifyNoInteractions();
     }
 
     @Test
