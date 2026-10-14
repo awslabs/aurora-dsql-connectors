@@ -41,6 +41,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.MockedConstruction;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -246,9 +248,23 @@ class DSQLConnectorTest {
     }
 
     @Test
-    void testConnect_InvalidURL_ThrowsSQLException() throws SQLException {
-        // Arrange - Use a truly invalid URL that will cause parsing issues
-        String url = null; // or some other invalid format
+    void testConnect_NullURL_ThrowsSQLException() {
+        // Arrange
+        Properties info = new Properties();
+        info.setProperty("user", "testuser");
+
+        // Act & Assert
+        SQLException exception = assertThrows(SQLException.class, () -> driver.connect(null, info));
+        assertEquals("URL is null", exception.getMessage());
+        propertyUtilsMock.verifyNoInteractions();
+        credentialsManagerMock.verifyNoInteractions();
+    }
+
+    @Test
+    void testConnect_MalformedDsqlURL_ThrowsSQLException() {
+        // Arrange - accepted prefix, so this driver owns the URL and must throw rather than
+        // return null
+        String url = "jdbc:aws-dsql:postgresql:///testdb";
         Properties info = new Properties();
         info.setProperty("user", "testuser");
 
@@ -256,26 +272,25 @@ class DSQLConnectorTest {
         copiedProps.setProperty("user", "testuser");
 
         propertyUtilsMock.when(() -> PropertyUtils.copyProperties(info)).thenReturn(copiedProps);
-        // Let the actual method handle the invalid URL
 
         // Act & Assert
-        SQLException exception =
-                assertThrows(
-                        SQLException.class,
-                        () -> {
-                            driver.connect(url, info);
-                        });
-        // Verify it's the expected error message
-        assertTrue(
-                exception.getMessage().contains("URL")
-                        || exception.getMessage().contains("null")
-                        || exception.getMessage().contains("Invalid"));
+        SQLException exception = assertThrows(SQLException.class, () -> driver.connect(url, info));
+        assertEquals("Invalid URL format: no host found", exception.getMessage());
+        credentialsManagerMock.verifyNoInteractions();
     }
 
-    @Test
-    void testConnect_NonDsqlUrl_ReturnsNull() throws SQLException {
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "jdbc:postgresql://localhost:5432/postgres",
+                "jdbc:postgresql://test-cluster.dsql.us-east-1.on.aws/postgres",
+                "jdbc:aws-dsql:test-cluster.dsql.us-east-1.on.aws/postgres",
+                "test-cluster.dsql.us-east-1.on.aws/postgres",
+                "jdbc:oracle:thin:@localhost:1521:xe",
+                ""
+            })
+    void testConnect_UnsupportedURL_ReturnsNull(String url) throws SQLException {
         // Arrange
-        String url = "jdbc:postgresql://localhost:5432/postgres";
         Properties info = new Properties();
         info.setProperty("user", "testuser");
 

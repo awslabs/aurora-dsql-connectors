@@ -197,15 +197,19 @@ public class DSQLConnector implements java.sql.Driver {
      *       AuroraDsqlCredentialsManager#setProvider(AwsCredentialsProvider)}
      * </ol>
      *
-     * <h3>Error Scenarios</h3>
+     * <h3>Unsupported URLs</h3>
      *
-     * <p>Returns {@code null} for URLs this driver does not accept, allowing {@link DriverManager}
-     * to try the next registered driver.
+     * <p>Per the {@link java.sql.Driver#connect} contract, returns {@code null} without attempting
+     * a connection if {@link #acceptsURL(String)} returns {@code false} for the URL (for example, a
+     * plain {@code jdbc:postgresql://} URL), so the caller can use another driver.
+     *
+     * <h3>Error Scenarios</h3>
      *
      * <p>Throws {@link SQLException} for:
      *
      * <ul>
-     *   <li>Invalid URL format
+     *   <li>{@code null} URL
+     *   <li>Malformed Aurora DSQL URL (for example, missing host)
      *   <li>Missing {@code user} property
      *   <li>AWS credential resolution failures
      *   <li>IAM token generation failures
