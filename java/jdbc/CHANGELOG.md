@@ -1,3 +1,28 @@
+<a id="java/jdbc/v1.5.1"></a>
+# [Aurora DSQL Connector for JDBC v1.5.1 (java/jdbc/v1.5.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/java/jdbc/v1.5.1) - 2026-10-15
+
+## What's Changed
+
+### Bug Fixes
+
+- Return `null` from `DSQLConnector.connect()` for unsupported URLs so `DriverManager` can continue to another JDBC driver ([#662](https://github.com/awslabs/aurora-dsql-connectors/pull/662))
+
+### Dependency Updates
+
+- Updated AWS SDK dependencies (`auth`, `dsql`, and `regions`) to 2.55.14
+- Updated the PostgreSQL JDBC driver to 42.7.13
+- Updated Gradle to 9.8.1 and JReleaser to 1.26.0
+- Updated Spotless to 8.10.4, Mockito to 5.24.0, and SpotBugs annotations to 4.10.4
+- Updated example dependencies to HikariCP 7.1.0 and JUnit BOM 6.1.3
+
+### Full Changelog
+
+https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.5.0...java/jdbc/v1.5.1
+
+
+[Changes][java/jdbc/v1.5.1]
+
+
 <a id="java/jdbc/v1.5.0"></a>
 # [Aurora DSQL Connector for JDBC v1.5.0 (java/jdbc/v1.5.0)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/java/jdbc/v1.5.0) - 2026-06-02
 
@@ -220,6 +245,7 @@ Initial release of Aurora DSQL JDBC Connector
 [Changes][java/jdbc/v1.0.0]
 
 
+[java/jdbc/v1.5.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.5.0...java/jdbc/v1.5.1
 [java/jdbc/v1.5.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.1...java/jdbc/v1.5.0
 [java/jdbc/v1.4.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.4.0...java/jdbc/v1.4.1
 [java/jdbc/v1.4.0]: https://github.com/awslabs/aurora-dsql-connectors/compare/java/jdbc/v1.3.0...java/jdbc/v1.4.0
