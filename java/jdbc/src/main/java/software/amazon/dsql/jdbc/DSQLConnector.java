@@ -197,12 +197,19 @@ public class DSQLConnector implements java.sql.Driver {
      *       AuroraDsqlCredentialsManager#setProvider(AwsCredentialsProvider)}
      * </ol>
      *
+     * <h3>Unsupported URLs</h3>
+     *
+     * <p>Per the {@link java.sql.Driver#connect} contract, returns {@code null} without attempting
+     * a connection if {@link #acceptsURL(String)} returns {@code false} for the URL (for example, a
+     * plain {@code jdbc:postgresql://} URL), so the caller can use another driver.
+     *
      * <h3>Error Scenarios</h3>
      *
      * <p>Throws {@link SQLException} for:
      *
      * <ul>
-     *   <li>Invalid URL format
+     *   <li>{@code null} URL
+     *   <li>Malformed Aurora DSQL URL (for example, missing host)
      *   <li>Missing {@code user} property
      *   <li>AWS credential resolution failures
      *   <li>IAM token generation failures
@@ -213,13 +220,21 @@ public class DSQLConnector implements java.sql.Driver {
      *     jdbc:aws-dsql:postgresql://cluster.dsql.region.on.aws} with optional database and
      *     property definitions
      * @param info connection properties which augment those provided in the URL
-     * @return a {@link Connection} to the Aurora DSQL cluster
+     * @return a {@link Connection} to the Aurora DSQL cluster, or {@code null} if this driver does
+     *     not accept the URL
      * @throws SQLException if connection cannot be established due to invalid input, credential
      *     issues, or connection failures
      * @see PropertyDefinition
      */
     @Override
     public Connection connect(final String url, final Properties info) throws SQLException {
+        if (url == null) {
+            throw new SQLException("URL is null");
+        }
+        if (!acceptsURL(url)) {
+            return null;
+        }
+
         // Parse properties from URL if provided
         final Properties props = PropertyUtils.copyProperties(info);
         try {
