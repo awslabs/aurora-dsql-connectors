@@ -187,13 +187,6 @@ impl DsqlConnectOptions {
         self.token_duration_secs
     }
 
-    /// How often the background refresh task should rotate tokens.
-    /// Returns `token_duration * 4/5` (80%).
-    #[cfg(feature = "pool")]
-    pub(crate) fn refresh_interval(&self) -> Duration {
-        Duration::from_secs((self.token_duration() * 4 / 5).max(1))
-    }
-
     /// If host is a bare cluster ID, expand it to a full DSQL hostname.
     pub(crate) fn resolve_host(&self, sdk_config: &SdkConfig) -> Result<String> {
         let host = self.pg_connect_options.get_host();
@@ -227,6 +220,13 @@ impl DsqlConnectOptions {
                 .into(),
         ))
     }
+}
+
+/// How long the background refresh task waits before rotating a token with the
+/// given lifetime. Returns `lifetime * 4/5` (80%).
+#[cfg(feature = "pool")]
+pub(crate) fn refresh_interval(token_lifetime: Duration) -> Duration {
+    Duration::from_secs((token_lifetime.as_secs() * 4 / 5).max(1))
 }
 
 /// Load AWS SDK config, optionally using a named profile and/or custom credentials.
@@ -545,7 +545,10 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(config.refresh_interval(), Duration::from_secs(720));
+        assert_eq!(
+            refresh_interval(Duration::from_secs(config.token_duration())),
+            Duration::from_secs(720)
+        );
     }
 
     #[test]
@@ -562,7 +565,10 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_eq!(config.refresh_interval(), Duration::from_secs(1));
+        assert_eq!(
+            refresh_interval(Duration::from_secs(config.token_duration())),
+            Duration::from_secs(1)
+        );
     }
 
     // --- credentials_provider tests ---
