@@ -1,3 +1,11 @@
+<a id="php/pdo_pgsql/v0.1.2"></a>
+# [PHP PDO_PGSQL v0.1.2 (php/pdo_pgsql/v0.1.2)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/php/pdo_pgsql/v0.1.2) - 2026-10-30
+
+Release 0.1.2 - See [CHANGELOG](https://github.com/awslabs/aurora-dsql-connectors/blob/main/php/pdo_pgsql/CHANGELOG.md)
+
+[Changes][php/pdo_pgsql/v0.1.2]
+
+
 <a id="php/pdo_pgsql/v0.1.1"></a>
 # [PHP PDO_PGSQL v0.1.1 (php/pdo_pgsql/v0.1.1)](https://github.com/awslabs/aurora-dsql-connectors/releases/tag/php/pdo_pgsql/v0.1.1) - 2026-04-09
 
@@ -14,6 +22,7 @@ Release 0.1.0 - See [CHANGELOG](https://github.com/awslabs/aurora-dsql-connector
 [Changes][php/pdo_pgsql/v0.1.0]
 
 
+[php/pdo_pgsql/v0.1.2]: https://github.com/awslabs/aurora-dsql-connectors/compare/php/pdo_pgsql/v0.1.1...php/pdo_pgsql/v0.1.2
 [php/pdo_pgsql/v0.1.1]: https://github.com/awslabs/aurora-dsql-connectors/compare/php/pdo_pgsql/v0.1.0...php/pdo_pgsql/v0.1.1
 [php/pdo_pgsql/v0.1.0]: https://github.com/awslabs/aurora-dsql-connectors/tree/php/pdo_pgsql/v0.1.0
 
