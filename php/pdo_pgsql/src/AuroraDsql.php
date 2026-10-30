@@ -56,8 +56,14 @@ class AuroraDsql
             $dsn .= ';sslnegotiation=direct';
         }
 
+        // Use unnamed server-side statements unless the caller sets this. Before
+        // PHP 8.4, or when built against libpq < 17, PDO_PGSQL frees named
+        // statements with SQL DEALLOCATE, which DSQL rejects. Inside a transaction
+        // that aborts the transaction, PDO ignores the error, and COMMIT then
+        // rolls back without raising.
+        $mergedAttributes = $pdoAttributes + [self::disablePreparesAttribute() => true];
+
         // Force ERRMODE_EXCEPTION — OCC retry depends on exceptions being thrown
-        $mergedAttributes = $pdoAttributes;
         $mergedAttributes[\PDO::ATTR_ERRMODE] = \PDO::ERRMODE_EXCEPTION;
 
         return new DsqlPdo(
@@ -68,6 +74,14 @@ class AuroraDsql
             occMaxRetries: $resolved->occMaxRetries ?? 0,
             logger: $resolved->logger,
         );
+    }
+
+    private static function disablePreparesAttribute(): int
+    {
+        // PHP 8.5 deprecates the PDO::PGSQL_* constants in favor of Pdo\Pgsql
+        return class_exists(\Pdo\Pgsql::class, false)
+            ? \Pdo\Pgsql::ATTR_DISABLE_PREPARES
+            : \PDO::PGSQL_ATTR_DISABLE_PREPARES;
     }
 
     private static function supportsDirectSslNegotiation(): bool

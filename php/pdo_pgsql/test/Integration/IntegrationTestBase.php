@@ -29,7 +29,7 @@ abstract class IntegrationTestBase extends TestCase
         self::$region = getenv('REGION') ?: null;
     }
 
-    protected function createConnection(array $configOverrides = []): \PDO
+    protected function createConnection(array $configOverrides = [], array $pdoAttributes = []): \PDO
     {
         $config = new DsqlConfig(
             host: $configOverrides['host'] ?? self::$clusterEndpoint,
@@ -43,7 +43,7 @@ abstract class IntegrationTestBase extends TestCase
             ormPrefix: $configOverrides['ormPrefix'] ?? null,
         );
 
-        return AuroraDsql::connect($config);
+        return AuroraDsql::connect($config, $pdoAttributes);
     }
 
     protected function generateTableName(string $prefix = 'test'): string

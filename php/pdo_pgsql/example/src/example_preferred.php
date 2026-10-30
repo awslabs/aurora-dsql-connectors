@@ -59,6 +59,9 @@ function main(): void
     $stmt = $pdo->prepare('SELECT name FROM example_test WHERE id = ?');
     $stmt->execute([$id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($row === false || $row['name'] !== $name) {
+        throw new RuntimeException("Row {$id} was not found after the transaction committed");
+    }
     echo "Read back: {$row['name']}\n";
 
     // Cleanup — exec() retry handles OCC conflicts transparently

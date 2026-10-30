@@ -99,6 +99,8 @@ $pdo = AuroraDsql::connect($config, pdoAttributes: [
 
 > **Note on connection lifetime:** Aurora DSQL enforces a 60-minute maximum connection lifetime. For long-lived processes (CLI workers, daemons, queue consumers), you must reconnect before the limit is reached. A safe pattern is to recreate the PDO instance every 55 minutes or catch the resulting `PDOException` and reconnect.
 
+> **Note on prepared statements:** The connector sets `Pdo\Pgsql::ATTR_DISABLE_PREPARES` (`PDO::PGSQL_ATTR_DISABLE_PREPARES` before PHP 8.4) to `true` unless you pass it in `pdoAttributes`. Parameters are still bound on the server, but `prepare()` and `query()` use an unnamed statement that the server doesn't keep, so each `execute()` parses the statement again. With named statements, PDO_PGSQL on PHP 8.2 and 8.3, or on PHP 8.4+ built against libpq older than 17, frees each one with a `DEALLOCATE` statement when its `PDOStatement` is destroyed, and Aurora DSQL rejects that `DEALLOCATE`. Inside a transaction, the rejection aborts the transaction without an exception, and `commit()` returns `true` while the server rolls the transaction back. Only set the attribute to `false` on PHP 8.4 or later built against libpq 17 or later.
+
 ## Host Configuration
 
 The connector supports two host formats:
