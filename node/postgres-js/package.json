@@ -63,7 +63,7 @@
     "async-mutex": "^0.5.0"
   },
   "peerDependencies": {
-    "postgres": "^3.4.7"
+    "postgres": "^4.0.0"
   },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.2",
@@ -78,7 +78,7 @@
     "eslint": "^10.11.0",
     "eslint-plugin-import-x": "^4.16.1",
     "jest": "^30.2.0",
-    "postgres": "^3.4.7",
+    "postgres": "^4.0.0",
     "publint": "^0.3.16",
     "ts-jest": "^29.4.5",
     "tsdown": "^0.21.1",
