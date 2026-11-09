@@ -49,6 +49,7 @@ The Aurora DSQL Connector for Postgres.js is designed to understand these requir
 ### Requirements
 
 - Node.js 20+
+- Postgres.js 3.4.7+ or 4.x. Postgres.js 4 is ESM-only, so loading it from CommonJS needs Node.js 20.19+ or 22.12+
 - [Access to an Aurora DSQL cluster](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/getting-started.html)
 - Set up appropriate IAM permissions to allow your application to connect to Aurora DSQL.
 - AWS credentials configured (via AWS CLI, environment variables, or IAM roles)

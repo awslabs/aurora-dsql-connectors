@@ -48,7 +48,7 @@ export class PostgresWs extends EventEmitter {
   constructor(config: AuroraDSQLWsConfig<{}>) {
     super();
     this.config = config;
-    this.host = config.host || '';
+    this.host = typeof config.host === "string" ? config.host : "";
   }
 
 
