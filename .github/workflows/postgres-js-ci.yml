@@ -71,6 +71,37 @@ jobs:
           npm run lint
           npm run test:unit
 
+      - name: Check CommonJS and ESM builds
+        run: |
+          npm run build:prod
+          node -e "require('./dist/index.cjs').auroraDSQLPostgres({ host: 'example.dsql.us-east-1.on.aws' }).end()"
+          node --input-type=module -e "const { auroraDSQLPostgres } = await import('./dist/index.mjs'); await auroraDSQLPostgres({ host: 'example.dsql.us-east-1.on.aws' }).end()"
+
+  # The connector supports postgres 3 and 4 and develops against 4.
+  postgres3-tests:
+    name: Postgres.js tests (postgres 3)
+    needs: setup
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ needs.setup.outputs.build-version }}
+
+      - name: Run tests against postgres 3
+        run: |
+          npm ci
+          npm install --no-save postgres@^3.4.7
+          npm run test:unit
+          npm run build:prod
+          node -e "require('./dist/index.cjs').auroraDSQLPostgres({ host: 'example.dsql.us-east-1.on.aws' }).end()"
+          node --input-type=module -e "const { auroraDSQLPostgres } = await import('./dist/index.mjs'); await auroraDSQLPostgres({ host: 'example.dsql.us-east-1.on.aws' }).end()"
+
   integration-tests:
     name: Postgres.js integration tests
     needs: [setup, create-cluster]
@@ -127,8 +158,10 @@ jobs:
           CLUSTER_USER: admin
           REGION: ${{ needs.create-cluster.outputs.region }}
           CONNECTION_CHECK: true
+        # The community tests come from the postgres 3 test suite.
         run: |
           npm ci
+          npm install --no-save postgres@^3.4.7
           npm run build:prod
           node test/community/index.js
 
@@ -139,8 +172,10 @@ jobs:
           CLUSTER_USER: admin
           REGION: ${{ needs.create-cluster.outputs.region }}
           CONNECTION_CHECK: false
+        # The community tests come from the postgres 3 test suite.
         run: |
           npm ci
+          npm install --no-save postgres@^3.4.7
           npm run build:prod
           node test/community/index.js
 

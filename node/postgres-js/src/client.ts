@@ -11,6 +11,13 @@ import { DsqlSigner, DsqlSignerConfig } from "@aws-sdk/dsql-signer";
 import { createPostgresWs } from "./postgres-web-socket";
 import { Logger, OCCRetryConfig, resolveRetryConfig, executeWithRetry } from "./occ-retry";
 
+// postgres 4 is ESM-only. Loading it from the CommonJS build returns the
+// module namespace instead of the function, so take its default export.
+const createPostgres: typeof postgres =
+  typeof postgres === "function"
+    ? postgres
+    : (postgres as unknown as { default: typeof postgres }).default;
+
 // Version is injected at build time via tsdown
 declare const __VERSION__: string;
 const version = typeof __VERSION__ !== "undefined" ? __VERSION__ : "0.0.0";
@@ -164,53 +171,20 @@ export function auroraDSQLPostgres<
 >(
   url: string,
   options?: AuroraDSQLConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): ReturnType<typeof postgres<T>>;
 
 export function auroraDSQLPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   options: AuroraDSQLConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): ReturnType<typeof postgres<T>>;
 
 export function auroraDSQLPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   urlOrOptions: string | AuroraDSQLConfig<T>,
   options?: AuroraDSQLConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
-> {
+): ReturnType<typeof postgres<T>> {
 
   let { opts } = parseConnectionParams(urlOrOptions, options);
   const { signerConfig } = setupDsqlSigner(opts);
@@ -222,8 +196,8 @@ export function auroraDSQLPostgres<
     pass: () => getToken(signer, opts.username),
   };
   const sql = typeof urlOrOptions === "string"
-    ? postgres(urlOrOptions, postgresOpts)
-    : postgres(postgresOpts);
+    ? createPostgres(urlOrOptions, postgresOpts)
+    : createPostgres(postgresOpts);
 
   wrapBegin(sql, { retry: opts.retry, logger: opts.logger });
   return sql;
@@ -234,53 +208,20 @@ export function auroraDSQLWsPostgres<
 >(
   url: string,
   options?: AuroraDSQLWsConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): ReturnType<typeof postgres<T>>;
 
 export function auroraDSQLWsPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   options: AuroraDSQLWsConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
->;
+): ReturnType<typeof postgres<T>>;
 
 export function auroraDSQLWsPostgres<
   T extends Record<string, postgres.PostgresType> = {}
 >(
   urlOrOptions: string | AuroraDSQLWsConfig<T>,
   options?: AuroraDSQLWsConfig<T>
-): postgres.Sql<
-  Record<string, postgres.PostgresType> extends T
-  ? {}
-  : {
-    [type in keyof T]: T[type] extends {
-      serialize: (value: infer R) => any;
-      parse: (raw: any) => infer R;
-    }
-    ? R
-    : never;
-  }
-> {
+): ReturnType<typeof postgres<T>> {
 
   let { opts } = parseConnectionParams(urlOrOptions, options);
   const { signerConfig } = setupDsqlSigner(opts);
@@ -308,8 +249,8 @@ export function auroraDSQLWsPostgres<
 
   const postgresOpts: postgres.Options<T> = { ...opts };
   const sql = typeof urlOrOptions === "string"
-    ? postgres(urlOrOptions, postgresOpts)
-    : postgres(postgresOpts);
+    ? createPostgres(urlOrOptions, postgresOpts)
+    : createPostgres(postgresOpts);
 
   wrapBegin(sql, { retry: opts.retry, logger: opts.logger });
   return sql;
