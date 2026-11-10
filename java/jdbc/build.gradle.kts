@@ -38,7 +38,7 @@ val mockitoAgent = configurations.create("mockitoAgent")
 
 dependencies {
     // AWS SDK for Aurora DSQL
-    implementation("software.amazon.awssdk:dsql:2.57.8")
+    implementation("software.amazon.awssdk:dsql:2.57.11")
 
     // PostgreSQL JDBC Driver - core dependency for Aurora DSQL connector.
     // Override with -PpgjdbcVersion=... (the compat-canary workflow passes `+`
