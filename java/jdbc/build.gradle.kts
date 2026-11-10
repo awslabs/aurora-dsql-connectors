@@ -54,7 +54,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.14.4")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.14.4")
     testImplementation("org.junit.jupiter:junit-jupiter:5.14.4")
-    testImplementation("software.amazon.awssdk:regions:2.57.8")
+    testImplementation("software.amazon.awssdk:regions:2.57.11")
 
     // Agent recommended for Java 21+ inline mocking.
     testImplementation("org.mockito:mockito-junit-jupiter:5.24.0")
