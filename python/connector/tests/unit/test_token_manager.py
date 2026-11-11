@@ -54,6 +54,7 @@ class TestTokenManager:
         mock_botocore_session = Mock()
         mock_botocore_session.get_component.return_value = mock_cred_provider
 
+        TokenManager._clients.clear()
         with (
             patch("dsql_core.token_manager.botocore.session.Session") as mock_botocore,
             patch("dsql_core.token_manager.boto3.Session") as mock_boto3,
@@ -65,6 +66,7 @@ class TestTokenManager:
                 boto3=mock_boto3,
                 cred_provider=mock_cred_provider,
             )
+        TokenManager._clients.clear()
 
     @pytest.mark.parametrize(
         "user,expected_token",
@@ -170,3 +172,39 @@ class TestTokenManager:
 
         with pytest.raises((ClientError, BotoCoreError)):
             TokenManager.get_token(self._build_params())
+
+    def test_client_reused_across_calls_with_same_params(self, mocks):
+        """Test that the boto3 session and client are built once for repeated token requests."""
+        params = self._build_params()
+        TokenManager.get_token(params)
+        TokenManager.get_token(params)
+
+        mocks.boto3.assert_called_once_with()
+        mocks.boto3.return_value.client.assert_called_once_with("dsql", region_name="us-east-1")
+        mock_client = mocks.boto3.return_value.client.return_value
+        assert mock_client.generate_db_connect_admin_auth_token.call_count == 2
+
+    def test_client_not_shared_across_regions(self, mocks):
+        """Test that a different region gets its own client."""
+        TokenManager.get_token(self._build_params(region="us-east-1"))
+        TokenManager.get_token(self._build_params(region="us-west-2"))
+
+        assert mocks.boto3.call_count == 2
+
+    def test_client_not_shared_across_profiles(self, mocks):
+        """Test that a different profile gets its own client."""
+        TokenManager.get_token(self._build_params(profile="a"))
+        TokenManager.get_token(self._build_params(profile="b"))
+
+        assert mocks.boto3.call_count == 2
+
+    def test_client_not_shared_across_credentials_providers(self, mocks):
+        """Test that the same provider is reused and a different provider is not."""
+        provider_a = Mock(spec=CredentialProvider)
+        provider_b = Mock(spec=CredentialProvider)
+        TokenManager.get_token(self._build_params(custom_credentials_provider=provider_a))
+        TokenManager.get_token(self._build_params(custom_credentials_provider=provider_a))
+        assert mocks.boto3.call_count == 1
+
+        TokenManager.get_token(self._build_params(custom_credentials_provider=provider_b))
+        assert mocks.boto3.call_count == 2
