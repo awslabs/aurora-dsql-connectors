@@ -1,6 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
+
 import psycopg
 from botocore.credentials import CredentialProvider
 
@@ -101,7 +103,10 @@ class DSQLAsyncConnection(psycopg.AsyncConnection):
             ClientError or BotoCoreError: If token generation fails
         """
 
-        params = ConnectionUtilities.parse_properties_and_set_token(
+        # Token generation does blocking work (credential resolution, boto3
+        # setup), so run it in a worker thread to keep the event loop responsive.
+        params = await asyncio.to_thread(
+            ConnectionUtilities.parse_properties_and_set_token,
             conninfo,
             {**kwargs, "custom_credentials_provider": custom_credentials_provider},
             driver_name="psycopg",
