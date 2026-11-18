@@ -1,6 +1,7 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0
 
+import asyncio
 import logging
 from typing import Any
 
@@ -115,7 +116,10 @@ async def connect(
     if ssl is not None:
         kwargs["ssl"] = ssl
 
-    params = ConnectionUtilities.parse_properties_and_set_token(
+    # Token generation does blocking work (credential resolution, boto3 setup),
+    # so run it in a worker thread to keep the event loop responsive.
+    params = await asyncio.to_thread(
+        ConnectionUtilities.parse_properties_and_set_token,
         dsn,
         {**kwargs, "custom_credentials_provider": custom_credentials_provider},
         driver_name="asyncpg",
